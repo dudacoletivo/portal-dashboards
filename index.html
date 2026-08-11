@@ -8,10 +8,11 @@
   :root{
     --ink:#1b2430;
     --ink-soft:#5b6675;
-    --bg:#f5f6f9;
+    --bg:#f4f6fb;
     --card:#ffffff;
-    --line:#e3e8f0;
-    --accent:#00498e;
+    --line:#e7ebf3;
+    --accent:#4f5eff;
+    --accent-soft:#eef0ff;
     --shadow: 0 1px 2px rgba(16,38,73,.05), 0 8px 24px rgba(16,38,73,.08);
     --red:#c8433d;
     --red-bg:#fbeaea;
@@ -20,53 +21,93 @@
   html,body{margin:0;padding:0;}
   body{
     font-family: Calibri, 'Segoe UI', Candara, Optima, Arial, sans-serif;
-    background: var(--bg);
+    background:
+      radial-gradient(560px 340px at 8% 0%, rgba(79,94,255,.07), transparent 60%),
+      radial-gradient(620px 380px at 96% 18%, rgba(200,67,61,.06), transparent 60%),
+      var(--bg);
     color: var(--ink);
     min-height:100vh;
     display:flex; flex-direction:column;
+    position:relative;
+    overflow-x:hidden;
   }
-  .wrap{ max-width:960px; margin:0 auto; padding:48px 24px 60px; width:100%; }
 
-  header.hero{ text-align:center; margin-bottom:36px; }
-  header.hero h1{ margin:0 0 8px; font-size:28px; font-weight:800; letter-spacing:.2px; }
-  header.hero p{ margin:0; color:var(--ink-soft); font-size:14.5px; }
+  /* Elementos decorativos discretos no fundo */
+  .deco{ position:absolute; border-radius:50%; filter:blur(60px); pointer-events:none; z-index:0; }
+  .deco-1{ width:340px; height:340px; top:-120px; left:-120px; background:rgba(79,94,255,.14); }
+  .deco-2{ width:300px; height:300px; bottom:-100px; right:-80px; background:rgba(248,158,38,.13); }
+  .deco-3{ width:220px; height:220px; top:38%; right:6%; background:rgba(94,18,85,.08); }
+
+  .wrap{ max-width:1040px; margin:0 auto; padding:56px 24px 60px; width:100%; position:relative; z-index:1; }
+
+  header.hero{ text-align:center; margin-bottom:44px; }
+  .hero-icon{
+    width:52px; height:52px; margin:0 auto 18px; border-radius:16px;
+    background:linear-gradient(150deg, var(--accent), #7c86ff);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 10px 24px rgba(79,94,255,.35);
+  }
+  header.hero h1{ margin:0 0 10px; font-size:32px; font-weight:800; letter-spacing:.2px; color:#12172a; }
+  header.hero p{ margin:0 0 16px; color:var(--ink-soft); font-size:15px; }
+  .hero-rule{ width:52px; height:4px; border-radius:99px; background:linear-gradient(90deg, var(--accent), #ff8a5b); margin:0 auto; }
 
   .grid{
-    display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:18px;
+    display:flex; flex-wrap:wrap; justify-content:center; gap:22px;
   }
   .client-card{
-    background:var(--card); border:1px solid var(--line); border-radius:18px;
-    padding:22px 20px; box-shadow:var(--shadow); cursor:pointer;
-    display:flex; flex-direction:column; align-items:flex-start; gap:14px;
-    transition: transform .15s ease, box-shadow .15s ease;
-    font-family:inherit; text-align:left;
+    background:var(--card); border:1.5px solid transparent; border-radius:22px;
+    padding:30px 26px 26px; box-shadow:var(--shadow); cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    font-family:inherit;
+    width:100%; max-width:300px; flex:1 1 280px;
   }
-  .client-card:hover{ transform:translateY(-3px); box-shadow:0 10px 28px rgba(16,38,73,.14); }
+  .client-card:hover{
+    transform:translateY(-5px);
+    box-shadow:0 16px 34px rgba(16,38,73,.16);
+    border-color: var(--card-color, var(--accent));
+  }
+
   .avatar{
-    width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center;
-    color:#fff; font-weight:800; font-size:18px; letter-spacing:.02em;
-    background:#fff; border:2px solid var(--line); overflow:hidden; flex-shrink:0;
+    width:88px; height:88px; border-radius:24px; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:26px; letter-spacing:.02em;
+    background:#fff; overflow:hidden; flex-shrink:0; margin-bottom:16px;
+    box-shadow:0 10px 22px rgba(16,38,73,.14), inset 0 0 0 1px rgba(16,38,73,.05);
+    transition: transform .18s ease;
   }
-  .avatar.has-logo{ padding:4px; gap:3px; }
-  .avatar img{ width:100%; height:100%; object-fit:contain; border-radius:6px; }
-  .avatar.multi-logo img{ width:50%; }
-  .client-card h3{ margin:0; font-size:16px; font-weight:700; }
-  .client-card span.enter{ margin-top:auto; font-size:12.5px; font-weight:700; color:var(--accent); }
+  .client-card:hover .avatar{ transform:scale(1.04); }
+  .avatar.has-logo{ padding:7px; }
+  .avatar img{ width:100%; height:100%; object-fit:contain; border-radius:12px; }
+  .avatar.multi-logo{ gap:4px; }
+  .avatar.multi-logo img{ width:50%; border-radius:8px; }
+
+  .client-card h3{ margin:0; font-size:17px; font-weight:800; color:#12172a; }
+  .client-card .card-sub{ margin:2px 0 14px; font-size:12.5px; color:var(--ink-soft); }
+
+  .cta{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:9px 20px; border-radius:999px; font-size:13px; font-weight:700;
+    border:1.5px solid var(--card-color, var(--accent)); color:var(--card-color, var(--accent));
+    transition: background .18s ease, color .18s ease;
+  }
+  .client-card:hover .cta{ background:var(--card-color, var(--accent)); color:#fff; }
+
+  footer.foot{ text-align:center; font-size:12px; color:#a3adbb; padding:24px; position:relative; z-index:1; }
 
   /* MODAL */
   .modal-overlay{
-    position:fixed; inset:0; background:rgba(20,26,36,.55);
+    position:fixed; inset:0; background:rgba(18,23,42,.6);
     display:none; align-items:center; justify-content:center; z-index:1000; padding:20px;
   }
   .modal-overlay.open{ display:flex; }
   .modal-box{
-    background:#fff; border-radius:20px; padding:28px 26px; max-width:380px; width:100%;
-    box-shadow:0 24px 70px rgba(0,0,0,.35);
+    background:#fff; border-radius:22px; padding:32px 28px; max-width:380px; width:100%;
+    box-shadow:0 24px 70px rgba(0,0,0,.35); text-align:center;
   }
-  .modal-box .avatar{ margin-bottom:14px; }
-  .modal-box h2{ margin:0 0 4px; font-size:19px; }
-  .modal-box p.sub{ margin:0 0 18px; font-size:13px; color:var(--ink-soft); }
-  .modal-box label{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); display:block; margin-bottom:6px; }
+  .modal-box .avatar{ margin:0 auto 16px; }
+  .modal-box h2{ margin:0 0 4px; font-size:20px; color:#12172a; }
+  .modal-box p.sub{ margin:0 0 20px; font-size:13px; color:var(--ink-soft); }
+  .modal-box label{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); display:block; margin-bottom:6px; text-align:left; }
   .modal-box input[type="password"]{
     width:100%; font-family:inherit; font-size:15px; padding:12px 14px; border-radius:12px;
     border:1.5px solid var(--line); margin-bottom:10px; outline:none;
@@ -81,19 +122,33 @@
   .btn.ghost{ background:#eef1f5; color:var(--ink); }
   .error-msg{
     display:none; background:var(--red-bg); color:var(--red); font-size:12.5px; font-weight:600;
-    padding:8px 12px; border-radius:10px; margin-bottom:10px;
+    padding:8px 12px; border-radius:10px; margin-bottom:10px; text-align:left;
   }
   .error-msg.show{ display:block; }
 
-  footer.foot{ text-align:center; font-size:12px; color:#a3adbb; padding:24px; }
+  @media (max-width:520px){
+    .client-card{ max-width:100%; }
+  }
 </style>
 </head>
 <body>
 
+<div class="deco deco-1"></div>
+<div class="deco deco-2"></div>
+<div class="deco deco-3"></div>
+
 <div class="wrap">
   <header class="hero">
+    <div class="hero-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="12" width="4" height="8" rx="1.2" fill="#fff"/>
+        <rect x="10" y="7" width="4" height="13" rx="1.2" fill="#fff" fill-opacity=".85"/>
+        <rect x="16" y="3" width="4" height="17" rx="1.2" fill="#fff" fill-opacity=".7"/>
+      </svg>
+    </div>
     <h1>Portal de Dashboards</h1>
     <p>Selecione seu cliente para acessar o painel de performance.</p>
+    <div class="hero-rule"></div>
   </header>
 
   <div class="grid" id="clientGrid"></div>
@@ -133,6 +188,13 @@
     return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
   }
 
+  function hexToRgba(hex, alpha) {
+    const h = hex.replace('#', '');
+    const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    const r = parseInt(full.slice(0, 2), 16), g = parseInt(full.slice(2, 4), 16), b = parseInt(full.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
   // Cliente pode ter uma logo única (client.logo) ou mais de uma (client.logos,
   // caso de marcas que não têm uma logo combinada única). Sem nenhuma, cai para
   // as iniciais coloridas.
@@ -143,7 +205,7 @@
     }
     const cls = 'avatar has-logo' + (logos.length > 1 ? ' multi-logo' : '');
     const imgs = logos.map(src => `<img src="${src}" alt="${client.name}">`).join('');
-    return `<div class="${cls}" style="border-color:${client.color}">${imgs}</div>`;
+    return `<div class="${cls}">${imgs}</div>`;
   }
 
   function renderGrid() {
@@ -152,10 +214,12 @@
       const card = document.createElement('button');
       card.className = 'client-card';
       card.type = 'button';
+      card.style.setProperty('--card-color', client.color);
       card.innerHTML = `
         ${avatarHTML(client)}
         <h3>${client.name}</h3>
-        <span class="enter">Acessar dashboard →</span>
+        <p class="card-sub">Dashboard de performance</p>
+        <span class="cta">Acessar dashboard →</span>
       `;
       card.addEventListener('click', () => openModal(client));
       grid.appendChild(card);
