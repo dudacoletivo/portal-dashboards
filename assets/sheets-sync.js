@@ -158,9 +158,12 @@ const SheetsSync = (function () {
       for (let j = lc + 1; j < nextLabelCol; j++) {
         const cellText = (header[j] || '').trim();
         if (!cellText) break;
-        // Sem "^" no início: a célula pode trazer o título do dashboard colado antes do mês
-        // (ex: "DASHBOARD - CUMBUCA MAIO (01-07)"), então buscamos o padrão "MÊS (período)" no fim da célula.
-        const m = /([A-ZÀ-ÚÇ]+)\s*\(([\d\-]+)\)\s*$/i.exec(cellText);
+        // Sem âncoras (nem "^" nem "$"): a célula pode trazer o título do dashboard colado
+        // antes do mês (ex: "DASHBOARD - CUMBUCA MAIO (01-07)") e/ou uma anotação de marca
+        // colada depois do período (ex: "JUNHO (01-07) Poke", de quando a loja trocou de nome
+        // de "Cumbuca Poke" pra "Wraps"). O "[A-Z]+\s*\(...\)" só bate mesmo em cima do nome
+        // do mês porque é a única sequência de letras maiúsculas imediatamente seguida de "(".
+        const m = /([A-ZÀ-ÚÇ]+)\s*\(([\d\-]+)\)/i.exec(cellText);
         if (m) cols.push({ col: j, month: monthFromHeader(m[1]), period: m[2] });
       }
       return { labelCol: lc, cols };

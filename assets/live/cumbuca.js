@@ -136,6 +136,20 @@
       });
     }
     if (!Object.keys(out).length) throw new Error('Nenhuma loja encontrada (parcial)');
+
+    // Backstop: cumbuca.html acessa DATA_PARTIAL[loja][janela]['GMV'][mês] direto, sem checar
+    // se existe, em vários lugares. Se uma loja ainda não tiver uma janela/métrica na planilha
+    // (ex: virada de marca fez faltar 3 das 4 janelas por um tempo), isso quebrava a tela
+    // inteira. Preenchendo com objetos vazios aqui, o pior caso vira "undefined" num valor,
+    // não mais um erro fatal.
+    const ALL_WINDOWS = ['w7', 'w14', 'w21', 'w28'];
+    Object.keys(out).forEach(key => {
+      ALL_WINDOWS.forEach(w => {
+        out[key][w] = out[key][w] || {};
+        METRIC_ORDER.forEach(m => { out[key][w][m] = out[key][w][m] || {}; });
+      });
+    });
+
     return { partial: out, products };
   }
 
