@@ -45,7 +45,11 @@
   .avatar{
     width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center;
     color:#fff; font-weight:800; font-size:18px; letter-spacing:.02em;
+    background:#fff; border:2px solid var(--line); overflow:hidden; flex-shrink:0;
   }
+  .avatar.has-logo{ padding:4px; gap:3px; }
+  .avatar img{ width:100%; height:100%; object-fit:contain; border-radius:6px; }
+  .avatar.multi-logo img{ width:50%; }
   .client-card h3{ margin:0; font-size:16px; font-weight:700; }
   .client-card span.enter{ margin-top:auto; font-size:12.5px; font-weight:700; color:var(--accent); }
 
@@ -116,7 +120,7 @@
 <script>
   const grid = document.getElementById('clientGrid');
   const modal = document.getElementById('loginModal');
-  const modalAvatar = document.getElementById('modalAvatar');
+  let modalAvatar = document.getElementById('modalAvatar');
   const modalTitle = document.getElementById('modalTitle');
   const modalError = document.getElementById('modalError');
   const modalPassword = document.getElementById('modalPassword');
@@ -129,6 +133,19 @@
     return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
   }
 
+  // Cliente pode ter uma logo única (client.logo) ou mais de uma (client.logos,
+  // caso de marcas que não têm uma logo combinada única). Sem nenhuma, cai para
+  // as iniciais coloridas.
+  function avatarHTML(client) {
+    const logos = client.logos || (client.logo ? [client.logo] : []);
+    if (!logos.length) {
+      return `<div class="avatar" style="background:${client.color}">${initials(client.name)}</div>`;
+    }
+    const cls = 'avatar has-logo' + (logos.length > 1 ? ' multi-logo' : '');
+    const imgs = logos.map(src => `<img src="${src}" alt="${client.name}">`).join('');
+    return `<div class="${cls}" style="border-color:${client.color}">${imgs}</div>`;
+  }
+
   function renderGrid() {
     grid.innerHTML = '';
     PORTAL_CLIENTS.forEach(client => {
@@ -136,7 +153,7 @@
       card.className = 'client-card';
       card.type = 'button';
       card.innerHTML = `
-        <div class="avatar" style="background:${client.color}">${initials(client.name)}</div>
+        ${avatarHTML(client)}
         <h3>${client.name}</h3>
         <span class="enter">Acessar dashboard →</span>
       `;
@@ -147,8 +164,8 @@
 
   function openModal(client) {
     activeClient = client;
-    modalAvatar.style.background = client.color;
-    modalAvatar.textContent = initials(client.name);
+    modalAvatar.outerHTML = avatarHTML(client).replace('class="avatar', 'id="modalAvatar" class="avatar');
+    modalAvatar = document.getElementById('modalAvatar');
     modalTitle.textContent = client.name;
     modalPassword.value = '';
     modalError.classList.remove('show');
