@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerar hash de senha</title>
+<style>
+  body{ font-family: Calibri, Arial, sans-serif; background:#f5f6f9; color:#1b2430; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; }
+  .box{ background:#fff; border-radius:16px; padding:28px; max-width:440px; width:90%; box-shadow:0 8px 24px rgba(0,0,0,.08); }
+  h1{ font-size:18px; margin:0 0 8px; }
+  p{ font-size:13px; color:#5b6675; margin:0 0 18px; line-height:1.5; }
+  input{ width:100%; font-family:inherit; font-size:15px; padding:11px 13px; border-radius:10px; border:1.5px solid #e3e8f0; box-sizing:border-box; margin-bottom:12px; }
+  button{ width:100%; font-family:inherit; font-size:14px; font-weight:700; background:#00498e; color:#fff; border:none; padding:12px; border-radius:10px; cursor:pointer; }
+  .result{ margin-top:16px; }
+  .result label{ font-size:11px; font-weight:700; text-transform:uppercase; color:#5b6675; }
+  textarea{ width:100%; font-family:'Courier New', monospace; font-size:12.5px; padding:10px; border-radius:8px; border:1.5px solid #e3e8f0; box-sizing:border-box; margin-top:4px; resize:none; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>Gerador de hash de senha</h1>
+    <p>Use esta página offline para gerar o <code>passwordHash</code> de um novo cliente ou trocar a senha de um existente. Cole o resultado em <code>assets/portal-config.js</code>.</p>
+    <input type="text" id="pw" placeholder="Digite a nova senha">
+    <button id="gen">Gerar hash</button>
+    <div class="result">
+      <label>passwordHash</label>
+      <textarea id="out" rows="3" readonly></textarea>
+    </div>
+  </div>
+  <script>
+    async function sha256Hex(text) {
+      const enc = new TextEncoder().encode(text);
+      const digest = await crypto.subtle.digest('SHA-256', enc);
+      return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    document.getElementById('gen').addEventListener('click', async () => {
+      const pw = document.getElementById('pw').value;
+      document.getElementById('out').value = pw ? await sha256Hex(pw) : '';
+    });
+  </script>
+</body>
+</html>

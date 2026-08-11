@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pato com Laranja | Dashboard de Performance</title>
+<script src="../assets/portal-config.js"></script>
+<script src="../assets/auth-guard.js" data-client="pato-com-laranja"></script>
+<style>
+  :root{
+    --orange:#F89E26;
+    --orange-deep:#EF6A2F;
+    --charcoal:#221F1D;
+    --cream:#FBF6EE;
+    --card:#FFFFFF;
+    --border:#EEE1CE;
+    --green:#3C8F5E;
+    --green-bg:#E7F4EC;
+    --red:#D9463A;
+    --red-bg:#FBEAE8;
+    --gray:#8A8378;
+    --gray-bg:#F1ECE3;
+    --shadow: 0 2px 10px rgba(34,31,29,0.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family: Calibri, 'Segoe UI', Candara, Optima, Arial, sans-serif;
+    background: var(--cream);
+    color: var(--charcoal);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{ max-width:1360px; margin:0 auto; padding:20px 24px 60px; }
+
+  header.topbar{
+    display:flex; align-items:center; gap:18px;
+    padding: 18px 24px;
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  header.topbar img.logo{
+    width:64px; height:64px; border-radius:16px; object-fit:cover;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  header.topbar .titles h1{ margin:0; font-size:22px; font-weight:700; letter-spacing:.2px; }
+  header.topbar .titles p{ margin:2px 0 0; font-size:13px; color:#6b6459; }
+  header.topbar .badge{
+    margin-left:auto; background: var(--orange); color:#fff; font-weight:700; font-size:12px;
+    padding:8px 14px; border-radius:999px; white-space:nowrap;
+  }
+
+  nav.tabs{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+  nav.tabs button{
+    font-family:inherit; cursor:pointer; border:1px solid var(--border); background: var(--card);
+    color: var(--charcoal); padding:10px 18px; border-radius:14px; font-size:14px; font-weight:600;
+    transition: all .15s ease;
+  }
+  nav.tabs button:hover{ border-color: var(--orange); }
+  nav.tabs button.active{
+    background: linear-gradient(135deg, var(--orange), var(--orange-deep));
+    color:#fff; border-color: transparent; box-shadow: var(--shadow);
+  }
+
+  .tabpanel{ display:none; }
+  .tabpanel.active{ display:block; animation: fade .25s ease; }
+  @keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+  .panel{
+    background: var(--card); border:1px solid var(--border); border-radius:18px;
+    padding:20px 22px; box-shadow: var(--shadow); margin-bottom:20px;
+  }
+  .panel h2{ margin:0 0 4px; font-size:17px; font-weight:800; letter-spacing:.1px; }
+  .panel .sub{ margin:0 0 16px; font-size:13px; color:#6b6459; }
+
+  .filterbar{ display:flex; flex-wrap:wrap; gap:22px; align-items:flex-start; }
+  .filtergroup{ display:flex; flex-direction:column; gap:8px; }
+  .filtergroup label.title{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#8A8378; }
+  .chipset{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{
+    border:1px solid var(--border); background:#fff; padding:6px 12px; border-radius:999px;
+    font-size:13px; cursor:pointer; font-family:inherit; font-weight:600; color:#4b463d;
+  }
+  .chip.active{ background: var(--orange); color:#fff; border-color: var(--orange); }
+  .chip.rede.active{ background: var(--charcoal); border-color: var(--charcoal); }
+  select.dd{
+    font-family:inherit; font-size:13px; font-weight:600; color:var(--charcoal);
+    border:1px solid var(--border); border-radius:12px; padding:8px 12px; background:#fff;
+  }
+
+  /* INSIGHT BOX */
+  .insight-box{ display:flex; flex-direction:column; gap:8px; }
+  .insight{
+    padding:10px 14px; border-radius:12px; font-size:13.5px; font-weight:600; line-height:1.4;
+    display:flex; gap:8px; align-items:flex-start;
+  }
+  .insight .ic{ font-size:15px; line-height:1.3; }
+  .insight.pos{ background:var(--green-bg); color:var(--green); }
+  .insight.neg{ background:var(--red-bg); color:var(--red); }
+  .insight.neutral{ background:var(--gray-bg); color:#6b6459; }
+
+  .kpi-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:14px; margin-top:6px; }
+  .kpi{ background: linear-gradient(160deg, #fff, #FFF9F0); border:1px solid var(--border); border-radius:16px; padding:14px 16px; }
+  .kpi .label{ font-size:11.5px; font-weight:700; text-transform:uppercase; color:#9a9284; letter-spacing:.04em;}
+  .kpi .value{ font-size:22px; font-weight:800; margin-top:4px; }
+  .kpi .delta{ font-size:12.5px; font-weight:700; margin-top:4px; display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:999px; }
+  .delta.up{ color:var(--green); background:var(--green-bg); }
+  .delta.down{ color:var(--red); background:var(--red-bg); }
+  .delta.flat{ color:var(--gray); background:var(--gray-bg); }
+
+  canvas{ max-width:100%; }
+  .chart-wrap{ position:relative; margin-top:12px; overflow:visible; border:none; }
+  .svg-chart{ width:100%; }
+  .svg-chart svg{ width:100%; height:auto; display:block; border:none; }
+  @keyframes chartFadeIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+  .chart-svg-animate{ animation: chartFadeIn .5s ease-out; }
+  .chart-svg-animate .chart-line{ animation: chartFadeIn .6s ease-out; }
+  .chart-svg-animate .chart-point{ animation: chartFadeIn .6s ease-out; }
+  .chart-svg-animate .chart-bar{ animation: chartFadeIn .5s ease-out; }
+  .empty-note{ text-align:center; color:#8A8378; font-size:13px; padding:30px 10px; }
+
+  /* HTML-based horizontal bar list (used for cancellation reasons — avoids text clipping) */
+  .hbar-list{ margin-top:10px; display:flex; flex-direction:column; gap:12px; }
+  .hbar-row{ display:flex; flex-direction:column; gap:5px; }
+  .hbar-label{ font-size:13px; color:#4b463d; font-weight:600; line-height:1.3; }
+  .hbar-track{ position:relative; background:var(--gray-bg); border-radius:8px; height:22px; overflow:hidden; }
+  .hbar-fill{ background:linear-gradient(90deg, var(--orange), var(--orange-deep)); height:100%; border-radius:8px; min-width:26px; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; }
+  .hbar-fill span{ font-size:11.5px; font-weight:800; color:#fff; }
+
+  /* MODAL */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(34,31,29,0.55);
+    display:none; align-items:center; justify-content:center; z-index:1000; padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    background:#fff; border-radius:20px; padding:24px 26px; max-width:640px; width:100%;
+    max-height:80vh; overflow:auto; box-shadow:0 24px 70px rgba(0,0,0,0.35);
+  }
+  .modal-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .modal-header h2{ margin:0; font-size:18px; }
+  .modal-close{
+    background:var(--gray-bg); border:none; width:32px; height:32px; border-radius:10px;
+    font-size:18px; cursor:pointer; color:#6b6459; font-family:inherit; line-height:1;
+  }
+  .modal-close:hover{ background:var(--red-bg); color:var(--red); }
+  .glossary-btn{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-family:inherit;
+    border:1px solid var(--border); background:#fff; color:var(--charcoal); font-weight:700;
+    font-size:13.5px; padding:10px 16px; border-radius:14px;
+  }
+  .glossary-btn:hover{ border-color:var(--orange); }
+
+  table.datatable{ width:100%; border-collapse:collapse; font-size:13.5px; margin-top:10px; }
+  table.datatable th{
+    text-align:left; padding:10px 12px; background:#FFF4E2; color:#7a5216;
+    font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; border-bottom:2px solid var(--border);
+  }
+  table.datatable td{ padding:9px 12px; border-bottom:1px solid #F2ECE1; white-space:nowrap; }
+  table.datatable tr:hover td{ background:#FFFBF4; }
+  .table-scroll{ overflow-x:auto; border-radius:12px; }
+  .arrow-up{ color:var(--green); font-weight:800; }
+  .arrow-down{ color:var(--red); font-weight:800; }
+  .arrow-flat{ color:var(--gray); font-weight:800; }
+
+  .tag{ display:inline-block; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700; }
+  .tag.pos{ background:var(--green-bg); color:var(--green); }
+  .tag.neg{ background:var(--red-bg); color:var(--red); }
+  .tag.mix{ background:var(--gray-bg); color:#6b6459; }
+
+  .storecard{ border:1px solid var(--border); border-radius:16px; padding:16px; background:#fff; }
+  .storecard h3{ margin:0 0 10px; font-size:15px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .metricrow{ display:flex; justify-content:space-between; gap:8px; font-size:13px; padding:5px 0; border-bottom:1px dashed #F1E9DA; }
+  .metricrow:last-child{ border-bottom:none; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .grid-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; margin-top:10px; }
+
+  .legend-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-top:10px; }
+  .legend-item{ background:#FFF8ED; border:1px solid var(--border); border-radius:12px; padding:10px 14px; font-size:13px; }
+  .legend-item b{ color:var(--orange-deep); }
+
+  footer.credit{ text-align:center; font-size:12px; color:#a89f8f; margin-top:30px; }
+
+  @media (max-width: 720px){
+    header.topbar{ flex-wrap:wrap; }
+    header.topbar .badge{ margin-left:0; }
+    .grid2{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <img class="logo" src="data:image/jpeg;base64,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" alt="Logo Pato com Laranja">
+    <div class="titles">
+      <h1>Pato com Laranja — Dashboard de Performance</h1>
+      <p>Visão iFood · Unidades: Barra da Tijuca, Leblon, Pato na Brasa e Ahiru</p>
+    </div>
+    <div class="badge" id="lastUpdateBadge">Atualizado</div>
+  </header>
+
+  <nav class="tabs" id="tabNav">
+    <button data-tab="mesfechado" class="active">📊 Dash — Mês Fechado</button>
+    <button data-tab="parcial">📅 Dash — Parcial</button>
+    <button data-tab="investimento">💰 Investimento</button>
+    <button data-tab="comp7">🔍 Comparativo 7 dias</button>
+    <button data-tab="alavancas">🕹️ Status das Alavancas</button>
+    <button data-tab="cancelamentos">🚫 Cancelamentos</button>
+  </nav>
+
+  <!-- ================= DASH MÊS FECHADO ================= -->
+  <section class="tabpanel active" id="tab-mesfechado">
+    <div class="panel">
+      <h2>Filtros</h2>
+      <p class="sub">Veja a rede toda ou escolha uma loja específica. Meses fechados: Abril, Maio, Junho e Julho.</p>
+      <div class="filterbar">
+        <div class="filtergroup">
+          <label class="title">Loja</label>
+          <div class="chipset" id="mfLojaChips"></div>
+        </div>
+        <div class="filtergroup">
+          <label class="title">Mês</label>
+          <div class="chipset" id="mfMesChips"></div>
+        </div>
+        <div class="filtergroup">
+          <label class="title">Indicador do gráfico</label>
+          <select class="dd" id="mfIndicatorSelect"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Leitura automática</h2>
+      <div class="insight-box" id="mfInsights"></div>
+    </div>
+
+    <div class="panel">
+      <h2 id="mfKpiTitle">Indicadores do período</h2>
+      <p class="sub" id="mfKpiSub"></p>
+      <div class="kpi-grid" id="mfKpiGrid"></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>Evolução — <span id="mfChartLabel"></span></h2>
+        <p class="sub">Abril → Maio → Junho → Julho — meses fechados.</p>
+        <div class="chart-wrap"><div id="mfChart" class="svg-chart"></div></div>
+      </div>
+      <div class="panel">
+        <h2 id="mfSecondaryTitle"></h2>
+        <p class="sub" id="mfSecondarySub"></p>
+        <div class="chart-wrap"><div id="mfSecondaryChart" class="svg-chart"></div></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>Comparativo com o mês anterior</h2>
+        <div class="table-scroll"><table class="datatable" id="mfCompareTable"></table></div>
+      </div>
+      <div class="panel" id="mfRankingPanel">
+        <h2>Ranking por loja — <span id="mfRankingLabel"></span></h2>
+        <div class="table-scroll"><table class="datatable" id="mfRankingTable"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DASH PARCIAL ================= -->
+  <section class="tabpanel" id="tab-parcial">
+    <div class="panel">
+      <h2>Filtros</h2>
+      <p class="sub">Compare o acumulado de um mês contra o outro, no mesmo corte de dias.</p>
+      <div class="filterbar">
+        <div class="filtergroup">
+          <label class="title">Loja</label>
+          <div class="chipset" id="dpLojaChips"></div>
+        </div>
+        <div class="filtergroup">
+          <label class="title">Comparar</label>
+          <div class="chipset" id="dpParChips"></div>
+        </div>
+        <div class="filtergroup">
+          <label class="title">Corte (dias)</label>
+          <div class="chipset" id="dpCorteChips"></div>
+        </div>
+        <div class="filtergroup">
+          <label class="title">Indicador do gráfico</label>
+          <select class="dd" id="dpIndicatorSelect"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Leitura automática</h2>
+      <div class="insight-box" id="dpInsights"></div>
+    </div>
+
+    <div class="panel">
+      <h2 id="dpKpiTitle">Indicadores do corte</h2>
+      <p class="sub" id="dpKpiSub"></p>
+      <div class="kpi-grid" id="dpKpiGrid"></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>Acumulado por corte — <span id="dpChartLabel"></span></h2>
+        <div class="chart-wrap"><div id="dpChart" class="svg-chart"></div></div>
+      </div>
+      <div class="panel">
+        <h2 id="dpSecondaryTitle"></h2>
+        <p class="sub" id="dpSecondarySub"></p>
+        <div class="chart-wrap"><div id="dpSecondaryChart" class="svg-chart"></div></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>Comparativo com o mesmo corte do mês anterior</h2>
+        <div class="table-scroll"><table class="datatable" id="dpCompareTable"></table></div>
+      </div>
+      <div class="panel" id="dpRankingPanel">
+        <h2>Ranking por loja — <span id="dpRankingLabel"></span></h2>
+        <div class="table-scroll"><table class="datatable" id="dpRankingTable"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= INVESTIMENTO ================= -->
+  <section class="tabpanel" id="tab-investimento">
+    <div class="panel">
+      <h2>Investimento por loja</h2>
+      <p class="sub">Indicadores nas colunas, lojas nas linhas — dados exclusivos das unidades do Pato com Laranja.</p>
+      <div class="filterbar">
+        <div class="filtergroup">
+          <label class="title">Mês</label>
+          <div class="chipset" id="invMonthToggle"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Leitura automática</h2>
+      <div class="insight-box" id="invInsights"></div>
+    </div>
+
+    <div class="panel">
+      <div class="table-scroll"><table class="datatable" id="invTable"></table></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>Budget de investimento por loja (%)</h2>
+        <div class="chart-wrap small"><div id="invBudgetChart" class="svg-chart"></div></div>
+      </div>
+      <div class="panel">
+        <h2>CPO e ROI por loja</h2>
+        <div class="chart-wrap small"><div id="invCpoRoiChart" class="svg-chart"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMPARATIVO 7 DIAS ================= -->
+  <section class="tabpanel" id="tab-comp7">
+    <div class="panel">
+      <h2>Comparativo — primeiros 7 dias</h2>
+      <p class="sub">Compara o acumulado dos primeiros 7 dias de um mês contra o outro. Regra de destaque: queda no % de investimento + crescimento de pedidos e GMV = <b>economizando e crescendo</b>.</p>
+      <div class="filterbar">
+        <div class="filtergroup">
+          <label class="title">Comparar</label>
+          <div class="chipset" id="c7ParChips"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Leitura automática</h2>
+      <div class="insight-box" id="c7Insights"></div>
+    </div>
+
+    <div class="grid-cards" id="c7Cards"></div>
+
+    <div class="panel">
+      <h2>Detalhe por loja</h2>
+      <div class="table-scroll"><table class="datatable" id="c7Table"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= CANCELAMENTOS ================= -->
+  <!-- ================= STATUS DAS ALAVANCAS ================= -->
+  <section class="tabpanel" id="tab-alavancas">
+    <div class="panel">
+      <h2>Status das Alavancas</h2>
+      <p class="sub" id="alavPeriodoSub">O que está ativo em cada unidade, conectado ao período mais recente da planilha.</p>
+      <div class="filterbar" id="alavFilterbar" style="display:none;">
+        <div class="filtergroup">
+          <label class="title">Período</label>
+          <div class="chipset" id="alavPeriodoChips"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Leitura automática</h2>
+      <div class="insight-box" id="alavInsights"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Alavancas por loja</h2>
+      <p class="sub">Verde = ativa (com o investimento/lance configurado); cinza = desativada.</p>
+      <div class="table-scroll"><table class="datatable" id="alavTable"></table></div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-cancelamentos">
+    <div class="panel">
+      <h2>Filtros</h2>
+      <div class="filterbar">
+        <div class="filtergroup">
+          <label class="title">Loja</label>
+          <div class="chipset" id="cancLojaChips"></div>
+        </div>
+        <div class="filtergroup">
+          <label class="title">Período</label>
+          <div class="chipset" id="cancPeriodoChips"></div>
+        </div>
+        <div class="filtergroup">
+          <label class="title">Origem</label>
+          <select class="dd" id="cancOrigemSelect"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Leitura automática</h2>
+      <div class="insight-box" id="cancInsights"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Resumo</h2>
+      <div class="kpi-grid" id="cancKpiGrid"></div>
+    </div>
+
+    <div class="panel">
+      <div class="grid2">
+        <div>
+          <h2>Motivos de cancelamento</h2>
+          <div id="cancMotivoChart" class="hbar-list"></div>
+        </div>
+        <div>
+          <h2>Origem do cancelamento</h2>
+          <div class="chart-wrap small"><div id="cancOrigemChart" class="svg-chart"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Pedidos cancelados — detalhe</h2>
+      <div class="table-scroll"><table class="datatable" id="cancTable"></table></div>
+    </div>
+  </section>
+
+  <div class="panel" style="text-align:center;">
+    <button class="glossary-btn" id="glossaryBtn">📖 Glossário de indicadores</button>
+  </div>
+
+  <div class="modal-overlay" id="glossaryModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Glossário de indicadores</h2>
+        <button class="modal-close" id="glossaryClose">×</button>
+      </div>
+      <div class="legend-grid">
+        <div class="legend-item"><b>GMV</b> — faturamento bruto.</div>
+        <div class="legend-item"><b>TM</b> — ticket médio.</div>
+        <div class="legend-item"><b>NOVOS</b> — clientes novos.</div>
+        <div class="legend-item"><b>CPO</b> — investimento total / total de pedidos.</div>
+        <div class="legend-item"><b>VISITAS</b> — visitas no cardápio.</div>
+        <div class="legend-item"><b>CONVERSÃO</b> — conversão de cardápio.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="credit">Pato com Laranja · Dashboard gerado a partir de [Pato com Laranja] Dashboard e [Pato com Laranja] Cancelamentos</footer>
+</div>
+
+<script type="application/json" id="raw-data">{"stores":["BARRA DA TIJUCA","LEBLON","PATO NA BRASA","AHIRU"],"monthly":{"BARRA DA TIJUCA":{"VENDAS":{"ABRIL":598.0,"MAIO":679.0,"JUNHO":641.0,"JULHO":641.0},"FATURAMENTO LÍQUIDO":{"ABRIL":137933.35,"MAIO":159011.85,"JUNHO":146102.87,"JULHO":142829.74},"TM":{"ABRIL":230.6577759,"MAIO":234.1853461,"JUNHO":227.9295944,"JULHO":222.8233073},"NOVOS":{"ABRIL":117.0,"MAIO":170.0,"JUNHO":155.0,"JULHO":146.0},"VISITAS":{"ABRIL":2751.0,"MAIO":3541.0,"JUNHO":3707.0,"JULHO":3622.0},"CONVERSÃO %":{"ABRIL":0.2173754998,"MAIO":0.1917537419,"JUNHO":0.1729161047,"JULHO":0.1769740475},"Budget de investimento":{"ABRIL":0.02165654644,"MAIO":0.03555112402,"JUNHO":0.04263208519,"JULHO":0.04137653685},"PROMOÇÕES + ADS":{"ABRIL":2987.16,"MAIO":5653.05,"JUNHO":6228.67,"JULHO":5909.8},"SUB IFOOD":{"ABRIL":2563.98,"MAIO":3273.06,"JUNHO":3005.97,"JULHO":2993.72},"CPO":{"ABRIL":4.995250836,"MAIO":8.325552283,"JUNHO":9.717113885,"JULHO":9.219656786},"ROI":{"ABRIL":45.17541411,"MAIO":27.12850585,"JUNHO":22.45651158,"JULHO":23.16828657}},"LEBLON":{"VENDAS":{"ABRIL":461.0,"MAIO":592.0,"JUNHO":578.0,"JULHO":552.0},"FATURAMENTO LÍQUIDO":{"ABRIL":97798.42,"MAIO":122653.16,"JUNHO":128925.48,"JULHO":123451.51},"TM":{"ABRIL":212.1440781,"MAIO":207.1843919,"JUNHO":223.0544637,"JULHO":223.6440399},"NOVOS":{"ABRIL":105.0,"MAIO":175.0,"JUNHO":155.0,"JULHO":142.0},"VISITAS":{"ABRIL":2242.0,"MAIO":3473.0,"JUNHO":3322.0,"JULHO":3059.0},"CONVERSÃO %":{"ABRIL":0.2056199822,"MAIO":0.1704578174,"JUNHO":0.1739915713,"JULHO":0.1804511278},"Budget de investimento":{"ABRIL":0.02752232603,"MAIO":0.04770557889,"JUNHO":0.04520471826,"JULHO":0.04282742269},"PROMOÇÕES + ADS":{"ABRIL":2691.64,"MAIO":5851.24,"JUNHO":5828.04,"JULHO":5287.11},"SUB IFOOD":{"ABRIL":2126.1,"MAIO":3019.66,"JUNHO":2763.01,"JULHO":3242.58},"CPO":{"ABRIL":5.838698482,"MAIO":9.883851351,"JUNHO":10.08311419,"JULHO":9.578097826},"ROI":{"ABRIL":35.33413829,"MAIO":19.96190893,"JUNHO":21.12158462,"JULHO":22.34952554}},"PATO NA BRASA":{"VENDAS":{"ABRIL":59.0,"MAIO":103.0,"JUNHO":130.0,"JULHO":124.0},"FATURAMENTO LÍQUIDO":{"ABRIL":7234.86,"MAIO":10618.35,"JUNHO":16228.58,"JULHO":13674.56},"TM":{"ABRIL":122.6247458,"MAIO":103.0907767,"JUNHO":124.8352308,"JULHO":110.2787097},"NOVOS":{"ABRIL":40.0,"MAIO":64.0,"JUNHO":78.0,"JULHO":78.0},"VISITAS":{"ABRIL":570.0,"MAIO":1095.0,"JUNHO":1657.0,"JULHO":1689.0},"CONVERSÃO %":{"ABRIL":0.1035087719,"MAIO":0.09406392694,"JUNHO":0.07845503923,"JULHO":0.07341622262},"Budget de investimento":{"ABRIL":0.06535579127,"MAIO":0.1248922855,"JUNHO":0.1642984167,"JULHO":0.1952706339},"PROMOÇÕES + ADS":{"ABRIL":472.84,"MAIO":1326.15,"JUNHO":2666.33,"JULHO":2670.24},"SUB IFOOD":{"ABRIL":262.48,"MAIO":472.43,"JUNHO":553.19,"JULHO":651.19},"CPO":{"ABRIL":8.014237288,"MAIO":12.87524272,"JUNHO":20.51023077,"JULHO":21.53419355},"ROI":{"ABRIL":14.30086287,"MAIO":7.006899672,"JUNHO":5.086485919,"JULHO":4.121097729}},"AHIRU":{"VENDAS":{"ABRIL":18.0,"MAIO":17.0,"JUNHO":20.0,"JULHO":15.0},"FATURAMENTO LÍQUIDO":{"ABRIL":2523.13,"MAIO":2207.97,"JUNHO":3313.3,"JULHO":1473.79},"TM":{"ABRIL":140.1738889,"MAIO":129.8805882,"JUNHO":165.665,"JULHO":98.25266667},"NOVOS":{"ABRIL":14.0,"MAIO":15.0,"JUNHO":14.0,"JULHO":12.0},"VISITAS":{"ABRIL":345.0,"MAIO":427.0,"JUNHO":443.0,"JULHO":396.0},"CONVERSÃO %":{"ABRIL":0.05217391304,"MAIO":0.03981264637,"JUNHO":0.04514672686,"JULHO":0.03787878788},"Budget de investimento":{"ABRIL":0.07290944184,"MAIO":0.04978781415,"JUNHO":0.1285123593,"JULHO":0.2951573833},"PROMOÇÕES + ADS":{"ABRIL":183.96,"MAIO":109.93,"JUNHO":425.8,"JULHO":435},"SUB IFOOD":{"ABRIL":208.88,"MAIO":98.63,"JUNHO":134.18,"JULHO":76.47},"CPO":{"ABRIL":8.44,"MAIO":7.33,"JUNHO":21.29,"JULHO":29},"ROI":{"ABRIL":20.83,"MAIO":18.94,"JUNHO":6.781352748,"JULHO":2.388022989}}},"cumulative":{"BARRA DA TIJUCA":{"VENDAS":{"01-07":{"MAIO":128.0,"JUNHO":159.0,"JULHO":166.0},"01-14":{"MAIO":264.0,"JUNHO":294.0,"JULHO":314.0},"01-21":{"MAIO":417.0,"JUNHO":456.0,"JULHO":456.0},"01-28":{"MAIO":581.0,"JUNHO":593.0,"JULHO":583.0}},"GMV":{"01-07":{"MAIO":30185.65,"JUNHO":35138.39,"JULHO":37646.73},"01-14":{"MAIO":64099.94,"JUNHO":69431.41,"JULHO":74078.47},"01-21":{"MAIO":101392.8,"JUNHO":106506.75,"JULHO":106246.8},"01-28":{"MAIO":137922.3,"JUNHO":136811.74,"JULHO":133567.43}},"TM":{"01-07":{"MAIO":235.8253906,"JUNHO":220.9961635,"JULHO":226.7875301},"01-14":{"MAIO":242.802803,"JUNHO":236.1612585,"JULHO":235.9186943},"01-21":{"MAIO":243.1482014,"JUNHO":233.5674342,"JULHO":232.9973684},"01-28":{"MAIO":237.3877797,"JUNHO":230.7111973,"JULHO":229.1036535}},"NOVOS":{"01-07":{"MAIO":39.0,"JUNHO":52.0,"JULHO":44.0},"01-14":{"MAIO":75.0,"JUNHO":83.0,"JULHO":79.0},"01-21":{"MAIO":114.0,"JUNHO":117.0,"JULHO":107.0},"01-28":{"MAIO":147.0,"JUNHO":139.0,"JULHO":130.0}},"VISITAS":{"01-07":{"MAIO":570.0,"JUNHO":814.0,"JULHO":845.0},"01-14":{"MAIO":1323.0,"JUNHO":1545.0,"JULHO":1744.0},"01-21":{"MAIO":2142.0,"JUNHO":2587.0,"JULHO":2505.0},"01-28":{"MAIO":3043.0,"JUNHO":3408.0,"JULHO":3235.0}},"CONVERSÃO %":{"01-07":{"MAIO":0.2245614035,"JUNHO":0.1953316953,"JULHO":0.1964497041},"01-14":{"MAIO":0.1995464853,"JUNHO":0.1902912621,"JULHO":0.1800458716},"01-21":{"MAIO":0.1946778711,"JUNHO":0.1762659451,"JULHO":0.1820359281},"01-28":{"MAIO":0.1909300033,"JUNHO":0.1740023474,"JULHO":0.1802163833}},"Budget de investimento":{"01-07":{"MAIO":0.01633922079,"JUNHO":0.03332708186,"JULHO":0.03693388509},"01-14":{"MAIO":0.02611110088,"JUNHO":0.03399614094,"JULHO":0.03626168305},"01-21":{"MAIO":0.0293798968,"JUNHO":0.03553849873,"JULHO":0.03720488523},"01-28":{"MAIO":0.03165796974,"JUNHO":0.0371298545,"JULHO":0.03857841691}},"PROMOÇÕES + ADS":{"01-07":{"MAIO":493.21,"JUNHO":1171.06,"JULHO":1390.44},"01-14":{"MAIO":1673.72,"JUNHO":2360.4,"JULHO":2686.21},"01-21":{"MAIO":2978.91,"JUNHO":3785.09,"JULHO":3952.9},"01-28":{"MAIO":4366.34,"JUNHO":5079.8,"JULHO":5152.82}},"SUB IFOOD":{"01-07":{"MAIO":685.67,"JUNHO":548.34,"JULHO":765.9},"01-14":{"MAIO":1342.38,"JUNHO":1189.32,"JULHO":1468.87},"01-21":{"MAIO":2096.04,"JUNHO":2276.42,"JULHO":2030.25},"01-28":{"MAIO":2857.96,"JUNHO":2850.52,"JULHO":2606.12}},"CPO":{"01-07":{"MAIO":3.853203125,"JUNHO":7.365157233,"JULHO":8.376144578},"01-14":{"MAIO":6.339848485,"JUNHO":8.028571429,"JULHO":8.554808917},"01-21":{"MAIO":5.93,"JUNHO":8.300635965,"JULHO":8.668640351},"01-28":{"MAIO":5.81,"JUNHO":8.566273187,"JULHO":8.838456261}},"ROI":{"01-07":{"MAIO":60.20242899,"JUNHO":29.00562738,"JULHO":26.07540778},"01-14":{"MAIO":37.29788734,"JUNHO":28.41510337,"JULHO":26.57731897},"01-21":{"MAIO":37.77,"JUNHO":27.13849869,"JULHO":25.8781907},"01-28":{"MAIO":37.52,"JUNHO":25.93250522,"JULHO":24.92122954}}},"LEBLON":{"VENDAS":{"01-07":{"MAIO":115.0,"JUNHO":126.0,"JULHO":141.0},"01-14":{"MAIO":261.0,"JUNHO":263.0,"JULHO":257.0},"01-21":{"MAIO":382.0,"JUNHO":407.0,"JULHO":377.0},"01-28":{"MAIO":512.0,"JUNHO":546.0,"JULHO":500.0}},"GMV":{"01-07":{"MAIO":24208.59,"JUNHO":27557.98,"JULHO":33128.4},"01-14":{"MAIO":55599.6,"JUNHO":58878.3,"JULHO":60752.32},"01-21":{"MAIO":82720.91,"JUNHO":90722.51,"JULHO":86919.85},"01-28":{"MAIO":108211.58,"JUNHO":124186.37,"JULHO":115756.33}},"TM":{"01-07":{"MAIO":210.5094783,"JUNHO":218.714127,"JULHO":234.9531915},"01-14":{"MAIO":213.0252874,"JUNHO":223.8718631,"JULHO":236.3903502},"01-21":{"MAIO":216.5468848,"JUNHO":222.90543,"JULHO":230.5566313},"01-28":{"MAIO":211.3507422,"JUNHO":227.4475641,"JULHO":231.51266}},"NOVOS":{"01-07":{"MAIO":25.0,"JUNHO":41.0,"JULHO":40.0},"01-14":{"MAIO":80.0,"JUNHO":79.0,"JULHO":66.0},"01-21":{"MAIO":110.0,"JUNHO":114.0,"JULHO":98.0},"01-28":{"MAIO":151.0,"JUNHO":143.0,"JULHO":134.0}},"VISITAS":{"01-07":{"MAIO":593.0,"JUNHO":824.0,"JULHO":816.0},"01-14":{"MAIO":1490.0,"JUNHO":1434.0,"JULHO":1557.0},"01-21":{"MAIO":2320.0,"JUNHO":2357.0,"JULHO":2190.0},"01-28":{"MAIO":3045.0,"JUNHO":3100.0,"JULHO":2776.0}},"CONVERSÃO %":{"01-07":{"MAIO":0.1939291737,"JUNHO":0.1529126214,"JULHO":0.1727941176},"01-14":{"MAIO":0.1751677852,"JUNHO":0.1834030683,"JULHO":0.1650610148},"01-21":{"MAIO":0.1646551724,"JUNHO":0.1726771319,"JULHO":0.1721461187},"01-28":{"MAIO":0.1681444992,"JUNHO":0.1761290323,"JULHO":0.1801152738}},"Budget de investimento":{"01-07":{"MAIO":0.02471891176,"JUNHO":0.04368534994,"JULHO":0.03884612598},"01-14":{"MAIO":0.03761735696,"JUNHO":0.03966299978,"JULHO":0.03962268437},"01-21":{"MAIO":0.02143629706,"JUNHO":0.03944930536,"JULHO":0.04062616307},"01-28":{"MAIO":0.04229233138,"JUNHO":0.03849649523,"JULHO":0.04002105112}},"PROMOÇÕES + ADS":{"01-07":{"MAIO":598.41,"JUNHO":1203.88,"JULHO":1286.91},"01-14":{"MAIO":2091.51,"JUNHO":2335.29,"JULHO":2407.17},"01-21":{"MAIO":1773.23,"JUNHO":3578.94,"JULHO":3531.22},"01-28":{"MAIO":4576.52,"JUNHO":4780.74,"JULHO":4632.69}},"SUB IFOOD":{"01-07":{"MAIO":590.35,"JUNHO":392.35,"JULHO":814.87},"01-14":{"MAIO":1392.31,"JUNHO":933.86,"JULHO":1396.41},"01-21":{"MAIO":2065.65,"JUNHO":1824.64,"JULHO":2108.01},"01-28":{"MAIO":2648.29,"JUNHO":2587.21,"JULHO":2805.25}},"CPO":{"01-07":{"MAIO":5.203565217,"JUNHO":9.554603175,"JULHO":9.127021277},"01-14":{"MAIO":8.013448276,"JUNHO":8.879429658,"JULHO":9.366420233},"01-21":{"MAIO":5.93,"JUNHO":8.793464373,"JULHO":9.3666313},"01-28":{"MAIO":5.85,"JUNHO":8.755934066,"JULHO":9.26538}},"ROI":{"01-07":{"MAIO":39.45485537,"JUNHO":21.8909692,"JULHO":24.74259272},"01-14":{"MAIO":25.58347318,"JUNHO":24.21241473,"JULHO":24.23806794},"01-21":{"MAIO":33.78,"JUNHO":24.34898881,"JULHO":23.61467991},"01-28":{"MAIO":33.54,"JUNHO":24.97639068,"JULHO":23.98684997}}},"PATO NA BRASA":{"VENDAS":{"01-07":{"MAIO":23.0,"JUNHO":28.0,"JULHO":20.0},"01-14":{"MAIO":33.0,"JUNHO":63.0,"JULHO":52.0},"01-21":{"MAIO":52.0,"JUNHO":93.0,"JULHO":86.0},"01-28":{"MAIO":83.0,"JUNHO":119.0,"JULHO":113.0}},"GMV":{"01-07":{"MAIO":2700.0,"JUNHO":2932.41,"JULHO":2633.79},"01-14":{"MAIO":3824.05,"JUNHO":8256.5,"JULHO":6979.82},"01-21":{"MAIO":5707.34,"JUNHO":12630.02,"JULHO":10848.96},"01-28":{"MAIO":9307.54,"JUNHO":15796.83,"JULHO":13936.13}},"TM":{"01-07":{"MAIO":117.3913043,"JUNHO":104.7289286,"JULHO":131.6895},"01-14":{"MAIO":115.880303,"JUNHO":131.0555556,"JULHO":134.2273077},"01-21":{"MAIO":109.7565385,"JUNHO":135.8066667,"JULHO":126.1506977},"01-28":{"MAIO":112.1390361,"JUNHO":132.7464706,"JULHO":123.3285841}},"NOVOS":{"01-07":{"MAIO":17.0,"JUNHO":17.0,"JULHO":16.0},"01-14":{"MAIO":24.0,"JUNHO":40.0,"JULHO":34.0},"01-21":{"MAIO":32.0,"JUNHO":55.0,"JULHO":56.0},"01-28":{"MAIO":50.0,"JUNHO":69.0,"JULHO":72.0}},"VISITAS":{"01-07":{"MAIO":197.0,"JUNHO":376.0,"JULHO":377.0},"01-14":{"MAIO":317.0,"JUNHO":675.0,"JULHO":787.0},"01-21":{"MAIO":541.0,"JUNHO":1156.0,"JULHO":1169.0},"01-28":{"MAIO":912.0,"JUNHO":1547.0,"JULHO":1557.0}},"CONVERSÃO %":{"01-07":{"MAIO":0.1218274112,"JUNHO":0.07446808511,"JULHO":0.05305039788},"01-14":{"MAIO":0.1041009464,"JUNHO":0.09333333333,"JULHO":0.06607369759},"01-21":{"MAIO":0.09611829945,"JUNHO":0.08044982699,"JULHO":0.07356715141},"01-28":{"MAIO":0.09100877193,"JUNHO":0.07692307692,"JULHO":0.07257546564}},"Budget de investimento":{"01-07":{"MAIO":0.05810740741,"JUNHO":0.2027308596,"JULHO":0.2110684603},"01-14":{"MAIO":0.05932192309,"JUNHO":0.1513716466,"JULHO":0.1700158457},"01-21":{"MAIO":0.06005599807,"JUNHO":0.148596756,"JULHO":0.1742406645},"01-28":{"MAIO":0.1021279522,"JUNHO":0.1546683733,"JULHO":0.2180555147}},"PROMOÇÕES + ADS":{"01-07":{"MAIO":156.89,"JUNHO":594.49,"JULHO":555.91},"01-14":{"MAIO":226.85,"JUNHO":1249.8,"JULHO":1186.68},"01-21":{"MAIO":342.76,"JUNHO":1876.78,"JULHO":1890.33},"01-28":{"MAIO":950.56,"JUNHO":2443.27,"JULHO":3038.85}},"SUB IFOOD":{"01-07":{"MAIO":138.29,"JUNHO":60.42,"JULHO":85.95},"01-14":{"MAIO":177.41,"JUNHO":236.96,"JULHO":252.2},"01-21":{"MAIO":268.78,"JUNHO":365.15,"JULHO":463.6},"01-28":{"MAIO":418.43,"JUNHO":475.86,"JULHO":585.3}},"CPO":{"01-07":{"MAIO":6.821304348,"JUNHO":21.23178571,"JULHO":27.7955},"01-14":{"MAIO":6.874242424,"JUNHO":19.83809524,"JULHO":22.82076923},"01-21":{"MAIO":7.79,"JUNHO":20.18043011,"JULHO":21.9805814},"01-28":{"MAIO":8.18,"JUNHO":20.53168067,"JULHO":26.89247788}},"ROI":{"01-07":{"MAIO":16.20950985,"JUNHO":3.932648152,"JULHO":3.737799284},"01-14":{"MAIO":15.85717434,"JUNHO":5.606257001,"JULHO":4.881804699},"01-21":{"MAIO":13.06,"JUNHO":5.729622012,"JULHO":4.739188396},"01-28":{"MAIO":12.41,"JUNHO":5.465445898,"JULHO":3.585988121}}},"AHIRU":{"VENDAS":{"01-07":{"MAIO":5.0,"JUNHO":3.0,"JULHO":3.0},"01-14":{"MAIO":5.0,"JUNHO":9.0,"JULHO":7.0},"01-21":{"MAIO":7.0,"JUNHO":15.0,"JULHO":10.0},"01-28":{"MAIO":17.0,"JUNHO":17.0,"JULHO":13.0}},"GMV":{"01-07":{"MAIO":558.62,"JUNHO":225.8,"JULHO":502.01},"01-14":{"MAIO":558.62,"JUNHO":1569.55,"JULHO":856.17},"01-21":{"MAIO":834.32,"JUNHO":2262.9,"JULHO":1256.48},"01-28":{"MAIO":2195.97,"JUNHO":2571.82,"JULHO":1520.24}},"TM":{"01-07":{"MAIO":111.724,"JUNHO":75.26666667,"JULHO":167.3366667},"01-14":{"MAIO":111.72,"JUNHO":174.3944444,"JULHO":122.31},"01-21":{"MAIO":119.1885714,"JUNHO":150.86,"JULHO":125.648},"01-28":{"MAIO":129.1747059,"JUNHO":151.2835294,"JULHO":116.9415385}},"NOVOS":{"01-07":{"MAIO":5.0,"JUNHO":2.0,"JULHO":3.0},"01-14":{"MAIO":5.0,"JUNHO":6.0,"JULHO":6.0},"01-21":{"MAIO":6.0,"JUNHO":11.0,"JULHO":7.0},"01-28":{"MAIO":15.0,"JUNHO":12.0,"JULHO":10.0}},"VISITAS":{"01-07":{"MAIO":93.0,"JUNHO":115.0,"JULHO":101.0},"01-14":{"MAIO":169.0,"JUNHO":209.0,"JULHO":141.0},"01-21":{"MAIO":228.0,"JUNHO":309.0,"JULHO":247.0},"01-28":{"MAIO":326.0,"JUNHO":401.0,"JULHO":371.0}},"CONVERSÃO %":{"01-07":{"MAIO":0.05376344086,"JUNHO":0.02608695652,"JULHO":0.0297029703},"01-14":{"MAIO":0.02958579882,"JUNHO":0.04306220096,"JULHO":0.04964539007},"01-21":{"MAIO":0.03070175439,"JUNHO":0.04854368932,"JULHO":0.04048582996},"01-28":{"MAIO":0.05214723926,"JUNHO":0.04239401496,"JULHO":0.03504043127}},"Budget de investimento":{"01-07":{"MAIO":0.06082847016,"JUNHO":0.5023914969,"JULHO":0.1894583773},"01-14":{"MAIO":0.06082847016,"JUNHO":0.1511006339,"JULHO":0.2626697969},"01-21":{"MAIO":0.0791183239,"JUNHO":0.1417826683,"JULHO":0.2483445817},"01-28":{"MAIO":0.1013766126,"JUNHO":0.1497577591,"JULHO":0.2631360838}},"PROMOÇÕES + ADS":{"01-07":{"MAIO":33.98,"JUNHO":113.44,"JULHO":95.11},"01-14":{"MAIO":33.98,"JUNHO":237.16,"JULHO":224.89},"01-21":{"MAIO":66.01,"JUNHO":320.84,"JULHO":312.04},"01-28":{"MAIO":222.62,"JUNHO":385.15,"JULHO":400.03}},"SUB IFOOD":{"01-07":{"MAIO":30.32,"JUNHO":0.0,"JULHO":14.69},"01-14":{"MAIO":30.32,"JUNHO":44.68,"JULHO":21.97},"01-21":{"MAIO":43.93,"JUNHO":97.13,"JULHO":44.6},"01-28":{"MAIO":98.63,"JUNHO":112.85,"JULHO":65.61}},"CPO":{"01-07":{"MAIO":6.796,"JUNHO":37.81333333,"JULHO":31.70333333},"01-14":{"MAIO":6.796,"JUNHO":26.35111111,"JULHO":32.12714286},"01-21":{"MAIO":7.28,"JUNHO":21.38933333,"JULHO":31.204},"01-28":{"MAIO":7.33,"JUNHO":22.65588235,"JULHO":30.77153846}},"ROI":{"01-07":{"MAIO":15.43967039,"JUNHO":0.9904795487,"JULHO":4.278204185},"01-14":{"MAIO":15.43967039,"JUNHO":5.61810592,"JULHO":2.80706123},"01-21":{"MAIO":16.19,"JUNHO":6.053048248,"JULHO":3.026663248},"01-28":{"MAIO":18.94,"JUNHO":5.677450344,"JULHO":2.800314976}}}},"cancelamentos":[{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-05T20:15:29","Turno":"JANTAR","Origem do cancelamento":"CLIENTE","Motivo do cancelamento":"PARTE DO ITEM OU INTEGRANTE DE UM GRUPO NÃO FOI ENVIADO","Impactou o super?":"SIM","Status do pedido":"CANCELAMENTO PARCIAL","Valor do pedido (R$)":679.89,"Valor total do cancelamento com entrega (R$)":82.0,"Itens cancelados":"[URAMAKI | 8 PEÇAS]","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"SIM","Data limite para contestação":"2026-07-13T00:30:13.210000","Loja solicitou contestação?":"SIM","Motivo da impossibilidade de contestar":"-","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-05T22:10:04","Turno":"JANTAR","Origem do cancelamento":"CLIENTE","Motivo do cancelamento":"PEDIDO IMPRÓPRIO PARA CONSUMO/USO","Impactou o super?":"NÃO","Status do pedido":"CANCELAMENTO PARCIAL","Valor do pedido (R$)":235.01,"Valor total do cancelamento com entrega (R$)":20.0,"Itens cancelados":"[JO SALMÃO CODORNA]","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"SUA LOJA ACEITOU A SOLICITAÇÃO DO CLIENTE","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-04T19:11:03","Turno":"JANTAR","Origem do cancelamento":"CLIENTE","Motivo do cancelamento":"PEDIDO IMPRÓPRIO PARA CONSUMO/USO","Impactou o super?":"NÃO","Status do pedido":"CANCELAMENTO PARCIAL","Valor do pedido (R$)":352.9,"Valor total do cancelamento com entrega (R$)":0.01,"Itens cancelados":"[KIT PARA 1 A 2 PESSOAS]","Teve tentativa de negociação?":"SIM","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"SUA LOJA ACEITOU A SOLICITAÇÃO DO CLIENTE","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-01T12:05:19","Turno":"ALMOÇO","Origem do cancelamento":"IFOOD","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Status do pedido":"CANCELADO","Valor do pedido (R$)":127.4,"Valor total do cancelamento com entrega (R$)":127.4,"Itens cancelados":"MIX TARTAR; KIT PARA 1 A 2 PESSOAS; TUNA SANDO","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-06T14:51:41","Turno":"ALMOÇO","Status do pedido":"CANCELADO","Origem do cancelamento":"IFOOD","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":78.89,"Valor total do cancelamento com entrega (R$)":78.89,"Itens cancelados":"CURRY DE FRANGO","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-06T16:44:53","Turno":"CAFÉ DA TARDE","Status do pedido":"CANCELADO","Origem do cancelamento":"IFOOD","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":185.99,"Valor total do cancelamento com entrega (R$)":185.99,"Itens cancelados":"REFRIGERANTE COCA COLA ZERO LATA; COMBINADO DE SALMÃO | 18 PEÇAS; TEMAKI HOT PHILADELPHIA","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-05T19:47:07","Turno":"JANTAR","Status do pedido":"CANCELADO","Origem do cancelamento":"IFOOD","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":393.9,"Valor total do cancelamento com entrega (R$)":393.9,"Itens cancelados":"URAMAKI | 8 PEÇAS; HOT | 8 PEÇAS; KIT PARA 1 A 2 PESSOAS; HOSSOMAKI HOTATE; CARPACCIO DE BARRIGA DE SALMÃO","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-01T12:05:19","Turno":"ALMOÇO","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":127.4,"Valor total do cancelamento com entrega (R$)":127.4,"Itens cancelados":"MIX TARTAR; KIT PARA 1 A 2 PESSOAS; TUNA SANDO","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-04T19:11:03","Turno":"JANTAR","Status do pedido":"CANCELAMENTO PARCIAL","Motivo do cancelamento":"PEDIDO IMPRÓPRIO PARA CONSUMO/USO","Impactou o super?":"NÃO","Valor do pedido (R$)":352.9,"Valor total do cancelamento com entrega (R$)":0.01,"Itens cancelados":"[KIT PARA 1 A 2 PESSOAS]","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"SIM","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"SUA LOJA ACEITOU A SOLICITAÇÃO DO CLIENTE","Status da contestação":"-","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-05T20:15:29","Turno":"JANTAR","Status do pedido":"CANCELAMENTO PARCIAL","Motivo do cancelamento":"PARTE DO ITEM OU INTEGRANTE DE UM GRUPO NÃO FOI ENVIADO","Impactou o super?":"SIM","Valor do pedido (R$)":679.89,"Valor total do cancelamento com entrega (R$)":82.0,"Itens cancelados":"[URAMAKI | 8 PEÇAS]","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"SIM","Data limite para contestação":"2026-07-13T00:30:13.210000","Loja solicitou contestação?":"SIM","Motivo da impossibilidade de contestar":"-","Status da contestação":"CONTESTAÇÃO RECUSADA","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-05T22:10:04","Turno":"JANTAR","Status do pedido":"CANCELAMENTO PARCIAL","Motivo do cancelamento":"PEDIDO IMPRÓPRIO PARA CONSUMO/USO","Impactou o super?":"NÃO","Valor do pedido (R$)":235.01,"Valor total do cancelamento com entrega (R$)":20.0,"Itens cancelados":"[JO SALMÃO CODORNA]","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"SUA LOJA ACEITOU A SOLICITAÇÃO DO CLIENTE","Status da contestação":"-","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-13T21:00:00","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"PEDIDO CANCELADO APESAR DE RECUSA DA LOJA","Impactou o super?":"NÃO","Valor do pedido (R$)":244.01,"Valor total do cancelamento com entrega (R$)":244.01,"Itens cancelados":"SUSHIS ESPECIAIS; CARPACCIO ORIENTAL DE ATUM TRUFADO","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"O CANCELAMENTO DESTE PEDIDO FOI ANALISADO E O REEMBOLSO JÁ FOI APROVADO PARA SUA LOJA","Status da contestação":"-","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-15T20:35:03","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"O ENDEREÇO ESTÁ INCOMPLETO E O CLIENTE NÃO ATENDE","Impactou o super?":"NÃO","Valor do pedido (R$)":482.54,"Valor total do cancelamento com entrega (R$)":482.54,"Itens cancelados":"URAMAKI | 8 PEÇAS; CARPACCIO ORIENTAL DE SALMÃO; JO ATUM COM FOIE GRAS E LICHIA; BAO DE CAMARÃO; CEVICHE DE PEIXE DO DIA COM LEITE DE TIGRE DE TUCUPI; RIBS DE MILHO COM MANTEIGA DE KATSUOBUSHI; EDAMAME NA BRASA","Origem do cancelamento":"LOJA","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"SIM","Data limite para contestação":"2026-07-23T00:26:41.965000","Loja solicitou contestação?":"SIM","Motivo da impossibilidade de contestar":"-","Status da contestação":"CONTESTAÇÃO ACATADA","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-21"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-19T21:29:14","Turno":"JANTAR","Status do pedido":"CANCELAMENTO PARCIAL","Motivo do cancelamento":"PARTE DO ITEM OU INTEGRANTE DE UM GRUPO NÃO FOI ENVIADO","Impactou o super?":"NÃO","Valor do pedido (R$)":636.19,"Valor total do cancelamento com entrega (R$)":110.0,"Itens cancelados":"[TEMPURA DE VIEIRA COM IKURA E PONZU]","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"SUA LOJA ACEITOU A SOLICITAÇÃO DO CLIENTE","Status da contestação":"-","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-21"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-26T22:25:09","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":375.89,"Valor total do cancelamento com entrega (R$)":375.89,"Itens cancelados":"COMBINADO SALMÃO | 36 PEÇAS; ROMEU E JULIETA 2.0; REFRIGERANTE COCA COLA ZERO LATA; BAO DE PATO","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-28"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-07-31T20:22:16","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"A FORMA DE PAGAMENTO ESTÁ ERRADA","Impactou o super?":"NÃO","Valor do pedido (R$)":369.39,"Valor total do cancelamento com entrega (R$)":369.39,"Itens cancelados":"TEMPURA DE CAMARÃO E LULA; CARPACCIO ORIENTAL DE SALMÃO; HOT | 8 PEÇAS; HANDROLL DE CAMARÃO VM; TATAKI","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO ANTES DA CONFIRMAÇÃO PELA SUA LOJA","Status da contestação":"-","_loja":"BARRA DA TIJUCA","_mes":"JULHO","_periodo":"01-28"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-05T19:47:07","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":393.9,"Valor total do cancelamento com entrega (R$)":393.9,"Itens cancelados":"URAMAKI | 8 PEÇAS; HOT | 8 PEÇAS; KIT PARA 1 A 2 PESSOAS; HOSSOMAKI HOTATE; CARPACCIO DE BARRIGA DE SALMÃO","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-06T14:51:41","Turno":"ALMOÇO","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":78.89,"Valor total do cancelamento com entrega (R$)":78.89,"Itens cancelados":"CURRY DE FRANGO","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-06T16:44:53","Turno":"CAFÉ DA TARDE","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":185.99,"Valor total do cancelamento com entrega (R$)":185.99,"Itens cancelados":"REFRIGERANTE COCA COLA ZERO LATA; COMBINADO DE SALMÃO | 18 PEÇAS; TEMAKI HOT PHILADELPHIA","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-11T22:57:45","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":180.89,"Valor total do cancelamento com entrega (R$)":180.89,"Itens cancelados":"COMBINADO SALMÃO E ATUM | 18 PEÇAS","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-13T18:29:23","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"NINGUÉM PODERÁ RECEBER O PEDIDO","Impactou o super?":"NÃO","Valor do pedido (R$)":89.01,"Valor total do cancelamento com entrega (R$)":89.01,"Itens cancelados":"URAMAKI | 8 PEÇAS; HOT | 8 PEÇAS","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"SUA LOJA ACEITOU A SOLICITAÇÃO DO CLIENTE","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-16T13:07:16","Turno":"ALMOÇO","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":166.69,"Valor total do cancelamento com entrega (R$)":166.69,"Itens cancelados":"STEAK TARTAR; MIGNON SANDO; SASHIMI SALMÃO","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-21"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-17T21:49:02","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"NINGUÉM PODERÁ RECEBER O PEDIDO","Impactou o super?":"NÃO","Valor do pedido (R$)":294.89,"Valor total do cancelamento com entrega (R$)":294.89,"Itens cancelados":"COMBINADO SALMÃO | 36 PEÇAS","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"SUA LOJA ACEITOU A SOLICITAÇÃO DO CLIENTE","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-21"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-20T22:36:32","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":165.99,"Valor total do cancelamento com entrega (R$)":165.99,"Itens cancelados":"SASHIMI ATUM; COMBINADO DE SALMÃO | 18 PEÇAS","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-21"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-24T18:30:46","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":83.01,"Valor total do cancelamento com entrega (R$)":83.01,"Itens cancelados":"TEMAKI DE SALMÃO; URAMAKI | 8 PEÇAS","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-28"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-26T21:14:20","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":666.79,"Valor total do cancelamento com entrega (R$)":666.79,"Itens cancelados":"SUSHI DE VIEIRA SELADO COM MEL TRUFADO; JO ATUM COM FOIE GRAS E LICHIA; COMBINADO AT | 14 PEÇAS; CARPACCIO DUO (ATUM E SALMÃO); HOT | 8 PEÇAS; COMBINADO DE SALMÃO | 18 PEÇAS","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-28"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-26T21:40:08","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":125.79,"Valor total do cancelamento com entrega (R$)":125.79,"Itens cancelados":"STEAK TARTAR; TUNA SANDO","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-28"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-07-31T17:42:28","Turno":"JANTAR","Status do pedido":"CANCELADO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":125.51,"Valor total do cancelamento com entrega (R$)":125.51,"Itens cancelados":"TEMPURÁ DE MILHO; TEMAKI HOT PHILADELPHIA; HOT | 8 PEÇAS","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","Status da contestação":"-","_loja":"LEBLON","_mes":"JULHO","_periodo":"01-28"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-21T18:00:29","Turno":"JANTAR","Motivo do cancelamento":"O PEDIDO FOI ACIDENTAL","Impactou o super?":"NÃO","Valor do pedido (R$)":175.72,"Itens cancelados":"BERINJELA NO MISSÔ; KITS PARA 3 PESSOAS; CAMARÃO JASMIN","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO ANTES DA CONFIRMAÇÃO PELA SUA LOJA","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-21"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-18T17:23:35","Turno":"JANTAR","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":65.77,"Itens cancelados":"KIT PARA 1 A 2 PESSOAS; MIX TARTAR","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-21"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-15T19:49:36","Turno":"JANTAR","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":90.89,"Itens cancelados":"HOT | 8 PEÇAS; URAMAKI | 8 PEÇAS","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-21"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-15T18:59:29","Turno":"JANTAR","Motivo do cancelamento":"ITEM INDISPONÍVEL","Impactou o super?":"SIM","Valor do pedido (R$)":110.39,"Itens cancelados":"GUIOZA DE PATO (5 UNIDADES); TEMPURÁ DE MILHO; MOLHOS","Origem do cancelamento":"LOJA","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"SUA LOJA ACEITOU A SOLICITAÇÃO DO CLIENTE","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-21"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-14T19:36:22","Turno":"JANTAR","Motivo do cancelamento":"PARTE DO ITEM OU INTEGRANTE DE UM GRUPO NÃO FOI ENVIADO","Impactou o super?":"SIM","Valor do pedido (R$)":292.04,"Itens cancelados":"[EDAMAME]","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"SIM","Cancelamento é contestável?":"SIM","Data limite para contestação":"2026-06-21T23:52:11.051000","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"-","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-12T12:05:12","Turno":"ALMOÇO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":91.89,"Itens cancelados":"URAMAKI | 8 PEÇAS","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-12T16:48:38","Turno":"CAFÉ DA TARDE","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":207.35,"Itens cancelados":"KIT PARA 1 A 2 PESSOAS; SASHIMI SALMÃO; SASHIMI ATUM; URAMAKI | 8 PEÇAS; HOSSOMAKI | 6 PEÇAS; SUNOMONO","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-12T21:08:04","Turno":"JANTAR","Motivo do cancelamento":"NINGUÉM PODERÁ RECEBER O PEDIDO","Impactou o super?":"NÃO","Valor do pedido (R$)":126.89,"Itens cancelados":"URAMAKI | 8 PEÇAS; JO SALMÃO CODORNA; SASHIMI SALMÃO","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"SUA LOJA ACEITOU A SOLICITAÇÃO DO CLIENTE","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-12T17:15:51","Turno":"JANTAR","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":184.35,"Itens cancelados":"URAMAKI | 8 PEÇAS; KIT PARA 1 A 2 PESSOAS; SASHIMI SALMÃO; SASHIMI ATUM; HOSSOMAKI | 6 PEÇAS; SUNOMONO","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-11T15:08:14","Turno":"CAFÉ DA TARDE","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor do pedido (R$)":132.79,"Itens cancelados":"TARTAR SALMÃO; BURGUER DE COSTELA (481)","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-04T12:21:11","Turno":"ALMOÇO","Motivo do cancelamento":"O PEDIDO NÃO FOI ENVIADO PARA A LOJA","Impactou o super?":"NÃO","Valor do pedido (R$)":92.99,"Itens cancelados":"HOT | 8 PEÇAS; URAMAKI | 8 PEÇAS","Origem do cancelamento":"LOJA","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"PEDIDO NÃO ENVIADO À LOJA","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-03T21:25:03","Turno":"JANTAR","Motivo do cancelamento":"PEDIDO OU ITEM VEIO ERRADO","Impactou o super?":"NÃO","Valor do pedido (R$)":128.84,"Itens cancelados":"[TEMAKI DE SALMÃO]","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"SIM","Data limite para contestação":"2026-06-11T01:22:58.209000","Loja solicitou contestação?":"SIM","Motivo da impossibilidade de contestar":"-","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - LEBLON","Data e hora do pedido":"2026-06-03T18:22:47","Turno":"JANTAR","Motivo do cancelamento":"O ENDEREÇO ESTÁ INCOMPLETO E O CLIENTE NÃO ATENDE","Impactou o super?":"NÃO","Valor do pedido (R$)":400.3,"Itens cancelados":"KIT PARA 1 A 2 PESSOAS; MIX TARTAR; HOT | 8 PEÇAS; PHILADELPHIA LIGHT | 8 PEÇAS; URAMAKI | 8 PEÇAS; SUSHI SALMÃO; SUSHI ATUM; JO SALMÃO MASSAGÔ; REFRIGERANTE COCA COLA ZERO LATA","Origem do cancelamento":"LOJA","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"SIM","Data limite para contestação":"2026-06-10T22:25:09.361000","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"-","_loja":"LEBLON","_mes":"JUNHO","_periodo":"01-07"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-06-27T14:42:31","Turno":"ALMOÇO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor total do cancelamento com entrega (R$)":142.89,"Itens cancelados":"HOT | 8 PEÇAS; URAMAKI | 8 PEÇAS","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"BARRA DA TIJUCA","_mes":"JUNHO","_periodo":"01-28"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-06-19T19:43:46","Turno":"JANTAR","Motivo do cancelamento":"O ENDEREÇO ESTÁ INCOMPLETO E O CLIENTE NÃO ATENDE","Impactou o super?":"NÃO","Valor total do cancelamento com entrega (R$)":206.79,"Itens cancelados":"URAMAKI | 8 PEÇAS; YAKISOBA DE FILÉ MIGNON","Origem do cancelamento":"LOJA","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"SIM","Data limite para contestação":"2026-06-26T23:41:07.647000","Loja solicitou contestação?":"SIM","Motivo da impossibilidade de contestar":"-","_loja":"BARRA DA TIJUCA","_mes":"JUNHO","_periodo":"01-21"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-06-12T19:26:35","Turno":"JANTAR","Motivo do cancelamento":"PEDIDO OU ITEM VEIO ERRADO","Impactou o super?":"SIM","Valor total do cancelamento com entrega (R$)":263.89,"Itens cancelados":"COMBINADO SALMÃO | 36 PEÇAS","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"SIM","Cancelamento é contestável?":"SIM","Data limite para contestação":"2026-06-19T23:47:57.643000","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"-","_loja":"BARRA DA TIJUCA","_mes":"JUNHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-06-12T19:23:57","Turno":"JANTAR","Motivo do cancelamento":"O PEDIDO VEIO REVIRADO/VIOLADO","Impactou o super?":"SIM","Valor total do cancelamento com entrega (R$)":165.89,"Itens cancelados":"TARTAR DE CENTOLLA; URAMAKI | 8 PEÇAS","Origem do cancelamento":"CLIENTE","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"NÃO É CONTESTÁVEL","_loja":"BARRA DA TIJUCA","_mes":"JUNHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-06-10T13:11:34","Turno":"ALMOÇO","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor total do cancelamento com entrega (R$)":88.8,"Itens cancelados":"POKE DE ATUM PHILADELPHIA; KIT PARA 1 A 2 PESSOAS","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"BARRA DA TIJUCA","_mes":"JUNHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-06-08T18:35:31","Turno":"JANTAR","Motivo do cancelamento":"O PEDIDO NÃO FOI ENVIADO PARA A LOJA","Impactou o super?":"NÃO","Valor total do cancelamento com entrega (R$)":126.48,"Itens cancelados":"YAKISOBA DE FILÉ MIGNON","Origem do cancelamento":"LOJA","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"PEDIDO NÃO ENVIADO À LOJA","_loja":"BARRA DA TIJUCA","_mes":"JUNHO","_periodo":"01-14"},{"Nome da loja":"JAPA DO PATO COM LARANJA - BARRA DA TIJUCA","Data e hora do pedido":"2026-06-06T18:14:16","Turno":"JANTAR","Motivo do cancelamento":"O PEDIDO NÃO FOI CONFIRMADO PELA LOJA","Impactou o super?":"SIM","Valor total do cancelamento com entrega (R$)":88.79,"Itens cancelados":"POKE SALMÃO PHILADELPHIA","Origem do cancelamento":"IFOOD","Teve tentativa de negociação?":"NÃO","Cancelamento é contestável?":"NÃO","Data limite para contestação":"-","Loja solicitou contestação?":"NÃO","Motivo da impossibilidade de contestar":"ESTE PEDIDO FOI CANCELADO POR FALTA DE CONFIRMAÇÃO DA SUA LOJA","_loja":"BARRA DA TIJUCA","_mes":"JUNHO","_periodo":"01-07"}],"alavancas":[{"_mes":"JULHO","_loja":"BARRA DA TIJUCA","alavancas":{"Campanha Inteligente (CI)":{"status":"Ativo","detail":"Investimento: R$ 300/dia"},"Anúncio":{"status":"Ativo","detail":"Investimento: R$ 100/dia | Lance: R$ 1,15"},"Hits":{"status":"Ativo","detail":"Investimento: R$ 100/dia"},"Cupom de R$ 12":{"status":"Ativo","detail":"Investimento semanal: até R$ 2520"},"Cupom Clube 25% off - Limitado a R$ 10":{"status":"Ativo","detail":"Investimento semanal: até R$ 1.050"},"Cupom Clube 25% off - Limitado a R$ 20 para novos":{"status":"Desativado","detail":null},"Entrega grátis para novos":{"status":"Desativado","detail":null}}},{"_mes":"JULHO","_loja":"LEBLON","alavancas":{"Campanha Inteligente (CI)":{"status":"Ativo","detail":"Investimento: R$ 300/dia"},"Anúncio":{"status":"Ativo","detail":"Investimento: R$ 100/dia | Lance: R$ 1,15"},"Hits":{"status":"Ativo","detail":"Investimento: R$ 100/dia"},"Cupom de R$ 12":{"status":"Ativo","detail":"Investimento semanal: até R$ 2520"},"Cupom Clube 25% off - Limitado a R$ 10":{"status":"Ativo","detail":"Investimento semanal: até R$ 1.050"},"Cupom Clube 25% off - Limitado a R$ 20 para novos":{"status":"Desativado","detail":null},"Entrega grátis para novos":{"status":"Desativado","detail":null}}},{"_mes":"JULHO","_loja":"PATO NA BRASA","alavancas":{"Campanha Inteligente (CI)":{"status":"Ativo","detail":"Investimento: R$ 150/dia"},"Anúncio":{"status":"Ativo","detail":"Investimento: R$ 40/dia | Lance: R$ 1,15"},"Hits":{"status":"Desativado","detail":null},"Cupom de R$ 12":{"status":"Ativo","detail":"Investimento semanal: até R$ 1.680"},"Cupom Clube 25% off - Limitado a R$ 10":{"status":"Desativado","detail":null},"Cupom Clube 25% off - Limitado a R$ 20 para novos":{"status":"Ativo","detail":"Investimento semanal: até R$ 1.400"},"Entrega grátis para novos":{"status":"Ativo","detail":null}}},{"_mes":"JULHO","_loja":"AHIRU","alavancas":{"Campanha Inteligente (CI)":{"status":"Ativo","detail":"Investimento: R$ 150/dia"},"Anúncio":{"status":"Ativo","detail":"Investimento: R$ 40/dia | Lance: R$ 1,15"},"Hits":{"status":"Desativado","detail":null},"Cupom de R$ 12":{"status":"Ativo","detail":"Investimento semanal: até R$ 1.680"},"Cupom Clube 25% off - Limitado a R$ 10":{"status":"Desativado","detail":null},"Cupom Clube 25% off - Limitado a R$ 20 para novos":{"status":"Ativo","detail":"Investimento semanal: até R$ 1.400"},"Entrega grátis para novos":{"status":"Ativo","detail":null}}}]}</script>
+<script>
+const RAW = JSON.parse(document.getElementById('raw-data').textContent);
+const STORES = RAW.stores;
+const MONTHLY = RAW.monthly;
+const CUM = RAW.cumulative;
+const CANCEL = RAW.cancelamentos;
+const ALAV = RAW.alavancas || [];
+
+const COLORS = ['#F89E26', '#EF6A2F', '#221F1D', '#3C8F5E'];
+const STORE_COLOR = {};
+STORES.forEach((s,i)=> STORE_COLOR[s] = COLORS[i % COLORS.length]);
+
+// ---- formatting helpers ----
+function fmtCurrency(v){
+  if(v===null||v===undefined||isNaN(v)) return '—';
+  return v.toLocaleString('pt-BR', {style:'currency', currency:'BRL', maximumFractionDigits:2});
+}
+function fmtNumber(v){
+  if(v===null||v===undefined||isNaN(v)) return '—';
+  return Math.round(v).toLocaleString('pt-BR');
+}
+function fmtPercent(v){
+  if(v===null||v===undefined||isNaN(v)) return '—';
+  return (v*100).toLocaleString('pt-BR',{maximumFractionDigits:1, minimumFractionDigits:1}) + '%';
+}
+function fmtByType(v,type){
+  if(type==='currency') return fmtCurrency(v);
+  if(type==='percent') return fmtPercent(v);
+  return fmtNumber(v);
+}
+function fmtDeltaPct(delta){
+  if(delta===null||delta===undefined||isNaN(delta)) return '—';
+  return (delta*100).toLocaleString('pt-BR',{maximumFractionDigits:1}) + '%';
+}
+// ---- text-case helpers: the source spreadsheet stores text in ALL CAPS;
+// these convert it to normal, readable Portuguese sentence/title case for display only.
+function toSentence(s){
+  if(!s || typeof s!=='string') return s;
+  const lower = s.toLocaleLowerCase('pt-BR');
+  if(lower==='ifood') return 'iFood';
+  return lower.charAt(0).toUpperCase()+lower.slice(1);
+}
+const STORE_SMALL_WORDS = ['da','de','do','das','dos','e','na','no','em'];
+function storeLabel(s){
+  if(!s || typeof s!=='string') return s;
+  return s.toLocaleLowerCase('pt-BR').split(' ').map(w=>
+    STORE_SMALL_WORDS.includes(w) ? w : (w.charAt(0).toUpperCase()+w.slice(1))
+  ).join(' ');
+}
+function pctChange(cur, prev){
+  if(prev===null||prev===undefined||prev===0||cur===null||cur===undefined) return null;
+  return (cur-prev)/Math.abs(prev);
+}
+function arrowSpan(delta, better){
+  if(delta===null||delta===undefined||isNaN(delta)) return '<span class="arrow-flat">—</span>';
+  let good;
+  if(better==='up') good = delta>0;
+  else if(better==='down') good = delta<0;
+  else good = null;
+  const cls = good===null ? 'arrow-flat' : (good ? 'arrow-up':'arrow-down');
+  const symbol = delta>0 ? '▲' : (delta<0 ? '▼' : '▬');
+  return `<span class="${cls}">${symbol} ${Math.abs(delta*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%</span>`;
+}
+function deltaBadge(delta, better){
+  if(delta===null||delta===undefined||isNaN(delta)) return `<span class="delta flat">— sem comparação</span>`;
+  let good = better==='up' ? delta>0 : better==='down' ? delta<0 : null;
+  const cls = good===null?'flat':(good?'up':'down');
+  const symbol = delta>0?'▲':(delta<0?'▼':'▬');
+  return `<span class="delta ${cls}">${symbol} ${Math.abs(delta*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%</span>`;
+}
+
+// ---- core metric definitions (dataset-agnostic) ----
+function makeCoreMetrics(gmvLabel){
+  return [
+    {key:'VENDAS', label:'Pedidos', type:'number', better:'up'},
+    {key:'GMV', label:gmvLabel, type:'currency', better:'up'},
+    {key:'TM', label:'Ticket médio (TM)', type:'currency', better:'up'},
+    {key:'NOVOS', label:'Clientes novos (NOVOS)', type:'number', better:'up'},
+    {key:'VISITAS', label:'Visitas no cardápio', type:'number', better:'up'},
+    {key:'CONVERSÃO %', label:'Conversão', type:'percent', better:'up'},
+  ];
+}
+const CORE_METRICS_CLOSED = makeCoreMetrics('Faturamento líquido');
+const CORE_METRICS_PARTIAL = makeCoreMetrics('GMV (faturamento bruto)');
+const CORE_METRICS = CORE_METRICS_CLOSED; // default used by shared indicator-select helper signature
+const CORE_BY_KEY_CLOSED = Object.fromEntries(CORE_METRICS_CLOSED.map(m=>[m.key,m]));
+const CORE_BY_KEY_PARTIAL = Object.fromEntries(CORE_METRICS_PARTIAL.map(m=>[m.key,m]));
+
+const MONTHLY_METRICS = {
+  'VENDAS': {label:'Pedidos', type:'number', better:'up'},
+  'FATURAMENTO LÍQUIDO': {label:'Faturamento líquido', type:'currency', better:'up'},
+  'TM': {label:'Ticket médio (TM)', type:'currency', better:'up'},
+  'NOVOS': {label:'Clientes novos (NOVOS)', type:'number', better:'up'},
+  'VISITAS': {label:'Visitas no cardápio', type:'number', better:'up'},
+  'CONVERSÃO %': {label:'Conversão', type:'percent', better:'up'},
+  'Budget de investimento': {label:'Budget de investimento (% fat.)', type:'percent', better:'down'},
+  'PROMOÇÕES + ADS': {label:'Promoções + Ads', type:'currency', better:'down'},
+  'SUB IFOOD': {label:'Subsídio iFood', type:'currency', better:'neutral'},
+  'CPO': {label:'CPO (custo por pedido)', type:'currency', better:'down'},
+  'ROI': {label:'ROI', type:'currency', better:'up'},
+};
+const CUM_METRICS = { ...MONTHLY_METRICS, 'GMV': {label:'GMV (faturamento bruto)', type:'currency', better:'up'} };
+
+function monthlyKeyFor(coreKey){ return coreKey==='GMV' ? 'FATURAMENTO LÍQUIDO' : coreKey; }
+
+const SUM_METRICS_MONTHLY = ['VENDAS','FATURAMENTO LÍQUIDO','NOVOS','VISITAS','PROMOÇÕES + ADS','SUB IFOOD'];
+const SUM_METRICS_CUM = ['VENDAS','GMV','NOVOS','VISITAS','PROMOÇÕES + ADS','SUB IFOOD'];
+
+function aggregateMonthlyValue(metric, month, stores){
+  const vals = stores.map(s=> MONTHLY[s]?.[metric]?.[month]).filter(v=>v!==null && v!==undefined);
+  if(vals.length===0) return null;
+  if(SUM_METRICS_MONTHLY.includes(metric)) return vals.reduce((a,b)=>a+b,0);
+  return vals.reduce((a,b)=>a+b,0)/vals.length;
+}
+function aggregateCumValue(metric, period, monthKey, stores){
+  const vals = stores.map(s=> CUM[s]?.[metric]?.[period]?.[monthKey]).filter(v=>v!==null && v!==undefined);
+  if(vals.length===0) return null;
+  if(SUM_METRICS_CUM.includes(metric)) return vals.reduce((a,b)=>a+b,0);
+  return vals.reduce((a,b)=>a+b,0)/vals.length;
+}
+function getMonthlyCore(coreKey, month, scope){
+  const stores = scope==='REDE' ? STORES : [scope];
+  return aggregateMonthlyValue(monthlyKeyFor(coreKey), month, stores);
+}
+function getCumCore(coreKey, period, monthKey, scope){
+  const stores = scope==='REDE' ? STORES : [scope];
+  return aggregateCumValue(coreKey, period, monthKey, stores);
+}
+
+const STORE_SCOPE_OPTIONS = [{value:'REDE', label:'Rede toda'}, ...STORES.map(s=>({value:s, label:storeLabel(s)}))];
+
+function renderPillGroup(containerId, options, currentValue, onChange, redeClass){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  options.forEach(opt=>{
+    const b = document.createElement('button');
+    let cls = 'chip';
+    if(opt.value===currentValue) cls += ' active';
+    if(redeClass && opt.value==='REDE') cls += ' rede';
+    b.className = cls;
+    b.textContent = opt.label;
+    b.onclick = ()=> onChange(opt.value);
+    el.appendChild(b);
+  });
+}
+
+function buildIndicatorSelect(selectEl, current, onChange, metricsList){
+  metricsList = metricsList || CORE_METRICS;
+  selectEl.innerHTML = '';
+  metricsList.forEach(m=>{
+    const opt = document.createElement('option');
+    opt.value = m.key; opt.textContent = m.label;
+    selectEl.appendChild(opt);
+  });
+  selectEl.value = current;
+  selectEl.onchange = ()=> onChange(selectEl.value);
+}
+
+// ---- insight engine ----
+function buildMetricComparison(getValueFn, curArg, prevArg, metricsList){
+  metricsList = metricsList || CORE_METRICS;
+  return metricsList.map(m=>{
+    const cur = getValueFn(m.key, curArg);
+    const prev = prevArg!==null ? getValueFn(m.key, prevArg) : null;
+    const delta = prevArg!==null ? pctChange(cur, prev) : null;
+    return {...m, cur, prev, delta};
+  });
+}
+
+function generateInsights(metricsArr, periodPhrase){
+  const bullets = [];
+  const withDelta = metricsArr.filter(m=> m.delta!==null && !isNaN(m.delta));
+  if(withDelta.length===0){
+    bullets.push({type:'neutral', ic:'ℹ️', text:'Sem mês/corte anterior para comparar — exibindo apenas os valores do período selecionado.'});
+    return bullets;
+  }
+  const scored = withDelta.map(m=> ({...m, goodDelta: m.better==='down' ? -m.delta : m.delta}));
+  const best = scored.reduce((a,b)=> b.goodDelta>a.goodDelta ? b : a);
+  const worst = scored.reduce((a,b)=> b.goodDelta<a.goodDelta ? b : a);
+
+  if(best.goodDelta > 0.02){
+    bullets.push({type:'pos', ic:'🔼', text:`<b>${best.label} ${best.delta>0?'+':''}${fmtDeltaPct(best.delta)}</b> — foi o destaque ${periodPhrase}, fechando em ${fmtByType(best.cur,best.type)}.`});
+  }
+  if(worst.goodDelta < -0.02 && worst.key!==best.key){
+    bullets.push({type:'neg', ic:'🔻', text:`<b>${worst.label} ${worst.delta>0?'+':''}${fmtDeltaPct(worst.delta)}</b> — atenção, ${periodPhrase}, fechando em ${fmtByType(worst.cur,worst.type)}.`});
+  }
+
+  const visitas = metricsArr.find(m=>m.key==='VISITAS');
+  const conv = metricsArr.find(m=>m.key==='CONVERSÃO %');
+  if(visitas && conv && visitas.delta!==null && conv.delta!==null && visitas.delta>0.03 && conv.delta<-0.03){
+    bullets.push({type:'neg', ic:'⚠️', text:`<b>Visitas</b> cresceram ${fmtDeltaPct(visitas.delta)} ${periodPhrase}, mas <b>Conversão</b> caiu ${fmtDeltaPct(Math.abs(conv.delta))} no mesmo intervalo — mais gente olhando o cardápio sem converter em pedido na mesma proporção.`});
+  }
+
+  const pedidos = metricsArr.find(m=>m.key==='VENDAS');
+  const tm = metricsArr.find(m=>m.key==='TM');
+  const gmv = metricsArr.find(m=>m.key==='GMV');
+  if(pedidos && tm && gmv && pedidos.delta!==null && tm.delta!==null && gmv.delta!==null){
+    if(pedidos.delta<0 && tm.delta>0 && gmv.delta>0){
+      bullets.push({type:'pos', ic:'💡', text:`${periodPhrase[0].toUpperCase()+periodPhrase.slice(1)}, <b>Pedidos</b> caíram ${fmtDeltaPct(Math.abs(pedidos.delta))}, mas <b>Ticket médio (TM)</b> subiu ${fmtDeltaPct(tm.delta)} e sustentou <b>${gmv.label}</b>, que cresceu ${fmtDeltaPct(gmv.delta)}.`});
+    } else if(pedidos.delta<-0.03 && gmv.delta<-0.03){
+      bullets.push({type:'neg', ic:'⚠️', text:`${periodPhrase[0].toUpperCase()+periodPhrase.slice(1)}, <b>Pedidos</b> caíram ${fmtDeltaPct(Math.abs(pedidos.delta))} e <b>${gmv.label}</b> caiu ${fmtDeltaPct(Math.abs(gmv.delta))} juntos — sinal de queda de demanda, não só de ticket médio.`});
+    }
+  }
+
+  if(bullets.length===0){
+    bullets.push({type:'neutral', ic:'➖', text:'Indicadores estáveis no período, sem variações relevantes.'});
+  }
+  return bullets.slice(0,4);
+}
+
+function renderInsightBox(elId, bullets){
+  document.getElementById(elId).innerHTML = bullets.map(b=>
+    `<div class="insight ${b.type}"><span class="ic">${b.ic}</span><span>${b.text}</span></div>`
+  ).join('');
+}
+
+// ---- lightweight inline SVG charts (no external library / no network needed) ----
+function fmtCompact(v, type){
+  if(v===null||v===undefined||isNaN(v)) return '—';
+  if(type==='percent') return fmtPercent(v);
+  const abs = Math.abs(v);
+  if(type==='currency'){
+    if(abs>=1000) return 'R$ '+(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mil';
+    return fmtCurrency(v);
+  }
+  if(abs>=1000) return (v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mil';
+  return fmtNumber(v);
+}
+
+function svgLineChart({labels, series, valueFormatter, axisFormatter}){
+  axisFormatter = axisFormatter || valueFormatter;
+  const w=640, h=250, padL=60, padR=22, padT=38, padB=32;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const allVals = series.flatMap(s=>s.data).filter(v=>v!==null&&v!==undefined&&!isNaN(v));
+  if(allVals.length===0) return '<div class="empty-note">Sem dados para exibir neste recorte.</div>';
+  const maxV = Math.max(...allVals, 0);
+  const minV = Math.min(...allVals, 0);
+  const yMax = maxV<=0 ? 1 : maxV*1.28;
+  const n = labels.length;
+  const xStep = n>1 ? plotW/(n-1) : 0;
+  const xPos = (i)=> padL + (n>1 ? i*xStep : plotW/2);
+  const yPos = (v)=> padT + plotH - (v/yMax)*plotH;
+
+  let grid='';
+  const ticks=4;
+  for(let t=0;t<=ticks;t++){
+    const val = yMax*t/ticks;
+    const y = padT+plotH-(val/yMax)*plotH;
+    grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="#8A8378" stroke-opacity="0.13" stroke-width="1"/>`;
+    grid += `<text x="${padL-10}" y="${(y+3.5).toFixed(1)}" font-size="11" font-weight="600" fill="#7a7266" text-anchor="end">${axisFormatter(val)}</text>`;
+  }
+  let xLabels='';
+  labels.forEach((l,i)=>{ xLabels += `<text x="${xPos(i).toFixed(1)}" y="${h-9}" font-size="11.5" font-weight="600" fill="#5b5449" text-anchor="middle">${l}</text>`; });
+
+  let seriesSvg='';
+  const single = series.length===1;
+  const endpointLabels = []; // collected for collision-avoidance stacking (multi-series case)
+  series.forEach(s=>{
+    const pts = s.data.map((v,i)=> (v!==null&&v!==undefined) ? `${xPos(i).toFixed(1)},${yPos(v).toFixed(1)}` : null).filter(Boolean).join(' ');
+    seriesSvg += `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="3.5" ${s.dashed?'stroke-dasharray="9,6"':''} stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" class="chart-line"/>`;
+    s.data.forEach((v,i)=>{
+      if(v===null||v===undefined) return;
+      seriesSvg += `<circle cx="${xPos(i).toFixed(1)}" cy="${yPos(v).toFixed(1)}" r="4" fill="${s.color}" stroke="#fff" stroke-width="1.5" class="chart-point"><title>${s.label}: ${valueFormatter(v)}</title></circle>`;
+      const isLast = i===s.data.length-1;
+      if(single){
+        // single series: label every point directly above it
+        seriesSvg += `<text x="${xPos(i).toFixed(1)}" y="${Math.max(yPos(v)-12,13).toFixed(1)}" font-size="12.5" font-weight="800" fill="${s.color}" text-anchor="middle">${valueFormatter(v)}</text>`;
+      } else if(isLast){
+        // multi-series: only label the final point of each line, stacked to avoid overlap
+        endpointLabels.push({ x: xPos(i), y: yPos(v), color: s.color, text: valueFormatter(v) });
+      }
+    });
+  });
+
+  let dataLabels='';
+  if(endpointLabels.length>1){
+    // sort by y ascending (topmost value first) and stack labels upward with a minimum gap
+    const sorted = [...endpointLabels].sort((a,b)=>a.y-b.y);
+    let lastY = null;
+    sorted.forEach(pt=>{
+      let ly = pt.y-12;
+      if(lastY!==null && ly > lastY-15) ly = lastY-15;
+      lastY = ly;
+      dataLabels += `<text x="${pt.x.toFixed(1)}" y="${Math.max(ly,13).toFixed(1)}" font-size="12.5" font-weight="800" fill="${pt.color}" text-anchor="middle">${pt.text}</text>`;
+    });
+  } else if(endpointLabels.length===1){
+    const pt = endpointLabels[0];
+    dataLabels += `<text x="${pt.x.toFixed(1)}" y="${Math.max(pt.y-12,13).toFixed(1)}" font-size="12.5" font-weight="800" fill="${pt.color}" text-anchor="middle">${pt.text}</text>`;
+  }
+
+  let legend='';
+  if(series.length>1){
+    legend = `<div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:10px;justify-content:center;flex:0 0 auto;">${series.map(s=>
+      `<span style="display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:#4b463d;"><span style="width:18px;height:${s.dashed?'0':'3.5px'};border-top:${s.dashed?'3.5px dashed '+s.color:'none'};background:${s.dashed?'transparent':s.color};display:inline-block;border-radius:2px;"></span>${s.label}</span>`
+    ).join('')}</div>`;
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" style="font-family:Calibri,'Segoe UI',Candara,Arial,sans-serif; overflow:visible;" class="chart-svg-animate">${grid}${seriesSvg}${dataLabels}${xLabels}</svg>${legend}`;
+}
+
+function svgBarChart({labels, series, valueFormatter, axisFormatter}){
+  axisFormatter = axisFormatter || valueFormatter;
+  const w=640, h=250, padL=58, padR=18, padT=38, padB=30;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const allVals = series.flatMap(s=>s.data).filter(v=>v!==null&&v!==undefined&&!isNaN(v));
+  if(allVals.length===0) return '<div class="empty-note">Sem dados para exibir.</div>';
+  const maxV = Math.max(...allVals, 0);
+  const yMax = maxV<=0 ? 1 : maxV*1.25;
+  const n = labels.length;
+  const groupW = plotW/n;
+  const barW = Math.min(34, groupW/(series.length+1));
+
+  let grid='';
+  const ticks=4;
+  for(let t=0;t<=ticks;t++){
+    const val = yMax*t/ticks;
+    const y = padT+plotH-(val/yMax)*plotH;
+    grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="#8A8378" stroke-opacity="0.13" stroke-width="1"/>`;
+    grid += `<text x="${padL-10}" y="${(y+3.5).toFixed(1)}" font-size="11" font-weight="600" fill="#7a7266" text-anchor="end">${axisFormatter(val)}</text>`;
+  }
+  let bars='', xLabels='', dataLabels='';
+  const multiSeries = series.length>1;
+  labels.forEach((l,i)=>{
+    const groupX = padL + i*groupW;
+    xLabels += `<text x="${(groupX+groupW/2).toFixed(1)}" y="${h-9}" font-size="11" font-weight="600" fill="#5b5449" text-anchor="middle">${l.length>14?l.slice(0,13)+'…':l}</text>`;
+    series.forEach((s,si)=>{
+      const v = s.data[i];
+      if(v===null||v===undefined) return;
+      const bh = (v/yMax)*plotH;
+      const fillColor = s.colors ? s.colors[i] : s.color;
+      const bx = groupX + groupW/2 - (series.length*barW)/2 + si*barW;
+      const by = padT+plotH-bh;
+      bars += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${(barW-4).toFixed(1)}" height="${Math.max(bh,0).toFixed(1)}" rx="5" fill="${fillColor}" class="chart-bar"><title>${s.label}: ${valueFormatter(v)}</title></rect>`;
+      const labelFontSize = multiSeries ? 10 : 12.5;
+      const ly = Math.max(by-6, 13);
+      dataLabels += `<text x="${(bx+(barW-4)/2).toFixed(1)}" y="${ly.toFixed(1)}" font-size="${labelFontSize}" font-weight="800" fill="#221F1D" text-anchor="middle">${valueFormatter(v)}</text>`;
+    });
+  });
+  let legend='';
+  if(series.length>1){
+    legend = `<div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:10px;justify-content:center;flex:0 0 auto;">${series.map(s=>
+      `<span style="display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:#4b463d;"><span style="width:12px;height:12px;background:${s.color};display:inline-block;border-radius:3px;"></span>${s.label}</span>`
+    ).join('')}</div>`;
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" style="font-family:Calibri,'Segoe UI',Candara,Arial,sans-serif; overflow:visible;" class="chart-svg-animate">${grid}${bars}${dataLabels}${xLabels}</svg>${legend}`;
+}
+
+function renderHBarList(containerEl, {labels, data, color, valueFormatter}){
+  if(labels.length===0){ containerEl.innerHTML = '<div class="empty-note">Sem dados para exibir.</div>'; return; }
+  const maxV = Math.max(...data, 0) || 1;
+  containerEl.innerHTML = labels.map((l,i)=>{
+    const v = data[i]||0;
+    const pct = Math.max((v/maxV)*100, 6);
+    return `<div class="hbar-row">
+      <div class="hbar-label">${l}</div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:${pct.toFixed(1)}%; background:${color};"><span>${valueFormatter?valueFormatter(v):v}</span></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderDonut(containerEl, {labels, data, colors}){
+  const total = data.reduce((a,b)=>a+b,0);
+  if(total===0){ containerEl.innerHTML = '<div class="empty-note">Sem dados para exibir.</div>'; return; }
+  let cumulative = 0;
+  const stops = data.map((v,i)=>{
+    const start = cumulative/total*360;
+    cumulative += v;
+    const end = cumulative/total*360;
+    return `${colors[i%colors.length]} ${start.toFixed(1)}deg ${end.toFixed(1)}deg`;
+  }).join(', ');
+  containerEl.innerHTML = `<div style="display:flex; align-items:center; gap:22px; flex-wrap:wrap; height:100%;">
+    <div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(${stops}); flex-shrink:0; box-shadow: inset 0 0 0 40px #fff, 0 2px 8px rgba(0,0,0,0.08);"></div>
+    <div style="display:flex;flex-direction:column;gap:7px;">
+      ${labels.map((l,i)=>`<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#4b463d;"><span style="width:12px;height:12px;border-radius:3px;background:${colors[i%colors.length]};display:inline-block;flex-shrink:0;"></span>${l} — <b>${data[i]}</b> (${Math.round(data[i]/total*100)}%)</div>`).join('')}
+    </div>
+  </div>`;
+}
+
+document.getElementById('lastUpdateBadge').textContent = 'Julho fechado (dados até 28/07)';
+
+// ============================================================
+// TABS
+// ============================================================
+document.getElementById('tabNav').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tabpanel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+});
+
+// ============================================================
+// DASH — MÊS FECHADO
+// ============================================================
+let mfLoja = 'REDE';
+let mfMes = 'JULHO';
+let mfIndicator = 'GMV';
+let mfChart;
+const MESES_FECHADOS = ['ABRIL','MAIO','JUNHO','JULHO'];
+function prevClosedMonth(m){ const i = MESES_FECHADOS.indexOf(m); return i>0 ? MESES_FECHADOS[i-1] : null; }
+
+function renderMesFechado(){
+  renderPillGroup('mfLojaChips', STORE_SCOPE_OPTIONS, mfLoja, (v)=>{ mfLoja=v; renderMesFechado(); }, true);
+  renderPillGroup('mfMesChips', MESES_FECHADOS.map(m=>({value:m,label:m.charAt(0)+m.slice(1).toLowerCase()})), mfMes, (v)=>{ mfMes=v; renderMesFechado(); });
+  const selEl = document.getElementById('mfIndicatorSelect');
+  buildIndicatorSelect(selEl, mfIndicator, (v)=>{ mfIndicator=v; renderMesFechado(); }, CORE_METRICS_CLOSED);
+
+  const prevMes = prevClosedMonth(mfMes);
+  const scopeLabel = mfLoja==='REDE' ? 'a rede toda' : storeLabel(mfLoja);
+  document.getElementById('mfKpiSub').textContent = `${scopeLabel} — ${mfMes.charAt(0)+mfMes.slice(1).toLowerCase()}${prevMes?` vs ${prevMes.charAt(0)+prevMes.slice(1).toLowerCase()}`:' (sem mês anterior)'}`;
+
+  const metricsArr = buildMetricComparison((k,month)=> getMonthlyCore(k,month,mfLoja), mfMes, prevMes, CORE_METRICS_CLOSED);
+
+  const mfMesLabel = mfMes.charAt(0)+mfMes.slice(1).toLowerCase();
+  const mfPrevLabel = prevMes ? prevMes.charAt(0)+prevMes.slice(1).toLowerCase() : null;
+  const mfPeriodPhrase = mfPrevLabel ? `de ${mfPrevLabel} para ${mfMesLabel}` : `em ${mfMesLabel} (sem mês anterior para comparar)`;
+  renderInsightBox('mfInsights', generateInsights(metricsArr, mfPeriodPhrase));
+
+  // KPI grid
+  const grid = document.getElementById('mfKpiGrid');
+  grid.innerHTML = metricsArr.map(m=> `
+    <div class="kpi">
+      <div class="label">${m.label}</div>
+      <div class="value">${fmtByType(m.cur, m.type)}</div>
+      ${deltaBadge(m.delta, m.better)}
+    </div>`).join('');
+
+  // chart: evolution across 3 months for selected indicator
+  document.getElementById('mfChartLabel').textContent = CORE_BY_KEY_CLOSED[mfIndicator].label + (mfLoja==='REDE' ? ' — Rede toda' : ' — '+storeLabel(mfLoja));
+  const chartData = MESES_FECHADOS.map(mo => getMonthlyCore(mfIndicator, mo, mfLoja));
+  document.getElementById('mfChart').innerHTML = svgLineChart({
+    labels: MESES_FECHADOS.map(m=>m.charAt(0)+m.slice(1).toLowerCase()),
+    series: [{ label: CORE_BY_KEY_CLOSED[mfIndicator].label, data: chartData, color: '#EF6A2F' }],
+    valueFormatter: (v)=> fmtByType(v, CORE_BY_KEY_CLOSED[mfIndicator].type),
+    axisFormatter: (v)=> fmtCompact(v, CORE_BY_KEY_CLOSED[mfIndicator].type),
+  });
+
+  // secondary chart: adapts to the loja filter — per-store comparison when viewing the whole network,
+  // or a clean "current vs previous month" bar when a single store is selected
+  const secTitleEl = document.getElementById('mfSecondaryTitle');
+  const secSubEl = document.getElementById('mfSecondarySub');
+  const secChartEl = document.getElementById('mfSecondaryChart');
+  const mfMetaCur = CORE_BY_KEY_CLOSED[mfIndicator];
+  if(mfLoja==='REDE'){
+    secTitleEl.textContent = `${mfMetaCur.label} por loja`;
+    secSubEl.textContent = `${mfMes.charAt(0)+mfMes.slice(1).toLowerCase()} — quem puxa o resultado`;
+    const storeVals = STORES.map(s=> getMonthlyCore(mfIndicator, mfMes, s));
+    secChartEl.innerHTML = svgBarChart({
+      labels: STORES.map(storeLabel),
+      series: [{ label: mfMetaCur.label, data: storeVals, color:'#EF6A2F', colors: STORES.map(s=>STORE_COLOR[s]) }],
+      valueFormatter: (v)=> fmtByType(v, mfMetaCur.type),
+      axisFormatter: (v)=> fmtCompact(v, mfMetaCur.type),
+    });
+  } else {
+    secTitleEl.textContent = 'Mês atual × mês anterior';
+    secSubEl.textContent = `${prevMes?prevMes.charAt(0)+prevMes.slice(1).toLowerCase()+' × ':''}${mfMes.charAt(0)+mfMes.slice(1).toLowerCase()} — ${mfMetaCur.label}`;
+    const curV = getMonthlyCore(mfIndicator, mfMes, mfLoja);
+    const prevV = prevMes ? getMonthlyCore(mfIndicator, prevMes, mfLoja) : null;
+    secChartEl.innerHTML = svgBarChart({
+      labels: [prevMes?prevMes.charAt(0)+prevMes.slice(1).toLowerCase():'—', mfMes.charAt(0)+mfMes.slice(1).toLowerCase()],
+      series: [{ label: mfMetaCur.label, data: [prevV, curV], color:'#EF6A2F', colors:['#F6D9B8','#EF6A2F'] }],
+      valueFormatter: (v)=> fmtByType(v, mfMetaCur.type),
+      axisFormatter: (v)=> fmtCompact(v, mfMetaCur.type),
+    });
+  }
+
+  // lean comparison table
+  const table = document.getElementById('mfCompareTable');
+  table.innerHTML = `<thead><tr><th>Indicador</th><th>${prevMes?prevMes.charAt(0)+prevMes.slice(1).toLowerCase():'Anterior'}</th><th>${mfMes.charAt(0)+mfMes.slice(1).toLowerCase()}</th><th>Variação</th></tr></thead>
+    <tbody>${metricsArr.map(m=>`<tr><td><b>${m.label}</b></td><td>${fmtByType(m.prev,m.type)}</td><td>${fmtByType(m.cur,m.type)}</td><td>${arrowSpan(m.delta,m.better)}</td></tr>`).join('')}</tbody>`;
+
+  // ranking table (only if REDE scope)
+  const rankPanel = document.getElementById('mfRankingPanel');
+  document.getElementById('mfRankingLabel').textContent = CORE_BY_KEY_CLOSED[mfIndicator].label;
+  if(mfLoja==='REDE'){
+    rankPanel.style.display='';
+    const rows = STORES.map(s=>{
+      const cur = getMonthlyCore(mfIndicator, mfMes, s);
+      const prev = prevMes ? getMonthlyCore(mfIndicator, prevMes, s) : null;
+      return {s, cur, delta: pctChange(cur,prev)};
+    }).sort((a,b)=> (b.cur||0)-(a.cur||0));
+    document.getElementById('mfRankingTable').innerHTML = `<thead><tr><th>Loja</th><th>${CORE_BY_KEY_CLOSED[mfIndicator].label}</th><th>Variação</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td><b>${storeLabel(r.s)}</b></td><td>${fmtByType(r.cur, CORE_BY_KEY_CLOSED[mfIndicator].type)}</td><td>${arrowSpan(r.delta, CORE_BY_KEY_CLOSED[mfIndicator].better)}</td></tr>`).join('')}</tbody>`;
+  } else {
+    rankPanel.style.display='none';
+  }
+}
+try { renderMesFechado(); } catch(e) { console.error('renderMesFechado failed:', e); }
+
+// ============================================================
+// DASH — PARCIAL
+// ============================================================
+let dpLoja = 'REDE';
+let dpPair = 'JUNHO_JULHO'; // MAIO_JUNHO | JUNHO_JULHO
+let dpCorte = '01-28';
+let dpIndicator = 'VENDAS';
+let dpChart;
+const CORTES_ALL = ['01-07','01-14','01-21','01-28'];
+
+function cortesForPair(pair){
+  const [prevKey, curKey] = pair.split('_');
+  const sampleStore = STORES[0];
+  return CORTES_ALL.filter(c=>{
+    const prevV = CUM[sampleStore]?.['VENDAS']?.[c]?.[prevKey];
+    const curV = CUM[sampleStore]?.['VENDAS']?.[c]?.[curKey];
+    return prevV!==null && prevV!==undefined && curV!==null && curV!==undefined;
+  });
+}
+
+function renderParcial(){
+  renderPillGroup('dpLojaChips', STORE_SCOPE_OPTIONS, dpLoja, (v)=>{ dpLoja=v; renderParcial(); }, true);
+  renderPillGroup('dpParChips', [{value:'MAIO_JUNHO',label:'Maio × Junho'},{value:'JUNHO_JULHO',label:'Junho × Julho'}], dpPair, (v)=>{
+    dpPair=v;
+    const cortes = cortesForPair(v);
+    if(!cortes.includes(dpCorte)) dpCorte = cortes[cortes.length-1];
+    renderParcial();
+  });
+  const cortes = cortesForPair(dpPair);
+  if(!cortes.includes(dpCorte)) dpCorte = cortes[cortes.length-1];
+  renderPillGroup('dpCorteChips', cortes.map(c=>({value:c,label:c})), dpCorte, (v)=>{ dpCorte=v; renderParcial(); });
+  buildIndicatorSelect(document.getElementById('dpIndicatorSelect'), dpIndicator, (v)=>{ dpIndicator=v; renderParcial(); }, CORE_METRICS_PARTIAL);
+
+  const [prevKey, curKey] = dpPair.split('_');
+  const scopeLabel = dpLoja==='REDE' ? 'a rede toda' : storeLabel(dpLoja);
+  document.getElementById('dpKpiSub').textContent = `${scopeLabel} — corte ${dpCorte} de ${curKey.charAt(0)+curKey.slice(1).toLowerCase()} vs ${prevKey.charAt(0)+prevKey.slice(1).toLowerCase()}`;
+
+  const metricsArr = buildMetricComparison((k,monthKey)=> getCumCore(k, dpCorte, monthKey, dpLoja), curKey, prevKey, CORE_METRICS_PARTIAL);
+  const dpCurLabel = curKey.charAt(0)+curKey.slice(1).toLowerCase();
+  const dpPrevLabel = prevKey.charAt(0)+prevKey.slice(1).toLowerCase();
+  const dpPeriodPhrase = `no corte ${dpCorte}, de ${dpPrevLabel} para ${dpCurLabel}`;
+  renderInsightBox('dpInsights', generateInsights(metricsArr, dpPeriodPhrase));
+
+  const grid = document.getElementById('dpKpiGrid');
+  grid.innerHTML = metricsArr.map(m=> `
+    <div class="kpi">
+      <div class="label">${m.label}</div>
+      <div class="value">${fmtByType(m.cur, m.type)}</div>
+      ${deltaBadge(m.delta, m.better)}
+    </div>`).join('');
+
+  document.getElementById('dpChartLabel').textContent = CORE_BY_KEY_PARTIAL[dpIndicator].label + (dpLoja==='REDE' ? ' — Rede toda' : ' — '+storeLabel(dpLoja));
+  const curData = cortes.map(c=> getCumCore(dpIndicator, c, curKey, dpLoja));
+  const prevData = cortes.map(c=> getCumCore(dpIndicator, c, prevKey, dpLoja));
+  document.getElementById('dpChart').innerHTML = svgLineChart({
+    labels: cortes,
+    series: [
+      { label: prevKey.charAt(0)+prevKey.slice(1).toLowerCase(), data: prevData, color:'#8A8378', dashed:true },
+      { label: curKey.charAt(0)+curKey.slice(1).toLowerCase(), data: curData, color:'#EF6A2F' },
+    ],
+    valueFormatter: (v)=> fmtByType(v, CORE_BY_KEY_PARTIAL[dpIndicator].type),
+    axisFormatter: (v)=> fmtCompact(v, CORE_BY_KEY_PARTIAL[dpIndicator].type),
+  });
+
+  // secondary chart: per-store comparison at this corte (network view) or current-vs-previous (single store)
+  const dpSecTitleEl = document.getElementById('dpSecondaryTitle');
+  const dpSecSubEl = document.getElementById('dpSecondarySub');
+  const dpSecChartEl = document.getElementById('dpSecondaryChart');
+  const dpMetaCur = CORE_BY_KEY_PARTIAL[dpIndicator];
+  if(dpLoja==='REDE'){
+    dpSecTitleEl.textContent = `${dpMetaCur.label} por loja`;
+    dpSecSubEl.textContent = `Corte ${dpCorte} — ${curKey.charAt(0)+curKey.slice(1).toLowerCase()}`;
+    const storeVals = STORES.map(s=> getCumCore(dpIndicator, dpCorte, curKey, s));
+    dpSecChartEl.innerHTML = svgBarChart({
+      labels: STORES.map(storeLabel),
+      series: [{ label: dpMetaCur.label, data: storeVals, color:'#EF6A2F', colors: STORES.map(s=>STORE_COLOR[s]) }],
+      valueFormatter: (v)=> fmtByType(v, dpMetaCur.type),
+      axisFormatter: (v)=> fmtCompact(v, dpMetaCur.type),
+    });
+  } else {
+    dpSecTitleEl.textContent = 'Corte atual × mesmo corte do mês anterior';
+    dpSecSubEl.textContent = `${prevKey.charAt(0)+prevKey.slice(1).toLowerCase()} × ${curKey.charAt(0)+curKey.slice(1).toLowerCase()} — ${dpMetaCur.label} (${dpCorte})`;
+    const curV = getCumCore(dpIndicator, dpCorte, curKey, dpLoja);
+    const prevV = getCumCore(dpIndicator, dpCorte, prevKey, dpLoja);
+    dpSecChartEl.innerHTML = svgBarChart({
+      labels: [prevKey.charAt(0)+prevKey.slice(1).toLowerCase(), curKey.charAt(0)+curKey.slice(1).toLowerCase()],
+      series: [{ label: dpMetaCur.label, data: [prevV, curV], color:'#EF6A2F', colors:['#F6D9B8','#EF6A2F'] }],
+      valueFormatter: (v)=> fmtByType(v, dpMetaCur.type),
+      axisFormatter: (v)=> fmtCompact(v, dpMetaCur.type),
+    });
+  }
+
+  const table = document.getElementById('dpCompareTable');
+  table.innerHTML = `<thead><tr><th>Indicador</th><th>${prevKey.charAt(0)+prevKey.slice(1).toLowerCase()} (${dpCorte})</th><th>${curKey.charAt(0)+curKey.slice(1).toLowerCase()} (${dpCorte})</th><th>Variação</th></tr></thead>
+    <tbody>${metricsArr.map(m=>`<tr><td><b>${m.label}</b></td><td>${fmtByType(m.prev,m.type)}</td><td>${fmtByType(m.cur,m.type)}</td><td>${arrowSpan(m.delta,m.better)}</td></tr>`).join('')}</tbody>`;
+
+  const rankPanel = document.getElementById('dpRankingPanel');
+  document.getElementById('dpRankingLabel').textContent = CORE_BY_KEY_PARTIAL[dpIndicator].label;
+  if(dpLoja==='REDE'){
+    rankPanel.style.display='';
+    const rows = STORES.map(s=>{
+      const cur = getCumCore(dpIndicator, dpCorte, curKey, s);
+      const prev = getCumCore(dpIndicator, dpCorte, prevKey, s);
+      return {s, cur, delta: pctChange(cur,prev)};
+    }).sort((a,b)=> (b.cur||0)-(a.cur||0));
+    document.getElementById('dpRankingTable').innerHTML = `<thead><tr><th>Loja</th><th>${CORE_BY_KEY_PARTIAL[dpIndicator].label}</th><th>Variação</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td><b>${storeLabel(r.s)}</b></td><td>${fmtByType(r.cur, CORE_BY_KEY_PARTIAL[dpIndicator].type)}</td><td>${arrowSpan(r.delta, CORE_BY_KEY_PARTIAL[dpIndicator].better)}</td></tr>`).join('')}</tbody>`;
+  } else {
+    rankPanel.style.display='none';
+  }
+}
+try { renderParcial(); } catch(e) { console.error('renderParcial failed:', e); }
+
+// ============================================================
+// INVESTIMENTO
+// ============================================================
+let invMonth = 'JULHO';
+const INV_COLS = ['VENDAS','FATURAMENTO LÍQUIDO','Budget de investimento','CPO','ROI'];
+
+function renderInvestimento(){
+  renderPillGroup('invMonthToggle', MESES_FECHADOS.map(m=>({value:m,label:m.charAt(0)+m.slice(1).toLowerCase()})), invMonth, (v)=>{ invMonth=v; renderInvestimento(); });
+
+  // insights: find best/worst efficiency store
+  const perStore = STORES.map(s=>({
+    s,
+    cpo: MONTHLY[s]['CPO'][invMonth],
+    roi: MONTHLY[s]['ROI'][invMonth],
+    budget: MONTHLY[s]['Budget de investimento'][invMonth],
+    invTotal: (MONTHLY[s]['PROMOÇÕES + ADS'][invMonth]||0) + (MONTHLY[s]['SUB IFOOD'][invMonth]||0),
+  }));
+  const bestRoi = perStore.reduce((a,b)=> b.roi>a.roi?b:a);
+  const worstCpo = perStore.reduce((a,b)=> b.cpo>a.cpo?b:a);
+  const highestBudget = perStore.reduce((a,b)=> b.budget>a.budget?b:a);
+  const invMonthLabel = invMonth.charAt(0)+invMonth.slice(1).toLowerCase();
+  const bullets = [
+    {type:'pos', ic:'🏆', text:`Em ${invMonthLabel}, <b>${storeLabel(bestRoi.s)}</b> tem o melhor <b>ROI</b>: ${fmtCurrency(bestRoi.roi)} por real investido.`},
+    {type:'neg', ic:'⚠️', text:`Em ${invMonthLabel}, <b>${storeLabel(worstCpo.s)}</b> tem o maior <b>CPO</b> (custo por pedido): ${fmtCurrency(worstCpo.cpo)} — eficiência de investimento mais baixa da rede.`},
+    {type:'neutral', ic:'💸', text:`Em ${invMonthLabel}, <b>${storeLabel(highestBudget.s)}</b> tem o maior <b>Budget de investimento</b>: ${fmtPercent(highestBudget.budget)} do faturamento em mídia.`},
+  ];
+  renderInsightBox('invInsights', bullets);
+
+  const table = document.getElementById('invTable');
+  let html = '<thead><tr><th>Loja</th>';
+  INV_COLS.forEach(c=> html += `<th>${MONTHLY_METRICS[c].label}</th>`);
+  html += '<th>Investimento total (Ads+Sub)</th></tr></thead><tbody>';
+  STORES.forEach(s=>{
+    html += `<tr><td><b>${storeLabel(s)}</b></td>`;
+    INV_COLS.forEach(c=>{
+      html += `<td>${fmtByType(MONTHLY[s][c][invMonth], MONTHLY_METRICS[c].type)}</td>`;
+    });
+    const invTotal = (MONTHLY[s]['PROMOÇÕES + ADS'][invMonth]||0) + (MONTHLY[s]['SUB IFOOD'][invMonth]||0);
+    html += `<td>${fmtCurrency(invTotal)}</td></tr>`;
+  });
+  html += `<tr style="background:#FFF8EC;"><td><b>Total / Média</b></td>`;
+  INV_COLS.forEach(c=>{
+    const v = aggregateMonthlyValue(c, invMonth, STORES);
+    html += `<td><b>${fmtByType(v, MONTHLY_METRICS[c].type)}</b></td>`;
+  });
+  const totalInv = perStore.reduce((a,b)=>a+b.invTotal,0);
+  html += `<td><b>${fmtCurrency(totalInv)}</b></td></tr></tbody>`;
+  table.innerHTML = html;
+
+  const budgetData = STORES.map(s=> MONTHLY[s]['Budget de investimento'][invMonth]*100);
+  document.getElementById('invBudgetChart').innerHTML = svgBarChart({
+    labels: STORES.map(storeLabel),
+    series: [{ label:'Budget de investimento (%)', data: budgetData, color:'#F89E26', colors: STORES.map(s=>STORE_COLOR[s]) }],
+    valueFormatter: (v)=> v.toFixed(1)+'%',
+    axisFormatter: (v)=> v.toFixed(0)+'%',
+  });
+
+  const cpoData = STORES.map(s=> MONTHLY[s]['CPO'][invMonth]);
+  const roiData = STORES.map(s=> MONTHLY[s]['ROI'][invMonth]);
+  document.getElementById('invCpoRoiChart').innerHTML = svgBarChart({
+    labels: STORES.map(storeLabel),
+    series: [
+      {label:'CPO (R$)', data:cpoData, color:'#EF6A2F'},
+      {label:'ROI (R$)', data:roiData, color:'#221F1D'},
+    ],
+    valueFormatter: (v)=> fmtCurrency(v),
+    axisFormatter: (v)=> fmtCompact(v, 'currency'),
+  });
+}
+try { renderInvestimento(); } catch(e) { console.error('renderInvestimento failed:', e); }
+
+// ============================================================
+// COMPARATIVO 7 DIAS
+// ============================================================
+let c7Pair = 'JUNHO_JULHO';
+
+function renderComp7(){
+  renderPillGroup('c7ParChips', [{value:'MAIO_JUNHO',label:'Maio × Junho'},{value:'JUNHO_JULHO',label:'Junho × Julho'}], c7Pair, (v)=>{ c7Pair=v; renderComp7(); });
+  const [prevKey, curKey] = c7Pair.split('_');
+
+  const perStore = STORES.map(s=>{
+    const vendasCur = CUM[s]['VENDAS']['01-07'][curKey];
+    const vendasPrev = CUM[s]['VENDAS']['01-07'][prevKey];
+    const gmvCur = CUM[s]['GMV']['01-07'][curKey];
+    const gmvPrev = CUM[s]['GMV']['01-07'][prevKey];
+    const budCur = CUM[s]['Budget de investimento']['01-07'][curKey];
+    const budPrev = CUM[s]['Budget de investimento']['01-07'][prevKey];
+    const vendasUp = vendasCur > vendasPrev;
+    const gmvUp = gmvCur > gmvPrev;
+    const budDown = budCur < budPrev;
+    let tagClass='mix', tagLabel='Misto';
+    if(budDown && vendasUp && gmvUp){ tagClass='pos'; tagLabel='Economizando e crescendo'; }
+    else if(!budDown && !vendasUp && !gmvUp){ tagClass='neg'; tagLabel='Investindo mais e vendendo menos'; }
+    return { s, vendasCur, vendasPrev, gmvCur, gmvPrev, budCur, budPrev, tagClass, tagLabel,
+      dVendas: pctChange(vendasCur,vendasPrev), dGmv: pctChange(gmvCur,gmvPrev), dBud: pctChange(budCur,budPrev) };
+  });
+
+  const nPos = perStore.filter(p=>p.tagClass==='pos').length;
+  const nNeg = perStore.filter(p=>p.tagClass==='neg').length;
+  const bullets = [];
+  const c7CurLabel = curKey.charAt(0)+curKey.slice(1).toLowerCase();
+  const c7PrevLabel = prevKey.charAt(0)+prevKey.slice(1).toLowerCase();
+  const c7PeriodPhrase = `no corte de 7 dias (01-07), de ${c7PrevLabel} para ${c7CurLabel}`;
+  if(nPos>0) bullets.push({type:'pos', ic:'🟢', text:`${nPos} de ${STORES.length} lojas estão <b>economizando e crescendo</b> ${c7PeriodPhrase}: <b>Budget de investimento</b> caiu, enquanto <b>Pedidos</b> e <b>GMV</b> subiram.`});
+  if(nNeg>0) bullets.push({type:'neg', ic:'🔴', text:`${nNeg} de ${STORES.length} loja(s) estão investindo mais e vendendo menos ${c7PeriodPhrase}: <b>Budget de investimento</b> subiu, enquanto <b>Pedidos</b> e <b>GMV</b> caíram — vale revisar a estratégia de mídia.`});
+  if(bullets.length===0) bullets.push({type:'neutral', ic:'➖', text:`Nenhuma loja se encaixa nos extremos ${c7PeriodPhrase} — resultados mistos entre <b>Budget de investimento</b>, <b>Pedidos</b> e <b>GMV</b>.`});
+  renderInsightBox('c7Insights', bullets);
+
+  const cards = document.getElementById('c7Cards');
+  cards.innerHTML = '';
+  perStore.forEach(p=>{
+    const card = document.createElement('div');
+    card.className = 'storecard';
+    card.innerHTML = `<h3>${storeLabel(p.s)} <span class="tag ${p.tagClass}">${p.tagLabel}</span></h3>
+      <div class="metricrow"><span>Pedidos</span><b>${fmtNumber(p.vendasPrev)} → ${fmtNumber(p.vendasCur)}</b> ${arrowSpan(p.dVendas,'up')}</div>
+      <div class="metricrow"><span>GMV</span><b>${fmtCurrency(p.gmvPrev)} → ${fmtCurrency(p.gmvCur)}</b> ${arrowSpan(p.dGmv,'up')}</div>
+      <div class="metricrow"><span>Budget investimento</span><b>${fmtPercent(p.budPrev)} → ${fmtPercent(p.budCur)}</b> ${arrowSpan(p.dBud,'down')}</div>`;
+    cards.appendChild(card);
+  });
+
+  const table = document.getElementById('c7Table');
+  table.innerHTML = `<thead><tr><th>Loja</th><th>Pedidos</th><th>Evolução</th><th>GMV</th><th>Evolução</th><th>Budget</th><th>Evolução</th><th>Classificação</th></tr></thead>
+    <tbody>${perStore.map(p=>`<tr>
+      <td><b>${storeLabel(p.s)}</b></td>
+      <td>${fmtNumber(p.vendasCur)}</td><td>${arrowSpan(p.dVendas,'up')}</td>
+      <td>${fmtCurrency(p.gmvCur)}</td><td>${arrowSpan(p.dGmv,'up')}</td>
+      <td>${fmtPercent(p.budCur)}</td><td>${arrowSpan(p.dBud,'down')}</td>
+      <td><span class="tag ${p.tagClass}">${p.tagLabel}</span></td>
+    </tr>`).join('')}</tbody>`;
+}
+try { renderComp7(); } catch(e) { console.error('renderComp7 failed:', e); }
+
+// ============================================================
+// STATUS DAS ALAVANCAS
+// ============================================================
+const LEVER_ORDER = [
+  'Campanha Inteligente (CI)', 'Anúncio', 'Hits', 'Cupom de R$ 12',
+  'Cupom Clube 25% off - Limitado a R$ 10', 'Cupom Clube 25% off - Limitado a R$ 20 para novos',
+  'Entrega grátis para novos',
+];
+let alavPeriodo = null;
+
+function renderAlavancas(){
+  if(ALAV.length===0){
+    document.getElementById('alavInsights').innerHTML = `<div class="insight neutral"><span class="ic">ℹ️</span><span>Nenhum dado de alavancas disponível na planilha para o período atual.</span></div>`;
+    document.getElementById('alavTable').innerHTML = '';
+    return;
+  }
+  const periodos = [...new Set(ALAV.map(r=>r._mes))];
+  if(!alavPeriodo || !periodos.includes(alavPeriodo)) alavPeriodo = periodos[periodos.length-1];
+
+  const filterbar = document.getElementById('alavFilterbar');
+  if(periodos.length>1){
+    filterbar.style.display = '';
+    renderPillGroup('alavPeriodoChips', periodos.map(p=>({value:p, label:toSentence(p)})), alavPeriodo, (v)=>{ alavPeriodo=v; renderAlavancas(); });
+  } else {
+    filterbar.style.display = 'none';
+  }
+  document.getElementById('alavPeriodoSub').textContent = `Período: ${toSentence(alavPeriodo)} — dados conectados à planilha de origem.`;
+
+  const rows = ALAV.filter(r=>r._mes===alavPeriodo);
+
+  // insights: for each lever, how many stores have it active, and flag divergence
+  const bullets = [];
+  LEVER_ORDER.forEach(lever=>{
+    const active = rows.filter(r=> r.alavancas[lever] && r.alavancas[lever].status==='Ativo');
+    const inactive = rows.filter(r=> r.alavancas[lever] && r.alavancas[lever].status!=='Ativo');
+    if(active.length>0 && inactive.length>0){
+      bullets.push({type:'neutral', ic:'🔀', text:`<b>${lever}</b> está ativa em ${active.map(r=>storeLabel(r._loja)).join(' e ')}, mas desativada em ${inactive.map(r=>storeLabel(r._loja)).join(' e ')}.`});
+    } else if(active.length===rows.length && rows.length>0){
+      const details = active.map(r=>r.alavancas[lever].detail).filter(Boolean);
+      bullets.push({type:'pos', ic:'✅', text:`<b>${lever}</b> está ativa em todas as lojas${details.length?` (${details[0]})`:''}.`});
+    }
+  });
+  if(bullets.length===0) bullets.push({type:'neutral', ic:'ℹ️', text:'Sem variações relevantes entre as lojas neste período.'});
+  renderInsightBox('alavInsights', bullets.slice(0,5));
+
+  const table = document.getElementById('alavTable');
+  let html = '<thead><tr><th>Loja</th>';
+  LEVER_ORDER.forEach(l=> html += `<th>${l}</th>`);
+  html += '</tr></thead><tbody>';
+  STORES.forEach(s=>{
+    const rec = rows.find(r=>r._loja===s);
+    html += `<tr><td><b>${storeLabel(s)}</b></td>`;
+    LEVER_ORDER.forEach(lever=>{
+      const lv = rec ? rec.alavancas[lever] : null;
+      if(!lv || !lv.status){
+        html += `<td>—</td>`;
+      } else {
+        const isActive = lv.status==='Ativo';
+        html += `<td><span class="tag ${isActive?'pos':'mix'}">${toSentence(lv.status)}</span>${lv.detail?`<br><span style="font-size:11.5px;color:#8A8378;">${lv.detail}</span>`:''}</td>`;
+      }
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+try { renderAlavancas(); } catch(e) { console.error('renderAlavancas failed:', e); }
+
+// ============================================================
+// CANCELAMENTOS
+// ============================================================
+let cancFilters = { loja: 'TODAS', periodo: 'TODOS', origem: 'TODAS' };
+
+function renderCancelamentos(){
+  renderPillGroup('cancLojaChips', [{value:'TODAS',label:'Todas'}, ...STORES.filter(s=>['BARRA DA TIJUCA','LEBLON'].includes(s)).map(s=>({value:s,label:storeLabel(s)}))], cancFilters.loja, (v)=>{ cancFilters.loja=v; renderCancelamentos(); }, true);
+
+  const periodos = ['TODOS', ...new Set(CANCEL.map(r=>`${r._mes} (${r._periodo})`))];
+  renderPillGroup('cancPeriodoChips', periodos.map(p=>({value:p, label: p==='TODOS'?'Todos os períodos':toSentence(p)})), cancFilters.periodo, (v)=>{ cancFilters.periodo=v; renderCancelamentos(); });
+
+  const origSel = document.getElementById('cancOrigemSelect');
+  const origens = ['TODAS', ...new Set(CANCEL.map(r=>r['Origem do cancelamento']).filter(Boolean))];
+  origSel.innerHTML='';
+  origens.forEach(o=>{
+    const opt=document.createElement('option'); opt.value=o; opt.textContent = o==='TODAS'?'Todas as origens':toSentence(o);
+    origSel.appendChild(opt);
+  });
+  origSel.value = cancFilters.origem;
+  origSel.onchange=()=>{ cancFilters.origem=origSel.value; renderCancelamentos(); };
+
+  const rows = CANCEL.filter(r=>{
+    if(cancFilters.loja!=='TODAS' && r._loja!==cancFilters.loja) return false;
+    if(cancFilters.periodo!=='TODOS' && `${r._mes} (${r._periodo})`!==cancFilters.periodo) return false;
+    if(cancFilters.origem!=='TODAS' && r['Origem do cancelamento']!==cancFilters.origem) return false;
+    return true;
+  });
+
+  const totalRegistros = rows.length;
+  const valorTotal = rows.reduce((a,r)=> a + (r['Valor total do cancelamento com entrega (R$)']||0), 0);
+  const impactouSuper = rows.filter(r=> r['Impactou o super?']==='SIM').length;
+  const pctImpacto = totalRegistros? impactouSuper/totalRegistros : 0;
+
+  // insights
+  const motivoCount = {};
+  rows.forEach(r=>{ const m = r['Motivo do cancelamento']||'Não informado'; motivoCount[m]=(motivoCount[m]||0)+1; });
+  const topMotivo = Object.entries(motivoCount).sort((a,b)=>b[1]-a[1])[0];
+  const lojaCount = {};
+  rows.forEach(r=>{ lojaCount[r._loja]=(lojaCount[r._loja]||0)+1; });
+  const topLoja = Object.entries(lojaCount).sort((a,b)=>b[1]-a[1])[0];
+
+  const bullets = [];
+  if(totalRegistros>0){
+    if(topMotivo) bullets.push({type:'neg', ic:'🔻', text:`Principal motivo: <b>${toSentence(topMotivo[0])}</b>, responsável por ${topMotivo[1]} de ${totalRegistros} cancelamentos (${fmtPercent(topMotivo[1]/totalRegistros)}).`});
+    if(topLoja && cancFilters.loja==='TODAS') bullets.push({type:'neutral', ic:'📍', text:`<b>${storeLabel(topLoja[0])}</b> concentra a maior parte dos cancelamentos no filtro atual: ${topLoja[1]} de ${totalRegistros}.`});
+    bullets.push({type: pctImpacto>0.3?'neg':'neutral', ic:'⚠️', text:`${fmtPercent(pctImpacto)} dos cancelamentos impactaram a nota do Super Restaurantes no iFood.`});
+  } else {
+    bullets.push({type:'neutral', ic:'ℹ️', text:'Nenhum cancelamento encontrado para os filtros selecionados.'});
+  }
+  renderInsightBox('cancInsights', bullets);
+
+  document.getElementById('cancKpiGrid').innerHTML = `
+    <div class="kpi"><div class="label">Pedidos cancelados</div><div class="value">${fmtNumber(totalRegistros)}</div></div>
+    <div class="kpi"><div class="label">Valor total cancelado</div><div class="value">${fmtCurrency(valorTotal)}</div></div>
+    <div class="kpi"><div class="label">Impactaram o Super</div><div class="value">${fmtNumber(impactouSuper)}</div><div class="delta ${pctImpacto>0.1?'down':'flat'}">${fmtPercent(pctImpacto)} do total</div></div>
+  `;
+
+  const motivoEntries = Object.entries(motivoCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  renderHBarList(document.getElementById('cancMotivoChart'), {
+    labels: motivoEntries.map(e=> toSentence(e[0])),
+    data: motivoEntries.map(e=>e[1]),
+    color: '#F89E26',
+    valueFormatter: (v)=> fmtNumber(v),
+  });
+
+  const origemCount = {};
+  rows.forEach(r=>{ const o = r['Origem do cancelamento']||'Não informado'; origemCount[o]=(origemCount[o]||0)+1; });
+  renderDonut(document.getElementById('cancOrigemChart'), {
+    labels: Object.keys(origemCount).map(toSentence),
+    data: Object.values(origemCount),
+    colors: ['#F89E26','#EF6A2F','#221F1D','#3C8F5E','#8A8378'],
+  });
+
+  const table = document.getElementById('cancTable');
+  const sorted = [...rows].sort((a,b)=> new Date(b['Data e hora do pedido']) - new Date(a['Data e hora do pedido']));
+  let html = `<thead><tr><th>Loja</th><th>Data/Hora</th><th>Turno</th><th>Motivo</th><th>Origem</th><th>Valor cancelado</th><th>Impactou Super?</th></tr></thead><tbody>`;
+  sorted.forEach(r=>{
+    const dt = r['Data e hora do pedido'] ? new Date(r['Data e hora do pedido']).toLocaleString('pt-BR') : '—';
+    html += `<tr>
+      <td>${storeLabel(r._loja)}</td>
+      <td>${dt}</td>
+      <td>${r['Turno']?toSentence(r['Turno']):'—'}</td>
+      <td>${r['Motivo do cancelamento']?toSentence(r['Motivo do cancelamento']):'—'}</td>
+      <td>${r['Origem do cancelamento']?toSentence(r['Origem do cancelamento']):'—'}</td>
+      <td>${fmtCurrency(r['Valor total do cancelamento com entrega (R$)'])}</td>
+      <td>${r['Impactou o super?']?toSentence(r['Impactou o super?']):'—'}</td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+try { renderCancelamentos(); } catch(e) { console.error('renderCancelamentos failed:', e); }
+
+// ============================================================
+// GLOSSARY MODAL
+// ============================================================
+(function(){
+  const btn = document.getElementById('glossaryBtn');
+  const modal = document.getElementById('glossaryModal');
+  const closeBtn = document.getElementById('glossaryClose');
+  if(!btn || !modal) return;
+  function open(){ modal.classList.add('open'); }
+  function close(){ modal.classList.remove('open'); }
+  btn.addEventListener('click', open);
+  if(closeBtn) closeBtn.addEventListener('click', close);
+  modal.addEventListener('click', (e)=>{ if(e.target===modal) close(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') close(); });
+})();
+
+</script>
+<script src="../assets/sheets-sync.js"></script>
+<script src="../assets/live-status-ui.js"></script>
+<script src="../assets/live/pato-com-laranja.js"></script>
+</body>
+</html>

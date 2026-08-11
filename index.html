@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal de Dashboards</title>
+<style>
+  :root{
+    --ink:#1b2430;
+    --ink-soft:#5b6675;
+    --bg:#f5f6f9;
+    --card:#ffffff;
+    --line:#e3e8f0;
+    --accent:#00498e;
+    --shadow: 0 1px 2px rgba(16,38,73,.05), 0 8px 24px rgba(16,38,73,.08);
+    --red:#c8433d;
+    --red-bg:#fbeaea;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family: Calibri, 'Segoe UI', Candara, Optima, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height:100vh;
+    display:flex; flex-direction:column;
+  }
+  .wrap{ max-width:960px; margin:0 auto; padding:48px 24px 60px; width:100%; }
+
+  header.hero{ text-align:center; margin-bottom:36px; }
+  header.hero h1{ margin:0 0 8px; font-size:28px; font-weight:800; letter-spacing:.2px; }
+  header.hero p{ margin:0; color:var(--ink-soft); font-size:14.5px; }
+
+  .grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:18px;
+  }
+  .client-card{
+    background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:22px 20px; box-shadow:var(--shadow); cursor:pointer;
+    display:flex; flex-direction:column; align-items:flex-start; gap:14px;
+    transition: transform .15s ease, box-shadow .15s ease;
+    font-family:inherit; text-align:left;
+  }
+  .client-card:hover{ transform:translateY(-3px); box-shadow:0 10px 28px rgba(16,38,73,.14); }
+  .avatar{
+    width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:18px; letter-spacing:.02em;
+  }
+  .client-card h3{ margin:0; font-size:16px; font-weight:700; }
+  .client-card span.enter{ margin-top:auto; font-size:12.5px; font-weight:700; color:var(--accent); }
+
+  /* MODAL */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(20,26,36,.55);
+    display:none; align-items:center; justify-content:center; z-index:1000; padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    background:#fff; border-radius:20px; padding:28px 26px; max-width:380px; width:100%;
+    box-shadow:0 24px 70px rgba(0,0,0,.35);
+  }
+  .modal-box .avatar{ margin-bottom:14px; }
+  .modal-box h2{ margin:0 0 4px; font-size:19px; }
+  .modal-box p.sub{ margin:0 0 18px; font-size:13px; color:var(--ink-soft); }
+  .modal-box label{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); display:block; margin-bottom:6px; }
+  .modal-box input[type="password"]{
+    width:100%; font-family:inherit; font-size:15px; padding:12px 14px; border-radius:12px;
+    border:1.5px solid var(--line); margin-bottom:10px; outline:none;
+  }
+  .modal-box input[type="password"]:focus{ border-color:var(--accent); }
+  .modal-actions{ display:flex; gap:10px; margin-top:14px; }
+  .btn{
+    font-family:inherit; font-size:14px; font-weight:700; border-radius:12px; padding:11px 18px;
+    border:none; cursor:pointer; flex:1;
+  }
+  .btn.primary{ background:var(--accent); color:#fff; }
+  .btn.ghost{ background:#eef1f5; color:var(--ink); }
+  .error-msg{
+    display:none; background:var(--red-bg); color:var(--red); font-size:12.5px; font-weight:600;
+    padding:8px 12px; border-radius:10px; margin-bottom:10px;
+  }
+  .error-msg.show{ display:block; }
+
+  footer.foot{ text-align:center; font-size:12px; color:#a3adbb; padding:24px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="hero">
+    <h1>Portal de Dashboards</h1>
+    <p>Selecione seu cliente para acessar o painel de performance.</p>
+  </header>
+
+  <div class="grid" id="clientGrid"></div>
+</div>
+
+<footer class="foot">Acesso restrito &middot; cada cliente possui login próprio</footer>
+
+<div class="modal-overlay" id="loginModal">
+  <div class="modal-box">
+    <div class="avatar" id="modalAvatar"></div>
+    <h2 id="modalTitle"></h2>
+    <p class="sub">Digite a senha de acesso para este dashboard.</p>
+    <div class="error-msg" id="modalError">Senha incorreta. Tente novamente.</div>
+    <label for="modalPassword">Senha</label>
+    <input type="password" id="modalPassword" autocomplete="current-password" placeholder="••••••••">
+    <div class="modal-actions">
+      <button class="btn ghost" id="modalCancel">Cancelar</button>
+      <button class="btn primary" id="modalSubmit">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/portal-config.js"></script>
+<script>
+  const grid = document.getElementById('clientGrid');
+  const modal = document.getElementById('loginModal');
+  const modalAvatar = document.getElementById('modalAvatar');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalError = document.getElementById('modalError');
+  const modalPassword = document.getElementById('modalPassword');
+  const modalSubmit = document.getElementById('modalSubmit');
+  const modalCancel = document.getElementById('modalCancel');
+
+  let activeClient = null;
+
+  function initials(name) {
+    return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+  }
+
+  function renderGrid() {
+    grid.innerHTML = '';
+    PORTAL_CLIENTS.forEach(client => {
+      const card = document.createElement('button');
+      card.className = 'client-card';
+      card.type = 'button';
+      card.innerHTML = `
+        <div class="avatar" style="background:${client.color}">${initials(client.name)}</div>
+        <h3>${client.name}</h3>
+        <span class="enter">Acessar dashboard →</span>
+      `;
+      card.addEventListener('click', () => openModal(client));
+      grid.appendChild(card);
+    });
+  }
+
+  function openModal(client) {
+    activeClient = client;
+    modalAvatar.style.background = client.color;
+    modalAvatar.textContent = initials(client.name);
+    modalTitle.textContent = client.name;
+    modalPassword.value = '';
+    modalError.classList.remove('show');
+    modal.classList.add('open');
+    setTimeout(() => modalPassword.focus(), 50);
+  }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    activeClient = null;
+  }
+
+  async function attemptLogin() {
+    if (!activeClient) return;
+    const hash = await portalSha256Hex(modalPassword.value);
+    if (hash === activeClient.passwordHash) {
+      portalSetSession(activeClient.slug);
+      window.location.href = activeClient.file;
+    } else {
+      modalError.classList.add('show');
+      modalPassword.value = '';
+      modalPassword.focus();
+    }
+  }
+
+  modalSubmit.addEventListener('click', attemptLogin);
+  modalCancel.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  modalPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') attemptLogin(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  renderGrid();
+
+  // Se veio de um redirecionamento (?client=slug), já abre o modal daquele cliente.
+  const params = new URLSearchParams(window.location.search);
+  const preselect = params.get('client');
+  if (preselect) {
+    const found = PORTAL_CLIENTS.find(c => c.slug === preselect);
+    if (found) openModal(found);
+  }
+</script>
+</body>
+</html>
