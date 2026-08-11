@@ -27,15 +27,10 @@ dela é comparado com o `passwordHash` salvo em `assets/portal-config.js` e, se
 bater, o navegador grava uma "sessão" local por 12 horas e libera o acesso ao
 arquivo daquele cliente em `clientes/`.
 
-### Senhas padrão (troque assim que publicar)
-
-| Cliente | Senha padrão |
-|---|---|
-| Pato com Laranja | `pato2026` |
-| Spesso | `spesso2026` |
-| Sunomono | `sunomono2026` |
-| Cumbuca | `cumbuca2026` |
-| Garami, Kimura & Ipoke | `garami2026` |
+As senhas de cada cliente já foram personalizadas (não são mais as de exemplo).
+Elas não ficam em texto puro em lugar nenhum do projeto — só o hash em
+`assets/portal-config.js` — então não há como consultá-las aqui; se esquecer
+uma, é só gerar outra pelo passo abaixo.
 
 ### Como trocar a senha de um cliente
 

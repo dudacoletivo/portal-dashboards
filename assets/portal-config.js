@@ -7,35 +7,35 @@ const PORTAL_CLIENTS = [
     name: 'Pato com Laranja',
     file: 'clientes/pato-com-laranja.html',
     color: '#F89E26',
-    passwordHash: '6d6fb5c599fd0022089c541558ce1d9c6862b4addbdaad6c9f2fb223dc203996'
+    passwordHash: '6724ce288d8f10ae1dae28997d7778437a94ad62c16872ec084bd9683b9d7924'
   },
   {
     slug: 'spesso',
     name: 'Spesso',
     file: 'clientes/spesso.html',
     color: '#00498e',
-    passwordHash: '33a57312e18024915fc357f906cdc59b358be22ce74d660c6735d907f18b4cf6'
+    passwordHash: '650e511a40711779f68667cce0dc1bcf82ea36c0bc17b29d34420dbd757f6857'
   },
   {
     slug: 'sunomono',
     name: 'Sunomono',
     file: 'clientes/sunomono.html',
     color: '#c32525',
-    passwordHash: 'eec515e12a117ffa19e5045d6720bef2eebe1ef6a9c251e486a16008db4ac90f'
+    passwordHash: '98f48599263b706b4410d29cc05fc9ddb26a4c9ff49a43584a5f1bab6896bf8b'
   },
   {
     slug: 'cumbuca',
     name: 'Cumbuca',
     file: 'clientes/cumbuca.html',
     color: '#5e1255',
-    passwordHash: '20682a8a6df6a81252afbf90ba44c1ddf32d60e4528c85c00a72f3ada447ddee'
+    passwordHash: 'ee8e0058c81d80504f417a0223a3b3fd2b03397e21306e490919d27d470c533e'
   },
   {
     slug: 'garami-kimura-ipoke',
     name: 'Garami, Kimura & Ipoke',
     file: 'clientes/garami-kimura-ipoke.html',
     color: '#221F1D',
-    passwordHash: '48f657fe5ecdd6c23379e13664e066efab314a447587865b717c8718969adb63'
+    passwordHash: '0507a6306c35c2aeaa12bbfa69be2d95306367e1b4c62c0fa6d7003449c70356'
   }
 ];
 
