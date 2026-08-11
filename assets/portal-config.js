@@ -39,7 +39,7 @@ const PORTAL_CLIENTS = [
     name: 'Garami, Kimura & Ipoke',
     file: 'clientes/garami-kimura-ipoke.html',
     color: '#221F1D',
-    logos: ['assets/logos/garami.png', 'assets/logos/kimura.jpg'],
+    logo: 'assets/logos/kimura.jpg',
     passwordHash: '0507a6306c35c2aeaa12bbfa69be2d95306367e1b4c62c0fa6d7003449c70356'
   }
 ];
