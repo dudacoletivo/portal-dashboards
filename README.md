@@ -58,14 +58,20 @@ uma, é só gerar outra pelo passo abaixo.
 
 ## Dados ao vivo via Google Sheets
 
-Todos os 5 dashboards já buscam os dados direto das planilhas de origem no Google
+Todos os 6 dashboards já buscam os dados direto das planilhas de origem no Google
 Drive sempre que a página é aberta (e a cada clique em **Atualizar**). O indicador
 no topo mostra **● dados ao vivo (horário)** quando a busca funciona, ou
 **○ snapshot** quando a planilha está inacessível (sem internet, planilha movida,
 permissão de compartilhamento removida etc.) — nesse caso o dashboard continua
 funcionando normalmente com os últimos dados salvos no próprio HTML.
 
-Como funciona: cada arquivo em `clientes/` carrega `assets/sheets-sync.js` (o
+**Tapí Tapioca é o único caso diferente**: o dashboard já veio pronto com a própria
+integração embutida (não usa `assets/sheets-sync.js`/`assets/live/*.js`) — busca a
+planilha `[Tapí Tapioca] Dashboard` direto via `SHEET_ID` fixo dentro do próprio
+`clientes/tapi.html`, com sua própria lógica de leitura e fallback. Pra trocar a
+planilha de origem dele, edite a constante `SHEET_ID` nesse arquivo diretamente.
+
+Como funciona nos outros 5: cada arquivo em `clientes/` carrega `assets/sheets-sync.js` (o
 "motor" genérico que baixa e interpreta as planilhas como CSV) e um script próprio
 em `assets/live/<cliente>.js` com os IDs das planilhas daquele cliente e o mapeamento
 para a estrutura de dados que aquele dashboard específico espera — cada um foi

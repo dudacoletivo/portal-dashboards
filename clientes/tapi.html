@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tapí Tapioca · Dashboard de Performance</title>
+<script src="../assets/portal-config.js"></script>
+<script src="../assets/auth-guard.js" data-client="tapi"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --vinho:#7B131F;
+  --vinho-escuro:#5A0D16;
+  --vinho-claro:#A33642;
+  --creme:#FBF6F1;
+  --areia:#F3EAE1;
+  --tapioca:#FFFFFF;
+  --acai:#3E1F2B;
+  --verde:#1E7A46;
+  --verde-bg:#E4F3EA;
+  --vermelho:#B3261E;
+  --vermelho-bg:#FBEAE9;
+  --neutro:#8A7F78;
+  --texto:#2E2420;
+  --borda:#E8DDD3;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Calibri,'Segoe UI',sans-serif;background:var(--creme);color:var(--texto);font-size:15px;}
+header{background:var(--tapioca);border-bottom:3px solid var(--vinho);padding:14px 28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(123,19,31,.06);}
+header img{height:52px;}
+header{transition:transform .25s ease;}
+.nav-toggle{display:none;}
+.nav-panel{display:contents;}
+@media(max-width:820px){
+  header{padding:8px 14px;gap:8px;}
+  header img{height:32px;border-radius:8px;}
+  header h1{font-size:14px;}
+  header p{display:none;} /* subtítulo e status somem no mobile pra economizar altura */
+  .nav-toggle{display:flex;align-items:center;justify-content:center;width:38px;height:38px;
+    border:1.5px solid var(--vinho);border-radius:10px;background:#fff;color:var(--vinho);
+    font-size:18px;cursor:pointer;margin-left:auto;flex-shrink:0;}
+  .nav-panel{display:flex;flex-direction:column;width:100%;order:10;
+    max-height:0;overflow:hidden;transition:max-height .3s ease;gap:10px;}
+  .nav-panel.open{max-height:2000px;padding-top:10px;margin-top:6px;border-top:1px solid var(--borda);}
+  #btnRefresh{width:100%;justify-content:center;text-align:center;}
+  .tabs-mode,.sub-tabs{justify-content:flex-start;}
+  header.header-hidden{transform:translateY(-100%);}
+}
+
+header h1{font-size:20px;color:var(--vinho);font-weight:700;letter-spacing:.5px;}
+header p{font-size:12.5px;color:var(--neutro);}
+.tabs{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;}
+.tab-btn{border:1.5px solid var(--vinho);background:var(--tapioca);color:var(--vinho);padding:8px 16px;border-radius:22px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;transition:.18s;}
+.tab-btn:hover{background:var(--areia);}
+.tab-btn.active{background:var(--vinho);color:#fff;}
+.mode-btn{border:1.5px solid var(--vinho);background:var(--tapioca);color:var(--vinho);padding:9px 22px;border-radius:22px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;transition:.18s;}
+.mode-btn:hover{background:var(--areia);}
+.mode-btn.active{background:var(--vinho);color:#fff;}
+.tabs-wrap{width:100%;display:flex;flex-direction:column;gap:8px;margin-left:auto;}
+.tabs-mode{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+.tabs-mode .legenda-btn{margin-left:6px;}
+.sub-tabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-top:2px;border-top:1px dashed var(--borda);}
+
+main{padding:24px 28px 60px;max-width:1500px;margin:0 auto;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;animation:fade .3s;}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.card{background:var(--tapioca);border:1px solid var(--borda);border-radius:16px;padding:18px 20px;box-shadow:0 2px 10px rgba(62,31,43,.05);}
+.grid{display:grid;gap:16px;}
+.kpi-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:20px;}
+.kpi{text-align:left;}
+.kpi .lbl{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--neutro);font-weight:700;}
+.kpi .val{font-size:24px;font-weight:700;color:var(--vinho);margin-top:4px;}
+.kpi .evo{font-size:13px;font-weight:700;margin-top:2px;}
+.up{color:var(--verde);} .down{color:var(--vermelho);} .flat{color:var(--neutro);}
+.filters{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;}
+.filters label{font-size:12px;font-weight:700;color:var(--neutro);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:5px;}
+select,.chip-box{font-family:inherit;font-size:14px;padding:8px 12px;border:1.5px solid var(--borda);border-radius:10px;background:#fff;color:var(--texto);}
+select:focus{outline:2px solid var(--vinho-claro);}
+.chips{display:flex;gap:6px;flex-wrap:wrap;max-width:760px;}
+.chip{border:1.5px solid var(--borda);background:#fff;border-radius:18px;padding:6px 13px;font-size:13.5px;cursor:pointer;font-family:inherit;transition:.15s;font-weight:600;color:var(--neutro);}
+.chip.on{background:var(--vinho);border-color:var(--vinho);color:#fff;}
+.chart-wrap{position:relative;height:380px;}
+.chart-wrap.tall{height:440px;}
+h2{font-size:17px;color:var(--vinho);margin-bottom:12px;font-weight:700;}
+h3{font-size:15px;color:var(--acai);margin:6px 0 10px;}
+.two-col{grid-template-columns:1fr 1fr;}
+@media(max-width:980px){.two-col{grid-template-columns:1fr}}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;}
+th{background:var(--vinho);color:#fff;padding:9px 10px;text-align:left;font-weight:700;position:sticky;top:0;}
+th:first-child{border-radius:10px 0 0 0;} th:last-child{border-radius:0 10px 0 0;}
+td{padding:8px 10px;border-bottom:1px solid var(--borda);}
+tbody tr:nth-child(even){background:var(--creme);}
+tbody tr:hover{background:var(--areia);}
+.table-scroll{overflow:auto;border-radius:12px;border:1px solid var(--borda);max-height:560px;}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;}
+.b-on{background:var(--verde-bg);color:var(--verde);}
+.b-off{background:#EFEBE7;color:var(--neutro);}
+.b-good{background:var(--verde-bg);color:var(--verde);}
+.b-bad{background:var(--vermelho-bg);color:var(--vermelho);}
+.b-warn{background:#FCF3E3;color:#9A6A12;}
+.mt{margin-top:20px;} .mb{margin-bottom:16px;}
+.legend-grid{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+.legend-item{border-left:4px solid var(--vinho);padding:10px 14px;background:var(--creme);border-radius:0 10px 10px 0;}
+.legend-item b{color:var(--vinho);}
+.legend-item p{font-size:13px;color:var(--texto);margin-top:2px;}
+.alav-grid{grid-template-columns:repeat(auto-fill,minmax(320px,1fr));}
+.alav-card h3{display:flex;justify-content:space-between;align-items:center;}
+.alav-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--borda);font-size:13.5px;align-items:center;gap:8px;}
+.alav-row:last-child{border-bottom:none;}
+.alav-row .k{color:var(--neutro);font-weight:600;}
+.insight{background:linear-gradient(135deg,var(--vinho),var(--vinho-claro));color:#fff;border-radius:16px;padding:18px 22px;margin-bottom:18px;}
+.insight h2{color:#fff;} .insight ul{margin:8px 0 0 18px;} .insight li{margin-bottom:6px;font-size:14.5px;}
+.note{font-size:12.5px;color:var(--neutro);margin-top:8px;font-style:italic;}
+.hm-cell{border-radius:8px;padding:6px 8px;text-align:center;font-weight:700;}
+footer{ text-align:center;color:var(--neutro);font-size:12px;padding:20px;}
+.q-box{background:#FCF3E3;border:1px solid #EBD9AE;border-radius:14px;padding:14px 18px;font-size:14px;margin-top:20px;}
+.q-box b{color:#9A6A12;}
+</style>
+</head>
+<body>
+<header>
+  <img src="data:image/png;base64,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" alt="Tapí Tapioca e Açaí">
+  <div>
+    <h1>Dashboard de Performance</h1>
+    <p>iFood · 12 unidades · Rio de Janeiro, Niterói e São Paulo</p>
+    <p id="liveStatus" style="font-size:12px;font-weight:700;color:var(--neutro)">Carregando dados da planilha…</p>
+  </div>
+  <button id="navToggle" class="nav-toggle" aria-label="Abrir menu" aria-expanded="false">☰</button>
+  <div class="nav-panel" id="navPanel">
+  <button id="btnRefresh" class="tab-btn" style="border-style:dashed" title="Recarregar dados da planilha Google">↻ Atualizar dados</button>
+  <div class="tabs-wrap">
+    <nav class="tabs-mode">
+      <button class="mode-btn" data-mode="parcial">Parcial</button>
+      <button class="mode-btn active" data-mode="consolidado">Consolidado</button>
+      <button class="tab-btn legenda-btn" data-tab="legenda">Legenda</button>
+    </nav>
+    <nav class="tabs sub-tabs" id="subTabs">
+      <button class="tab-btn active" data-tab="dashf" data-group="consolidado">Dash · Mês Fechado</button>
+      <button class="tab-btn" data-tab="alavancas" data-group="consolidado">Status de Alavancas</button>
+      <button class="tab-btn" data-tab="invest" data-group="consolidado">Investimento</button>
+      <button class="tab-btn" data-tab="margem" data-group="consolidado">Margem (DRE)</button>
+      <button class="tab-btn" data-tab="junjul" data-group="consolidado">Junho × Julho</button>
+      <button class="tab-btn" data-tab="bp" data-group="consolidado">Eficiência Operacional</button>
+      <button class="tab-btn" data-tab="cruz" data-group="consolidado">BP × Pedidos</button>
+      <button class="tab-btn" data-tab="ftw" data-group="consolidado">Método FTW</button>
+      <button class="tab-btn" data-tab="dashp" data-group="parcial" style="display:none">Dash · Parcial</button>
+    </nav>
+  </div>
+  </div>
+</header>
+<main>
+<div id="jsWarn" style="background:#FBEAE9;border:2px solid #B3261E;border-radius:14px;padding:16px 20px;margin-bottom:20px;color:#B3261E;font-size:15px">
+  <b>⚠️ Este visualizador não executa o dashboard (JavaScript desativado).</b><br>
+  A pré-visualização do iPhone/WhatsApp/E-mail mostra só a moldura, sem dados nem filtros.<br><br>
+  <b>Como abrir corretamente:</b><br>
+  💻 <b>Computador:</b> salve o arquivo e dê duplo clique (abre no Chrome/Edge/Safari e funciona, inclusive os dados ao vivo).<br>
+  📱 <b>Celular:</b> hospede o arquivo uma única vez (ex.: netlify.com/drop — grátis, é só arrastar o arquivo) e abra o link gerado no Safari/Chrome. Aí funciona em qualquer aparelho, sempre com os dados atuais da planilha.
+</div>
+
+<!-- ============ DASH MÊS FECHADO ============ -->
+<section id="dashf" class="tab-panel active">
+  <div class="card mb">
+    <div class="filters" style="margin-bottom:0">
+      <div><label>Mês fechado</label><select id="dashf-mes"></select></div>
+      <div><label>Loja</label><select id="dashf-loja"></select></div>
+    </div>
+  </div>
+  <div class="grid kpi-grid" id="dashf-kpis"></div>
+  <div class="insight" id="dashf-insight"></div>
+  <div class="card mb" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 20px">
+    <label style="font-size:12px;font-weight:700;color:var(--neutro);text-transform:uppercase;letter-spacing:.6px;margin:0">Indicador dos gráficos abaixo</label>
+    <select id="dashf-metric"></select>
+  </div>
+  <div class="grid two-col mb">
+    <div class="card"><h2 id="dashf-t1"></h2><div class="chart-wrap"><canvas id="dashf-c1"></canvas></div></div>
+    <div class="card"><h2 id="dashf-t2"></h2><div class="chart-wrap"><canvas id="dashf-c2"></canvas></div></div>
+  </div>
+  <div class="card"><h2 id="dashf-t3"></h2><div class="table-scroll" style="max-height:460px"><table id="dashf-table"></table></div>
+    <p class="note" id="dashf-note"></p></div>
+</section>
+
+<!-- ============ DASH PARCIAL ============ -->
+<section id="dashp" class="tab-panel">
+  <div class="card mb">
+    <div class="filters" style="margin-bottom:0">
+      <div><label>Janela do parcial</label><select id="dashp-janela"></select></div>
+      <div><label>Período</label><select id="dashp-mes"></select></div>
+      <div><label>Loja</label><select id="dashp-loja"></select></div>
+    </div>
+  </div>
+  <div class="grid kpi-grid" id="dashp-kpis"></div>
+  <div class="insight" id="dashp-insight"></div>
+  <div class="card mb" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 20px">
+    <label style="font-size:12px;font-weight:700;color:var(--neutro);text-transform:uppercase;letter-spacing:.6px;margin:0">Indicador dos gráficos abaixo</label>
+    <select id="dashp-metric"></select>
+  </div>
+  <div class="grid two-col mb">
+    <div class="card"><h2 id="dashp-t1"></h2><div class="chart-wrap"><canvas id="dashp-c1"></canvas></div></div>
+    <div class="card"><h2 id="dashp-t2"></h2><div class="chart-wrap"><canvas id="dashp-c2"></canvas></div></div>
+  </div>
+  <div class="card"><h2 id="dashp-t3"></h2><div class="table-scroll" style="max-height:460px"><table id="dashp-table"></table></div>
+    <p class="note" id="dashp-note"></p></div>
+</section>
+
+<!-- ============ ALAVANCAS ============ -->
+<section id="alavancas" class="tab-panel">
+  <div class="insight" id="alavInsight"></div>
+  <div class="filters card mb">
+    <div>
+      <label>Filtrar por loja</label>
+      <select id="alavLoja"><option value="all">Todas as lojas</option></select>
+    </div>
+    <div>
+      <label>Filtrar por alavanca</label>
+      <select id="alavTipo">
+        <option value="all">Todas</option>
+        <option value="ci">Campanha Inteligente ativa</option>
+        <option value="anuncio">Anúncio ativo</option>
+        <option value="hits">Hits ativo</option>
+        <option value="nenhuma">Nenhuma alavanca ativa</option>
+        <option value="flex">Taxa / Entrega Flexível (histórico)</option>
+      </select>
+    </div>
+  </div>
+  <div class="grid alav-grid" id="alavGrid"></div>
+  <div class="card mt">
+    <h2>Histórico de ações por data — Maio → Junho</h2>
+    <p class="note" style="margin:0 0 12px">Registro cronológico das mudanças de alavanca por unidade, conforme as abas de Status da planilha. Os filtros de loja e alavanca acima também se aplicam aqui.</p>
+    <div id="alavTimeline"></div>
+  </div>
+</section>
+
+<!-- ============ INVESTIMENTO ============ -->
+<section id="invest" class="tab-panel">
+  <div class="card mb">
+    <h2>Consolidado da Rede — Pedidos, GMV e Budget de investimento</h2>
+    <div class="filters" style="margin-bottom:10px">
+      <div style="flex:1">
+        <label>Meses (selecione 1 ou vários)</label>
+        <div class="chips" id="invMesesChips"></div>
+      </div>
+    </div>
+    <div class="chart-wrap tall"><canvas id="invConsChart"></canvas></div>
+    <p class="note" id="invConsNote"></p>
+  </div>
+  <div class="card mb">
+    <div class="filters">
+      <div>
+        <label>Mês</label>
+        <select id="invMes"></select>
+      </div>
+      <div>
+        <label>Indicador do gráfico</label>
+        <select id="invMetric"></select>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="invChart"></canvas></div>
+  </div>
+  <div class="card mb">
+    <h2>Matriz Investimento — lojas (linhas) × indicadores (colunas)</h2>
+    <div class="table-scroll"><table id="invTable"></table></div>
+    <p class="note">% Invest. = investimento próprio (promoções + anúncios) sobre faturamento líquido. Verde = eficiente (&lt;5%) · Amarelo = atenção (5–9%) · Vermelho = alto (≥9%).</p>
+  </div>
+  <div class="card">
+    <h2>Evolução do investimento total da loja ao longo dos meses</h2>
+    <div class="filters">
+      <div style="flex:1">
+        <label>Clique para destacar lojas (as demais ficam esmaecidas ao fundo)</label>
+        <div class="chips" id="invChips"></div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="invEvoChart"></canvas></div>
+  </div>
+</section>
+
+<!-- ============ MARGEM / DRE VIRTUAL ============ -->
+<section id="margem" class="tab-panel">
+  <div class="card mb">
+    <div class="filters" style="margin-bottom:0">
+      <div><label>Loja</label><select id="mg-loja"></select></div>
+      <div><label>Período</label><select id="mg-per"></select></div>
+    </div>
+  </div>
+  <div class="grid kpi-grid" id="mg-kpis"></div>
+  <div class="insight" id="mg-insight"></div>
+  <div class="grid two-col mb">
+    <div class="card">
+      <h2 id="mg-t1">DRE Virtual — Delivery (iFood)</h2>
+      <div class="table-scroll" style="max-height:520px"><table id="mg-dre"></table></div>
+      <p class="note" id="mg-note"></p>
+    </div>
+    <div class="card">
+      <h2 id="mg-t2"></h2>
+      <div class="chart-wrap"><canvas id="mg-chart"></canvas></div>
+      <p class="note">Margem de Contribuição % calculada período a período com o Budget de investimento real da loja em cada período. Linha tracejada = margem da rede.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Margem de Contribuição iFood % por loja no período selecionado</h2>
+    <div class="chart-wrap"><canvas id="mg-rank"></canvas></div>
+  </div>
+</section>
+
+<!-- ============ JUNHO x JULHO ============ -->
+<section id="junjul" class="tab-panel">
+  <div class="insight" id="jjInsight"></div>
+  <div class="card mb">
+    <h2 id="jjTitle"></h2>
+    <div class="table-scroll"><table id="jjTable"></table></div>
+    <p class="note">🏆 Eficiência = loja reduziu % de investimento e mesmo assim cresceu em vendas e GMV (economizando e crescendo). Verde = melhora · Vermelho = piora. Para "Budget %" e "CPO", queda é lida como positiva quando acompanhada de crescimento.</p>
+  </div>
+  <div class="grid two-col">
+    <div class="card">
+      <h2 id="jjT1"></h2>
+      <div class="chart-wrap"><canvas id="jjGmvChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2 id="jjT2"></h2>
+      <div class="chart-wrap"><canvas id="jjScatter"></canvas></div>
+      <p class="note">Quadrante superior-esquerdo = gastou menos e cresceu (ideal). Superior-direito = cresceu investindo mais. Inferior-direito = investiu mais e caiu (crítico).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BP ============ -->
+<section id="bp" class="tab-panel">
+  <div class="insight">
+    <h2>Eficiência operacional de despacho (BP) — semanas de 08/12/2025 a 05/01/2026</h2>
+    <ul>
+      <li><b>Centro (96,2%), Downtown (95,0%) e Botafogo (92,6%)</b> lideram o despacho dentro do prazo.</li>
+      <li><b>Ipanema (65,4%), Flamengo (66,8%) e Arpoador (71,7%)</b> são os pontos críticos: 1 em cada 3 pedidos despachado fora do prazo.</li>
+      <li>Leblon apresenta <b>tendência de queda</b> consistente: de 89,5% para 75,0% em 5 semanas, com NRE15 subindo até 33% na última semana.</li>
+    </ul>
+  </div>
+  <div class="card mb">
+    <div class="filters">
+      <div style="flex:1">
+        <label>Lojas</label>
+        <div class="chips" id="bpChips"></div>
+      </div>
+      <div>
+        <label>Métrica</label>
+        <select id="bpMetric">
+          <option value="BP">BP % (despacho no prazo)</option>
+          <option value="pedidos">Pedidos na semana</option>
+          <option value="nre15">NRE15 %</option>
+          <option value="nba10">NBA10 %</option>
+          <option value="atraso">Atraso crítico %</option>
+        </select>
+      </div>
+    </div>
+    <div class="chart-wrap tall"><canvas id="bpChart"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>Resumo geral do período — ranking por BP %</h2>
+    <div class="table-scroll"><table id="bpTable"></table></div>
+  </div>
+</section>
+
+<!-- ============ CRUZAMENTO ============ -->
+<section id="cruz" class="tab-panel">
+  <div class="insight" id="cruzInsight"></div>
+  <div class="grid two-col mb">
+    <div class="card">
+      <h2 id="cruzT1"></h2>
+      <div class="chart-wrap"><canvas id="cruzConv"></canvas></div>
+    </div>
+    <div class="card">
+      <h2 id="cruzT2"></h2>
+      <div class="chart-wrap"><canvas id="cruzGmv"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Tabela cruzada — operação × comercial</h2>
+    <div class="table-scroll"><table id="cruzTable"></table></div>
+    <p class="note">⚠️ Os dados de BP referem-se a dez/2025–jan/2026 e os comerciais ao período vigente. A leitura correta é de perfil operacional estrutural de cada loja, não de causalidade direta no mesmo período.</p>
+  </div>
+</section>
+
+<!-- ============ MÉTODO FTW ============ -->
+<section id="ftw" class="tab-panel">
+  <div class="insight">
+    <h2>Método FTW — benchmarks de mercado para balizar, avaliar e validar os resultados Tapí</h2>
+    <ul>
+      <li><b>O que é:</b> cada indicador do negócio Delivery é comparado a uma referência externa publicada (plataformas, consultorias do setor e critérios oficiais do iFood), gerando um farol 🟢🟡🔴 por loja e um <b>Score FTW</b> de aderência ao padrão de mercado.</li>
+      <li><b>Como ler:</b> 🟢 dentro/acima da referência · 🟡 até ~20–30% fora da faixa (zona de atenção) · 🔴 fora do padrão (prioridade de ação). Os valores usam sempre <b>o período mais recente disponível</b> nos dados ao vivo.</li>
+      <li><b>Limite honesto do método:</b> benchmark orienta, não sentencia — faixas variam por categoria, praça e modelo logístico. Use como bússola de priorização, não como veredito.</li>
+    </ul>
+  </div>
+  <div class="card mb">
+    <h2 id="ftw-t1">Benchmarks × Rede Tapí</h2>
+    <div class="table-scroll"><table id="ftw-rede"></table></div>
+    <p class="note" id="ftw-nota-rede"></p>
+  </div>
+  <div class="card mb">
+    <h2 id="ftw-t2">Farol FTW por loja</h2>
+    <div class="table-scroll"><table id="ftw-farol"></table></div>
+    <p class="note">Score FTW = média dos faróis (🟢=2 · 🟡=1 · 🔴=0) convertida para 0–10. Ordenado do maior para o menor.</p>
+  </div>
+  <div class="grid two-col mb">
+    <div class="card">
+      <h2>Score FTW por loja</h2>
+      <div class="chart-wrap"><canvas id="ftw-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Nota metodológica (leia antes de cobrar as lojas 🙂)</h2>
+      <div style="font-size:14px;line-height:1.55">
+        <p><b>1 · ROI interno ≠ ROAS atribuído.</b> O ROI do dash divide o faturamento total pelo investimento próprio; o ROAS de mercado (4:1 setor · 8,5:1 média iFood Anúncios) considera apenas a receita <i>atribuída</i> aos anúncios. Por isso o ROI Tapí tende a superar o benchmark — a comparação vale como teto de sanidade, não como equivalência.</p>
+        <p style="margin-top:8px"><b>2 · Atraso crítico ≈ "taxa de problemas".</b> Usamos o critério oficial do Selo Super Restaurantes do iFood (problemas ≤ 2,5% em 3 meses, que inclui atrasos) como régua para o atraso crítico do BP — proxy conservador e a favor da operação.</p>
+        <p style="margin-top:8px"><b>3 · Períodos.</b> Conversão, TM, ROI e Budget usam o parcial mais recente; a Margem iFood usa o DRE do mesmo parcial; o atraso crítico vem do resumo BP (dez/25–jan/26) até a extração ser atualizada.</p>
+        <p style="margin-top:8px"><b>4 · CMV é parâmetro, não medição.</b> O CMV do DRE é fixado em contrato/ficha técnica; o farol compara o parâmetro à faixa setorial — se a faixa mudar na planilha de Margem, o farol acompanha.</p>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Fontes de referência</h2>
+    <div id="ftw-fontes" style="font-size:13.5px;line-height:1.7"></div>
+  </div>
+</section>
+
+<!-- ============ LEGENDA ============ -->
+<section id="legenda" class="tab-panel">
+  <div class="card">
+    <h2>Legenda dos indicadores</h2>
+    <div class="grid legend-grid mt">
+      <div class="legend-item"><b>GMV</b><p>Faturamento bruto (valor total dos pedidos).</p></div>
+      <div class="legend-item"><b>Faturamento líquido</b><p>Receita após taxas/comissões da plataforma.</p></div>
+      <div class="legend-item"><b>TM (Ticket Médio)</b><p>GMV ÷ número de pedidos.</p></div>
+      <div class="legend-item"><b>Pedidos</b><p>Quantidade de pedidos no período.</p></div>
+      <div class="legend-item"><b>Novos</b><p>Clientes novos (primeira compra na loja).</p></div>
+      <div class="legend-item"><b>Visitas</b><p>Visitas ao cardápio no iFood.</p></div>
+      <div class="legend-item"><b>Conversão %</b><p>Conversão de cardápio: pedidos ÷ visitas.</p></div>
+      <div class="legend-item"><b>Budget de investimento %</b><p>% do faturamento destinado a promoções + anúncios.</p></div>
+      <div class="legend-item"><b>Promoções + Ads</b><p>Investimento próprio da loja em promoções e anúncios.</p></div>
+      <div class="legend-item"><b>Sub iFood</b><p>Subsídio/investimento bancado pelo iFood na loja.</p></div>
+      <div class="legend-item"><b>CPO</b><p>Custo por pedido: investimento total ÷ total de pedidos.</p></div>
+      <div class="legend-item"><b>ROI</b><p>Retorno sobre investimento: receita gerada por R$ 1 investido.</p></div>
+      <div class="legend-item"><b>BP %</b><p>Eficiência de despacho: % de pedidos despachados dentro do prazo (Bom Parceiro).</p></div>
+      <div class="legend-item"><b>NRE15</b><p>Interpretado como % de pedidos não respondidos/aceitos em até 15 min.*</p></div>
+      <div class="legend-item"><b>NBA10</b><p>Interpretado como % de pedidos com não-atendimento do prazo de 10 min (aceite/preparo).*</p></div>
+      <div class="legend-item"><b>Atraso crítico %</b><p>% de pedidos com atraso severo no despacho/entrega.</p></div>
+      <div class="legend-item"><b>DRE Virtual — Delivery</b><p>Simulação da saúde financeira do iFood: Faturamento − custos fixos (Imposto, CMV, ROY, FPP, Tx iFood, Tx iFood POL) − Alavancas (Budget de investimento real do período) = Margem de Contribuição.</p></div>
+      <div class="legend-item"><b>CMV / ROY / FPP</b><p>Custo da mercadoria vendida; royalties da franquia; fundo de propaganda — percentuais fixos sobre o faturamento.</p></div>
+      <div class="legend-item"><b>Alavancas</b><p>Taxa Grátis, Campanha Inteligente (CI), Anúncio (CPC com lance) e Hits — ferramentas de mídia/promoção do iFood.</p></div>
+    </div>
+    <div class="q-box">
+      <b>Para confirmar:</b> as siglas <b>NRE15</b> e <b>NBA10</b> não vieram com definição na planilha — assumi as interpretações acima (métricas de tempo de resposta/aceite do iFood). Se tiverem outro significado oficial na operação de vocês, me avise que ajusto a legenda e as análises.
+    </div>
+  </div>
+</section>
+
+<footer>Tapí Tapioca e Açaí · Dashboard gerado em 26/07/2026 · Fontes: Dashboard de Performance (PDF) + Análise BP (XLSX)</footer>
+</main>
+
+<script>
+/* ================= DADOS ================= */
+const LOJAS=["Arpoador","Botafogo","Centro","Flamengo","Icaraí","Ipanema","Itaim","Leblon","Pinheiros","Tijuca","Downtown","Novo Leblon"];
+const CORES=["#7B131F","#C0392B","#E67E22","#B8860B","#6B8E23","#1E7A46","#16808A","#2C5F8A","#5B4E9E","#8E4B8E","#B25078","#8A7F78"];
+
+// meses fechados: [Abr, Mai, Jun]
+const MENSAL={metrics:["Pedidos","GMV / Fat. líquido","TM","Novos","Visitas","Conversão %","Budget %","Promoções + Ads","Sub iFood","CPO","ROI"],labels:["Abril", "Maio", "Junho", "Julho"],data:{
+ "Arpoador":[[931,943,1058,1060],[60957.43,60541.26,66856.21,67787.42],[65.4752,64.2007,63.1911,63.9504],[141,128,206,172],[2284,2461,2869,2849],[40.7618,38.3178,36.877,37.206],[0,0,2.1263,2.7157],[0,0,1421.58,1840.91],[6094.13,5792.47,6097.85,8183.4],[0,0,1.3436,1.7367],[0,0,46.0295,35.8228]],
+ "Botafogo":[[1436,1469,1558,1602],[88359.23,87943.78,95761.48,95997.12],[61.5315,59.8664,61.4644,59.9233],[216,219,252,234],[3747,3733,4209,4286],[38.324,39.3517,37.0159,37.3775],[4.1233,4.0188,4.9243,5.3541],[3643.3,3534.31,4715.54,5139.82],[13817.03,9768.07,9595.76,12141.5],[2.5371,2.4059,3.0267,3.2084],[23.2525,23.8829,19.3076,17.6771]],
+ "Centro":[[1227,1423,1258,1314],[53939.22,60757.67,59173.55,63739.27],[43.9602,42.6969,47.0378,48.5078],[206,191,172,150],[3965,3974,3745,4031],[30.9458,35.8078,33.5915,32.5974],[6.7545,7.6623,1.9514,2.1023],[3643.3,4655.42,1154.7,1339.99],[8432.75,8668.72,7583.21,960.99],[2.9693,3.2716,0.9179,1.0198],[13.805,12.051,50.2458,46.567]],
+ "Flamengo":[[1474,1498,1398,1426],[86020.98,87425.74,82383.81,83448.18],[58.3589,58.3616,58.9298,58.5191],[321,306,301,285],[4643,4166,4297,4485],[31.7467,35.9578,32.5343,31.7949],[6.2887,6.193,5.902,8.533],[5409.59,5414.3,4862.28,7120.65],[9635.82,9670.38,8540.3,12604.39],[3.67,3.6144,3.478,4.9934],[14.9016,15.1472,15.9435,10.7192]],
+ "Icaraí":[[942,759,586,607],[50292.12,45324,36191.95,38261.96],[53.3887,59.7154,61.761,63.0345],[313,142,109,115],[4588,3210,2108,2045],[20.5318,23.6449,27.7989,29.6822],[11.9168,3.3837,0,0.0235],[5993.2,1533.62,0,9],[8501.56,7299.1,4627.18,4596.4],[5.36,2.56,0,0.0148],[9.83,23.71,0,4250.3289]],
+ "Ipanema":[[450,467,382,386],[21533.66,23718.62,20859.56,21880.35],[47.8526,50.7893,54.6062,56.6848],[126,79,59,57],[1212,957,716,744],[37.1287,48.7983,53.352,51.8817],[11.221,7.9102,0.0805,0.2646],[2416.29,1876.19,16.8,57.9],[1828.51,2655.17,222.03,960.99],[5.23,4.44,0.044,0.15],[8.86,11.34,0,376.899]],
+ "Itaim":[[2132,1789,1485,1513],[115089.15,100681.37,86492.18,88841.08],[53.9818,56.278,58.2439,58.7185],[631,413,283,343],[6906,4902,4202,4265],[30.8717,36.4953,35.3403,35.4748],[7.5654,6.4197,5.8353,4.8168],[8706.97,6463.4,5047.07,4279.26],[15903.73,12250.02,9738.82,12245.01],[4.0839,3.6129,3.3987,2.8283],[12.218,14.5772,16.1371,19.7609]],
+ "Leblon":[[1719,1785,1682,1614],[109489.58,104427.96,102850.06,98620.32],[63.6938,58.5031,61.1475,61.103],[188,212,242,223],[3732,4902,3678,3551],[46.0611,36.4137,45.7314,45.452],[4.0238,4.5664,4.2867,4.3127],[4405.62,4768.62,4408.83,4253.17],[15670.61,9181.32,7843.88,12323.85],[2.5629,2.6715,2.6212,2.6352],[23.8523,20.899,22.3282,22.1875]],
+ "Pinheiros":[[1335,1283,1099,1214],[82103.49,75088.37,65220,70000.48],[61.5007,58.5256,59.3449,57.661],[332,320,265,309],[5023,3404,2817,3634],[26.5777,37.691,39.0131,33.4067],[4.459,6.176,6.4905,6.0806],[3660.99,4637.43,4233.11,4256.48],[7613.31,8811.45,7348.67,9769.83],[2.7423,3.6145,3.8518,3.5062],[21.4266,15.1918,14.4071,15.4456]],
+ "Tijuca":[[870,1032,840,938],[51208.95,58809.05,53022.52,59154.31],[58.8609,56.9855,63.122,63.0643],[253,270,214,211],[4198,4128,3691,3593],[20.7242,25,22.7581,26.1063],[8.1254,8.785,5.8878,5.6505],[4160.92,5166.36,3121.88,3342.53],[7509.33,7936.32,5756.09,7351.35],[4.7827,5.0062,3.7165,3.5635],[11.3071,10.3831,15.9842,16.6975]],
+ "Downtown":[[546,431,435,489],[35184.445,26640.2,27756.62,32795.08],[64.4404,61.8102,63.8083,67.0656],[117,87,92,99],[2557,1916,1720,1942],[21.3531,22.4948,25.2907,25.1802],[4.058,4.7275,4.1518,8.4056],[1427.8,1259.42,1152.41,2756.63],[4975.16,2606.93,2522.92,2811.15],[2.615,2.9221,2.6492,5.6373],[23.6424,20.1528,23.0857,10.8968]],
+ "Novo Leblon":[[630,667,568,489],[44084.59,44025.28,36348.88,35322.74],[69.9755,66.0049,63.9945,72.2346],[167,183,145,110],[2650,2114,2210,1816],[23.7736,31.5516,25.7014,26.9273],[3.4308,6.8495,6.3914,1.0719],[1512.46,3015.52,2323.2,378.62],[5684.83,3881.75,3175.75,3520.26],[1.06,5.54,4.0901,0.7743],[65.62,11.61,14.646,92.2934]]
+}};
+
+// parcial 01-07 (snapshot da planilha)
+const PARCIAIS={
+ "01-07":{labels:["Abril (01–07)", "Maio (01–07)", "Junho (01–07)", "Julho (01–07)", "Agosto (01–07)"],data:{
+ "Arpoador":[[205,201,246,229,215],[14131.02,13960.36,17102.56,15793.39,15695.7],[68.9318,69.4545,69.5226,68.9668,73.0033],[37,25,51,28,27],[516,568,702,646,646],[39.7287,35.3873,35.0427,35.4489,33.2817],[0,0,1.5036,2.2478,2.8479],[0,0,257.16,355,447],[464.49,498.82,201.76,689.36,776.85],[0,0,1.0454,1.5502,2.0791],[0,0,65.5055,43.4884,34.1134]],
+ "Botafogo":[[317,328,345,366,353],[22336.09,21387.91,24240.12,24751.37,23833.86],[70.4609,65.207,70.2612,67.6267,67.518],[48,59,56,51,55],[840,897,974,1052,928],[37.7381,36.4548,35.4209,34.7909,38.0388],[3.7975,3.0372,4.5301,4.4412,5.1114],[848.21,649.6,1098.09,1099.26,1218.25],[2625.18,1563.2,1037.31,1637.88,1743.2],[3.12,3.23,3.1829,3.0034,3.4511],[20.28,17.5,21.0748,21.5164,18.564]],
+ "Centro":[[290,329,228,293,295],[14115.24,15200.32,11301.73,15969.42,16616.1],[48.6732,46.2016,49.569,54.5031,56.3258],[47,43,31,38,36],[865,848,706,921,873],[33.526,38.7972,32.2946,31.8132,33.7915],[6.8109,9.9464,1.7696,1.5655,1.6892],[961.37,1511.88,200,250,280.68],[1236.12,1093.45,259.93,448.83,751.76],[3.53,4.75,0.8772,0.8532,0.9515],[12.64,8.6,55.5087,62.8777,58.1994]],
+ "Flamengo":[[322,329,303,356,374],[19611.98,20016.61,19351.71,23440.19,25764.6],[60.9068,60.8408,63.867,65.8432,68.8893],[77,73,69,67,94],[1004,1041,907,1056,1156],[31.9721,31.4121,33.4068,33.7121,32.3529],[6.4354,6.3643,4.4173,6.4804,6.9439],[1262.1,1273.92,854.82,1519.01,1789.06],[1683.38,1102.35,1230.19,2372.57,2176.9],[5,5.39,2.8212,4.2669,4.7836],[11.11,10,21.6383,14.4312,13.4012]],
+ "Icaraí":[[196,179,150,116,175],[12183.51,12656.88,10848.39,7682.88,13599.6],[62.1608,70.7088,72.3226,66.2317,77.712],[67,46,34,24,32],[858,945,543,443,602],[22.8438,18.9418,27.6243,26.1851,29.0698],[10.0443,6.744,0,0,0.0662],[1223.75,853.58,0,0,9],[1893.26,1570.31,550.23,241.69,452.43],[5.35,3.46,0,0,0.0514],[9.94,17.95,0,0,1510.0667]],
+ "Ipanema":[[108,95,89,95,81],[6123.37,5615.47,5022.78,6123.32,5136.33],[56.6979,59.1102,56.4357,64.456,63.4115],[27,19,19,8,15],[252,208,164,181,163],[42.4603,45.6731,54.2683,52.4862,49.6933],[9.7544,7.1697,0,0.2433,0.292],[597.3,402.61,0,14.9,15],[442.32,592.33,80.59,205.31,248.63],[5.63,4.47,0,0.1568,0.1852],[8.75,11.97,0,409.9611,341.422]],
+ "Itaim":[[437,482,305,363,406],[27322.44,31221.09,21787.17,22989.7,28330.61],[62.5227,64.774,71.4333,63.3325,69.7798],[133,153,64,98,91],[1500,1414,824,1086,1043],[29,34.017,37.0146,33.4254,38.9262],[7.9504,7.8691,4.8938,4.7574,3.4518],[2172.25,2456.83,1066.23,1093.71,977.91],[2028.72,2735,1648.23,3431.12,1708.3],[6.21,6.41,3.4958,3.013,2.4086],[7.87,7.96,19.4338,20.0199,27.9706]],
+ "Leblon":[[399,396,405,351,381],[29396.13,25673.45,27518.77,23771.7,27761.07],[73.6745,64.8319,67.9476,67.7256,72.8637],[50,49,81,56,59],[874,826,903,842,700],[45.5378,47.9419,44.8505,41.6865,54.4286],[3.6829,4.5733,3.7355,4.2519,1.8135],[1082.62,1174.13,1027.95,1010.74,503.45],[3042.8,1916.43,701.18,1322.22,1306.7],[2.52,4.46,2.5381,2.8796,1.3214],[25.97,12.98,25.7705,22.5191,54.1417]],
+ "Pinheiros":[[307,283,243,277,308],[21747.6,18352.89,16331.23,18647.76,20658.12],[70.8391,64.8512,67.2067,67.3204,67.0718],[77,60,71,68,81],[1148,880,627,671,787],[26.7422,31.7045,38.756,41.2817,39.136],[5.5953,6.5962,6.9047,3.2696,5.0864],[1216.85,1210.59,1127.62,609.71,1050.76],[1964.73,1432.53,1418.5,2586.53,1393.76],[3.29,5.09,4.6404,2.2011,3.4116],[17.74,10.59,13.4829,29.5846,18.6602]],
+ "Tijuca":[[184,219,219,203,229],[12419.06,14436.12,14617.97,14212.28,16172.57],[67.4949,65.9184,66.7487,70.0112,70.6226],[45,57,66,36,49],[778,861,1003,775,818],[23.3933,25.4355,21.8345,26.1935,27.9951],[3.9977,7.7332,8.8594,4.9837,4.3386],[496.48,1116.38,1295.07,708.3,701.66],[710.08,1125.39,908.3,783.63,483.24],[2.44,5.6,5.9136,3.4892,3.064],[23.96,10.35,10.2874,19.0653,22.049]],
+ "Downtown":[[130,83,100,115,128],[10180.74,5819.98,7458.17,8756.95,9301.74],[78.3134,70.1202,74.5817,76.1474,72.6698],[38,19,24,22,25],[570,460,400,457,528],[22.807,18.0435,25,25.1641,24.2424],[3.0754,4.9672,3.7124,3.5324,9.1212],[313.1,289.09,276.88,309.33,848.43],[583.54,190.73,207.97,167.97,677.35],[2.4085,3.483,2.7688,2.6898,6.6284],[0,0,25.9365,27.3094,9.9635]],
+ "Novo Leblon":[[131,148,126,139,126],[10568.8,11332.46,9958.57,11221.61,10822.46],[80.6779,76.5707,79.0363,80.731,85.8925],[34,40,38,36,18],[568,494,470,599,365],[23.0634,29.7571,26.8085,23.2053,34.5205],[3.0137,5.3091,6.7451,3.119,0],[318.51,601.65,671.72,350,0],[597.44,763.48,559.8,747.59,160.82],[0.85,4.88,5.3311,2.518,0],[81.47,13.37,13.8255,31.0617,null]]
+},rede:null},
+ "01-14":{labels:["Abril (01–14)", "Maio (01–14)", "Junho (01–14)", "Julho (01–14)"],data:{
+ "Arpoador":[[448,420,481,495],[30075.8,27761.65,32363.55,34830.37],[67.1335,66.0992,67.2839,70.3644],[74,61,102,75],[1060,1121,1354,1314],[42.2642,37.4665,35.5244,37.6712],[0,0,1.8591,2.0672],[0,0,601.68,720],[695.24,667,438.44,1777.86],[0,0,1.2509,1.4545],[0,0,52.7886,47.3755]],
+ "Botafogo":[[669,678,722,724],[45172.61,44905.62,48264.56,49739.56],[67.5226,66.2325,66.8484,68.701],[103,111,120,102],[1754,1646,1942,2011],[38.1414,41.1908,37.1782,36.002],[3.9524,3.0822,4.5222,4.5208],[1785.39,1384.07,2182.62,2248.61],[4923.18,2837.77,2213.12,3437.06],[3.22,3.24,3.023,3.1058],[18.68,17.64,21.1131,21.1201]],
+ "Centro":[[644,693,null,567],[31831.78,32427.03,null,31320.35],[49.4282,46.7923,null,55.2387],[109,90,null,65],[1957,1843,null,1785],[32.9075,37.6017,null,31.7647],[7.0885,9.2379,null,0.9738],[2256.38,2995.58,null,305],[2791.51,2148.86,null,1361.44],[3.79,4.5,null,0.5379],[12.08,9.3,null,101.6897]],
+ "Flamengo":[[671,684,619,653],[40296.06,41498.84,39793.7,43070.09],[60.0537,60.6708,64.2871,65.9573],[149,153,131,124],[2071,1888,1848,1972],[32.3998,36.2288,33.4957,33.1136],[6.3412,6.4573,4.3326,6.775],[2555.26,2679.7,1724.12,2918.01],[3292.32,2828.42,2642.63,4974.79],[4.87,4.72,2.7853,4.4686],[11.24,11.66,22.0806,13.7601]],
+ "Icaraí":[[437,372,304,271],[27523.06,25127.99,21167.95,18765.99],[62.9818,67.5484,69.6314,69.2472],[146,85,63,54],[2004,1749,1062,972],[21.8064,21.2693,28.6252,27.8807],[9.9558,6.9763,0,0],[2740.13,1753,0,0],[3967.39,3148.38,894.73,679.26],[5.36,3.62,0,0],[10.11,16.35,0,0]],
+ "Ipanema":[[228,225,null,186],[12484.79,12943.29,null,12120.81],[54.7579,57.5257,null,65.1656],[55,43,null,22],[554,462,null,342],[41.1552,48.7013,null,54.386],[9.6647,7.3243,null,0.1642],[1206.62,948.01,null,19.9],[973.79,1327.36,null,514.85],[5.11,4.47,null,0.107],[9.09,11.7,null,608.0859]],
+ "Itaim":[[978,923,642,657],[60936.29,60090.22,43506.47,43665.34],[62.307,65.1032,67.7671,66.4617],[277,245,128,153],[3225,2556,1702,1854],[30.3256,36.1111,37.7203,35.4369],[7.8353,6.2764,5.0721,4.5346],[4774.56,3771.49,2206.69,1980.04],[4572.59,4801.65,3504.43,4815.6],[6.18,5.83,3.4372,3.0138],[7.92,8.86,18.7157,21.0528]],
+ "Leblon":[[822,816,790,716],[59778.37,51633.4,51908.97,49507.69],[72.7231,63.2762,65.7076,69.1448],[103,99,126,110],[1721,1578,1734,1682],[47.7629,51.711,45.5594,42.5684],[3.6967,4.9034,3.9568,4.0649],[2209.81,2531.8,2053.95,2012.42],[5814.59,3001.5,1096.8,2980.33],[2.6,5.06,2.5999,2.8106],[24.85,10.74,24.2728,23.6011]],
+ "Pinheiros":[[635,583,543,539],[44256.67,37766.06,36378.14,35894.37],[69.6955,64.7788,66.9947,66.5944],[166,138,152,131],[2386,1634,1348,1458],[26.6136,35.6793,40.2819,36.9684],[5.6755,6.4661,6.546,4.6059],[2511.78,2441.99,2381.3,1653.26],[3003.18,3114.83,3083.24,3935.23],[3.89,5.29,4.3855,3.0673],[15.08,10.11,14.2766,20.7113]],
+ "Tijuca":[[372,474,423,422],[24720.08,30082.55,29126.82,29843.81],[66.4518,63.4653,68.8577,70.7199],[98,129,120,95],[1743,1813,1867,1603],[21.3425,26.1445,22.6567,26.3256],[5.8346,8.2059,7.0598,2.9696],[1442.32,2468.54,2056.3,886.24],[1852.3,2120.5,1372.87,1354.96],[3.59,5.43,4.8612,2.1001],[16.08,9.91,13.1647,32.6746]],
+ "Downtown":[[268,205,196,229],[20262.39,14409.46,15084.79,17730.45],[75.6059,70.29,76.9632,77.4255],[72,42,48,49],[1156,912,768,882],[23.1834,22.4781,25.5208,25.9637],[3.0984,4.0472,3.4016,5.6548],[627.8,583.18,513.12,1002.62],[1189.98,397.64,327.97,777.16],[2.3425,2.8448,2.618,4.3783],[8.79,7.46,28.3982,16.6841]],
+ "Novo Leblon":[[279,290,273,252],[22562.63,21384.65,20053.99,20974.41],[80.8696,73.7402,73.4578,83.2318],[74,77,73,63],[1157,978,952,974],[24.1141,29.6524,28.6765,25.8727],[2.9434,5.8572,6.7885,1.7622],[664.11,1252.54,1361.36,369.62],[1066.88,1513.04,1336.39,869.43],[1.09,5.29,4.9867,1.4667],[62.87,11.48,13.7309,55.7459]]
+},rede:null},
+ "01-21":{labels:["Abril (01–21)", "Maio (01–21)", "Junho (01–21)", "Julho (01–21)"],data:{
+ "Arpoador":[[675,639,719,718],[46103.31,42714.8,46766.87,50971.91],[68.3012,66.8463,65.0443,70.9915],[115,88,152,120],[1621,1589,1992,1928],[41.641,40.214,36.0944,37.2407],[0,0,2.0775,2.1482],[0,0,971.58,1095],[1068.79,1162.88,627.22,2524.74],[0,0,1.3513,1.5251],[0,0,47.1349,45.5497]],
+ "Botafogo":[[1009,1006,1086,1092],[68985.23,66634.84,71622.14,74636.56],[68.3699,66.2374,65.9504,68.3485],[157,157,186,157],[2624,2310,2974,2958],[38.4527,43.5498,36.5165,36.9168],[3.8775,3.4796,4.6305,4.5525],[2674.88,2318.63,3316.45,3397.81],[6884.56,4303.12,3473.18,5253.45],[3.27,3.29,3.0538,3.1115],[18.42,17.44,20.596,20.9661]],
+ "Centro":[[906,1079,null,865],[45194.17,50473.06,null,48097.71],[49.8832,46.7776,null,55.6043],[156,144,null,99],[2780,2674,null,2648],[32.5899,40.3515,null,32.6662],[7.281,8.6658,null,1.5988],[3290.6,4373.9,null,769],[4077.93,2787.9,null,2274.93],[3.92,4.21,null,0.889],[11.74,9.92,null,61.5458]],
+ "Flamengo":[[1005,1023,947,966],[61583.99,62132.26,59665.7,64201.97],[61.2776,60.7353,63.005,66.4617],[217,227,186,188],[3188,2675,2781,2941],[31.5245,38.243,34.0525,32.846],[6.0209,6.6738,4.6147,7.1758],[3707.88,4146.61,2753.41,4606.99],[5391.22,5162.64,3988.25,7713.18],[4.39,4.74,2.9075,4.7691],[12.97,11.59,20.6697,12.9358]],
+ "Icaraí":[[649,551,435,392],[41148.48,37437.5,30018.84,28342.33],[63.4029,67.9446,69.0088,72.3019],[215,111,80,74],[3171,2447,1541,1398],[20.4667,22.5174,28.2284,28.0401],[9.9355,5.7886,0,0],[4088.31,2167.12,0,0],[5906.25,4437.7,1339.22,900.02],[5.26,3.23,0,0],[10.29,18.51,0,0]],
+ "Ipanema":[[327,348,263,256],[17431.03,19855.67,15439.66,16418.11],[53.3059,57.0565,58.7059,64.1332],[83,59,41,36],[848,701,509,481],[38.5613,49.6434,51.6699,53.2225],[10.2988,7.26,0.0324,0.1517],[1795.19,1441.52,5,24.9],[1441.26,2106.07,201.05,723.51],[5.36,4.48,0.019,0.0973],[8.38,11.55,3086.932,658.3618]],
+ "Itaim":[[1448,1328,1023,987],[92582.14,86298.77,69135.81,66172.39],[63.9379,64.984,67.5814,67.044],[430,311,194,221],[4754,3558,2788,2782],[30.4586,37.3243,36.693,35.4781],[7.8056,5.7772,5.1751,4.4084],[7226.61,4985.62,3577.83,2917.15],[6842.46,6852.38,5224.02,6538.83],[6.13,5.5,3.4974,2.9556],[8.41,9.5,18.3234,21.6839]],
+ "Leblon":[[1240,1210,1184,1121],[89781.64,77486.15,77371.17,78713.72],[72.4045,64.0381,65.3473,70.2174],[149,146,176,162],[2605,2337,2595,2493],[47.6008,51.7758,45.6262,44.9659],[3.642,4.6258,3.9781,3.8803],[3269.86,3584.39,3077.93,3054.29],[8393.85,3844.58,1556.42,4687.07],[2.62,3.23,2.5996,2.7246],[24.33,18.51,24.1374,24.7715]],
+ "Pinheiros":[[890,874,797,802],[63707.55,58680.98,54135.55,53617.52],[71.5815,67.1407,67.9242,66.8548],[229,223,201,203],[3494,2389,2028,2307],[25.4722,36.5843,39.2998,34.7638],[5.9293,5.8893,6.1859,3.6861],[3777.41,3455.92,3348.78,1976.42],[3926.99,4416.24,4599.66,5432.15],[4.08,5.26,4.2017,2.4644],[14.59,10.54,15.1658,26.1286]],
+ "Tijuca":[[601,711,611,631],[39342.22,45523.19,42623.27,45375.26],[65.4613,64.027,69.7599,71.9101],[175,190,164,151],[2909,2738,2673,2466],[20.66,25.9679,22.8582,25.588],[7.507,8.1505,6.2686,3.8361],[2953.41,3710.36,2671.88,1740.66],[3413.54,3117.62,1766.31,1864.22],[4.44,5.29,4.373,2.7586],[12.7,10.23,14.9525,25.0678]],
+ "Downtown":[[381,308,288,335],[28677.23,21391.25,21601.99,26634.29],[75.2683,69.4521,75.0069,79.5053],[89,66,71,70],[1720,1354,1161,1310],[22.1512,22.7474,24.8062,25.5725],[3.4097,4.0934,3.6206,6.2968],[977.8,875.63,782.13,1677.1],[1653.66,515.6,456.9,1383.01],[2.5664,2.843,2.7157,5.0063],[7.63,7.58,26.6194,14.8812]],
+ "Novo Leblon":[[440,439,400,345],[36057.31,32971.31,30038.65,29148.2],[81.9484,75.1055,75.0966,84.4875],[128,121,104,78],[1848,1445,1446,1297],[23.8095,30.3806,27.6625,26.5998],[2.9785,5.8492,6.236,0],[1073.95,1928.55,1873.2,0],[2060.48,2578.34,1850.94,1054.26],[1.17,5.4,4.683,0],[59.24,11.39,15.036,0]]
+},rede:null},
+ "01-28":{labels:["Abril (01–28)", "Maio (01–28)", "Junho (01–28)", "Julho (01–28)"],data:{
+ "Arpoador":[[888,833,974,947],[60685.83,55992.34,64303.49,67281.63],[68.3399,67.2177,66.02,71.0471],[138,111,195,154],[2131,2177,2643,2568],[41.6706,38.2637,36.8521,36.8769],[0,0,2.0552,2.4033],[0,0,1321.58,1616.96],[1558.02,1309.69,798.22,3286.57],[0,0,1.3569,1.7075],[0,0,47.6565,40.61]],
+ "Botafogo":[[1363,1346,1446,1432],[95151.46,88470.9,95977.51,97898.14],[69.8103,65.7288,66.3745,68.3646],[201,199,186,211],[3513,3361,3924,3875],[38.7987,40.0476,36.8502,36.9548],[3.6431,3.2756,4.6165,4.6416],[3466.42,2897.92,4430.78,4544.05],[9260.07,5356.16,4636.28,6984.54],[3.13,3.36,3.0642,3.1732],[19.48,16.88,20.6615,20.5442]],
+ "Centro":[[1132,1383,1157,1115],[55634.07,65224.92,58062.52,61602.62],[49.1467,47.1619,50.1837,55.249],[185,184,154,125],[2516,3830,3443,3479],[44.9921,36.1097,33.6044,32.0494],[6.3866,7.1167,1.8165,1.9171],[3553.15,4641.87,1054.7,1180.99],[4831.36,3011.14,982.78,3147.54],[3.87,3.81,0.9116,1.0592],[11.79,11.1,54.0512,51.1618]],
+ "Flamengo":[[1387,1366,1259,1288],[85906.87,84279.27,78875.28,84906.8],[61.9372,61.6979,62.6492,65.9214],[307,286,262,254],[4340,3748,3848,4018],[31.9585,36.4461,32.7183,32.0557],[6.0128,5.9801,5.3597,7.48],[5165.4,5039.95,4227.49,6351.03],[7377.02,5838.41,5570.06,10170.32],[4.37,4.19,3.3578,4.9309],[13.05,13.49,17.6577,12.369]],
+ "Icaraí":[[892,690,566,532],[55667.41,46648.68,40237.27,39131.52],[62.4074,67.6068,71.0906,73.5555],[293,133,80,97],[4341,2949,2017,1826],[20.5483,23.3978,28.0615,29.1347],[10.26,3.2876,0,0.023],[5711.48,1533.62,0,9],[7661.43,4950.53,1736.77,1305.55],[5.39,2.71,0,0.0169],[9.83,21.79,0,4346.9467]],
+ "Ipanema":[[429,448,339,353],[23203.51,24750.04,19686.82,22654.81],[54.0874,55.2456,58.0732,64.1779],[119,75,52,49],[1118,908,657,651],[38.3721,49.3392,51.5982,54.2243],[8.2537,7.4795,0.0853,0.2556],[1915.15,1851.19,16.8,57.9],[1797.59,2604.28,208.05,1012.03],[5.41,4.52,0.0496,0.164],[8.56,11.59,1170.8345,390.2748]],
+ "Itaim":[[1972,1682,1386,1345],[125987.64,109507.41,94244.29,92463.88],[63.8883,65.1055,67.9973,68.7464],[585,381,264,298],[6454,4532,3891,3764],[30.5547,37.1139,35.6207,35.7333],[7.7691,5.54,5.0106,4.1808],[9788.12,6066.7,4722.25,3865.69],[9304.7,8629.18,6817.44,8109.1],[6.09,5.34,3.4071,2.8741],[8.32,9.96,18.9575,22.9191]],
+ "Leblon":[[1645,1597,1557,1486],[118427.56,100847.72,100936.72,103384.56],[71.9924,63.1482,64.8277,69.5724],[182,188,227,207],[3475,3077,3419,3251],[47.3381,51.9012,45.5396,45.709],[3.5648,4.3273,4.0649,3.8722],[4221.71,4363.98,4102.93,4003.27],[10765.35,4115.35,1960.92,6216.84],[2.57,5.25,2.6352,2.694],[24.57,10.55,23.6011,24.825]],
+ "Pinheiros":[[1236,1175,1019,1077],[88252.79,78346.73,69943.32,72636.77],[71.4019,66.6781,68.6392,67.4436],[310,293,242,270],[4672,3115,2630,3189],[26.4555,37.7207,38.7452,33.7723],[5.9202,5.5762,5.7666,5.2062],[5224.74,4368.77,4033.34,3781.58],[5160.46,5677.04,5823.03,6984.54],[4.26,5.17,3.9581,3.5112],[14.24,10.61,16.3413,18.208]],
+ "Tijuca":[[831,919,786,845],[55837.39,59339.13,55040.96,61048.08],[67.193,64.5692,70.0267,72.2462],[246,242,203,195],[3989,3674,3458,3240],[20.8323,25.0136,22.7299,26.0802],[7.2184,7.6167,5.4902,4.0038],[4030.59,4519.67,3021.88,2444.23],[4465.59,3863.08,2009.2,2275.6],[4.32,4.86,3.8446,2.8926],[13.21,11.42,17.2141,23.9764]],
+ "Downtown":[[504,405,394,436],[37942.64,28672.26,29325.25,34415.85],[75.283,70.7957,74.4296,78.9354],[107,81,71,85],[2301,1780,1577,1729],[21.9035,22.7528,24.9841,25.2169],[3.4995,4.0321,3.6153,6.8817],[1327.8,1156.1,1060.2,2368.38],[2148.27,659.31,609.94,1947.63],[2.6345,2.8546,2.6909,5.4321],[7.64,7.43,26.6601,13.5314]],
+ "Novo Leblon":[[587,592,552,441],[49044.52,45028.53,39149.94,38230.56],[83.5511,76.0617,70.9238,86.6906],[158,162,135,100],[2483,1904,2021,1658],[23.6408,31.0924,27.3132,26.5983],[2.8862,5.8797,5.6787,0],[1415.52,2647.52,2223.2,0],[2846.48,3331.79,1972.51,1189.08],[1.06,5.46,4.0275,0],[66.63,11.58,16.6097,0]]
+},rede:null}
+};
+const PARCIAL={labels:[],data:{},rede:null};
+let JANELA="";
+function setJanela(w){
+ const p=PARCIAIS[w];if(!p)return;
+ JANELA=w;PARCIAL.labels=p.labels;PARCIAL.data=p.data;
+ PARCIAL.rede=p.rede||aggRede(p.data,p.labels.length);
+}
+function janelaAtiva(){
+ const ord=l=>{const m=(l.split(" ")[0]||"").toUpperCase();return {JANEIRO:1,FEVEREIRO:2,MARÇO:3,ABRIL:4,MAIO:5,JUNHO:6,JULHO:7,AGOSTO:8,SETEMBRO:9,OUTUBRO:10,NOVEMBRO:11,DEZEMBRO:12}[m]||0;};
+ const ws=Object.keys(PARCIAIS).sort();
+ const maxM=Math.max(...ws.map(w=>ord(PARCIAIS[w].labels[PARCIAIS[w].labels.length-1])));
+ return ws.filter(w=>ord(PARCIAIS[w].labels[PARCIAIS[w].labels.length-1])===maxM).pop();
+}
+const METRICS = MENSAL.metrics;
+const FMT = { // 0=int, 1=money, 2=pct
+ "Pedidos":0,"GMV / Fat. líquido":1,"TM":1,"Novos":0,"Visitas":0,"Conversão %":2,"Budget %":2,"Promoções + Ads":1,"Sub iFood":1,"CPO":1,"ROI":1
+};
+// direção "bom quando sobe" — Budget%, Promoções+Ads e CPO são custos: cair é sempre positivo (nunca neutro/cinza)
+const GOOD_UP = {"Pedidos":1,"GMV / Fat. líquido":1,"TM":1,"Novos":1,"Visitas":1,"Conversão %":1,"Budget %":-1,"Promoções + Ads":-1,"Sub iFood":1,"CPO":-1,"ROI":1};
+
+// Investimento mensal Jan–Jun: [Promoções, Anúncios, Total, FatLiq, %Invest, InvestIfood, Novos, Visitas]
+const INV = {
+ meses:["Janeiro","Fevereiro","Março","Abril","Maio","Junho"],
+ cols:["Promoções (R$)","Anúncios (R$)","Total invest. (R$)","Fat. líquido (R$)","% Invest.","Invest. iFood (R$)","Novos clientes","Visitas"],
+ data:{
+ "Arpoador":[[414.47,677.31,1091.78,65520.72,1.7,6756.80,202,3491],[408.29,648.37,1056.65,81283.50,1.30,9803.88,272,3558],[5.00,125.86,129.87,56437.86,0.23,7796.81,153,2673],[0,0,0,49847.06,0,6094.13,141,2284],[0,0,0,49496.38,0,5792.47,128,2461],[49.90,1401.68,1451.58,53350.70,2.72,5792.47,206,2869]],
+ "Botafogo":[[1018.47,710.88,1729.35,94072.04,1.8,11220.55,290,4560],[3374.04,854.25,4230.60,102785.75,4.12,11796.01,362,4795],[3941.20,1015.56,4956.93,84013.09,5.90,16598.17,247,4723],[3668.30,718.09,4386.32,71404.36,6.14,13817.03,216,3747],[3292.92,333.13,3625.95,71870.20,5.05,9768.07,219,3733],[3327.27,1488.27,4815.54,77600.06,6.21,9595.76,252,4209]],
+ "Centro":[[2207.44,462.86,2670.30,53817.75,5.0,6840.94,242,4055],[1962.16,512.23,2474.28,58855.73,4.20,7583.35,244,3908],[3112.75,604.28,3717.62,62213.38,5.98,11821.09,277,5200],[3884.89,521.32,4406.46,44056.59,10.00,8432.75,206,3965],[4676.87,13.55,4690.62,49539.87,9.47,8668.72,191,3974],[104.70,1050.00,1154.70,47640.48,2.42,7583.21,172,3745]],
+ "Flamengo":[[4727.89,18.61,4746.50,75184.60,6.3,6016.41,328,4143],[474.98,269.13,743.21,88408.38,0.84,9204.16,351,4527],[5208.80,834.01,6052.78,78776.18,7.68,9904.05,370,5104],[4589.55,840.05,5429.48,62101.37,8.74,9635.82,321,4643],[4839.10,790.64,5629.79,70902.93,7.94,9670.38,306,4166],[3507.27,1400.00,4907.27,66457.66,7.38,8540.30,301,4297]],
+ "Icaraí":[[3190.43,1074.45,4264.88,45299.83,9.4,7329.89,266,4385],[3353.93,878.70,4232.68,50773.50,8.34,8766.10,316,4025],[4890.91,1239.06,6130.43,43669.47,14.04,9889.57,339,5048],[4837.80,1190.40,6028.19,39170.73,15.39,8501.56,313,4588],[1573.62,633.50,2206.45,36266.91,6.08,7299.10,142,3210],[0,0,0,29602.31,0,4627.18,109,2108]],
+ "Ipanema":[[1810.37,549.21,2359.58,25115.95,9.4,1879.71,123,1303],[1592.19,459.49,2051.56,24683.09,8.31,2122.59,108,1127],[812.05,559.50,1371.06,20210.93,6.78,3221.23,87,1312],[2003.08,485.21,2489.76,17078.85,14.58,2989.58,126,1212],[1914.17,0,1914.13,19396.58,9.87,2762.03,79,957],[16.80,0,16.80,17107.37,0.10,1999.33,59,716]],
+ "Itaim":[[4877.65,0,4877.65,90199.44,5.4,8035.73,544,6013],[4598.88,269.18,4868.00,102720.94,4.74,13660.83,572,6213],[4678.78,1023.23,5702.03,104030.93,5.48,18235.76,638,7471],[8982.73,1857.16,10840.81,91929.14,11.79,15903.73,631,6905],[6683.27,65.00,6748.01,82159.01,8.21,12250.02,413,4902],[4270.06,845.00,5115.06,70032.58,7.30,9738.82,283,4202]],
+ "Leblon":[[598.26,697.62,1295.88,98420.69,1.3,9840.96,221,3778],[3222.61,732.66,3959.66,112960.07,3.51,11377.96,289,4326],[3578.60,771.08,4349.79,90109.24,4.83,16647.54,185,4104],[3686.50,719.13,4405.66,88417.00,4.98,15670.61,188,3732],[4560.81,321.74,4882.79,85337.68,5.72,9181.92,212,3433],[2981.83,1500.00,4481.83,82666.76,5.42,7843.88,242,3678]],
+ "Pinheiros":[[2799.82,1948.92,4748.74,62809.75,7.6,6492.30,375,5512],[2744.53,1169.01,3913.52,72654.94,5.39,9567.08,344,4644],[3303.19,1355.34,4658.73,75736.86,6.15,10971.82,354,4952],[3670.99,1971.60,5642.70,64707.36,8.72,7613.31,332,5023],[4805.59,173.25,4979.15,60949.91,8.17,8811.45,320,3404],[4346.05,0,4346.05,52988.34,8.20,7348.67,265,2817]],
+ "Tijuca":[[3338.01,442.74,3780.75,50646.75,7.5,7051.10,373,5266],[3634.01,0,3634.10,58594.87,6.20,7244.11,288,3569],[1974.48,167.80,2141.82,50876.38,4.21,8892.26,248,3598],[3019.86,1146.06,4166.45,40634.24,10.25,7509.33,253,4198],[3807.22,1443.00,5250.48,46756.46,11.23,7936.32,270,4128],[1591.87,1556.00,3147.87,41868.97,7.52,5756.09,214,3691]],
+ "Downtown":[[0,1393.41,1393.41,32113.48,4.3,5974.85,154,2805],[0,1249.53,1249.53,37256.64,3.35,6618.53,136,2613],[0,1377.57,1377.57,32199.96,4.28,6393.44,147,2767],[0,1427.80,1427.80,27221.75,5.25,4975.16,117,2557],[0,1259.42,1259.42,20805.62,6.05,2606.93,87,1916],[0,1152.41,1152.41,21517.87,5.36,2522.92,92,1720]],
+ "Novo Leblon":[[942.63,0,942.63,32619.35,2.9,3326.74,129,1871],[2121.50,197.26,2320.01,39750.28,5.84,4231.09,153,2238],[2044.69,783.89,2828.54,35533.70,7.96,4752.62,171,2656],[394.48,1117.98,1511.65,34737.15,4.35,5684.83,167,2650],[3163.02,35.26,3205.30,35814.25,8.95,3881.75,183,2114],[1707.20,0,1707.20,29245.03,5.84,3175.75,145,2210]]
+ }
+};
+
+// Alavancas (junho, início 08/06)
+const ALAV = {
+ "Arpoador":{budget:3342.81,fat:66856.21,tg:null,ci:null,an:"R$ 50/dia",hits:"R$ 100/dia"},
+ "Botafogo":{budget:4788.07,fat:95761.48,tg:null,ci:"R$ 110/dia",an:"R$ 50/dia",hits:"R$ 100/dia"},
+ "Centro":{budget:2958.68,fat:59173.55,tg:null,ci:null,an:"R$ 50/dia",hits:"R$ 100/dia"},
+ "Flamengo":{budget:4119.19,fat:82383.81,tg:null,ci:"R$ 150/dia",an:"R$ 100/dia",hits:null},
+ "Icaraí":{budget:1809.60,fat:36191.95,tg:null,ci:null,an:null,hits:null},
+ "Ipanema":{budget:1042.98,fat:20859.56,tg:null,ci:null,an:null,hits:"R$ 100/dia"},
+ "Itaim":{budget:4324.61,fat:86492.18,tg:null,ci:"R$ 100/dia",an:"R$ 65/dia",hits:null},
+ "Pinheiros":{budget:2911.00,fat:58220.00,tg:null,ci:"R$ 100/dia",an:"R$ 50/dia",hits:null},
+ "Leblon":{budget:5142.50,fat:102850.06,tg:null,ci:null,an:"R$ 50/dia",hits:"R$ 100/dia"},
+ "Tijuca":{budget:2651.13,fat:53022.52,tg:"Copart até 4km · R$ 5/pedido",ci:null,an:"R$ 55/dia",hits:null},
+ "Downtown":{budget:1387.83,fat:27756.62,tg:null,ci:"R$ 100/dia",an:"R$ 75/dia",hits:null},
+ "Novo Leblon":{budget:1817.44,fat:36348.88,tg:null,ci:null,an:null,hits:null}
+};
+
+// BP semanal
+const BP = {
+ semanas:["08/12","15/12","22/12","29/12","05/01"],
+ data:{
+ "Downtown":{bp:[93.5,94.9,100,91.8,94.4],ped:[108,137,80,73,18],nre:[1.85,1.46,0,0,5.56],nba:[22.2,43.1,48.8,46.6,16.7],atr:[1.9,3.6,5.0,5.5,0]},
+ "Botafogo":{bp:[89.6,92.0,94.7,96.0,89.8],ped:[386,311,246,277,49],nre:[4.9,11.9,10.6,10.8,16.3],nba:[8.5,12.9,12.2,19.1,4.1],atr:[1.0,5.8,2.4,6.1,4.1]},
+ "Centro":{bp:[96.5,94.5,95.5,99.1,100],ped:[315,326,132,109,54],nre:[1.0,0,0.8,1.8,0],nba:[12.7,18.4,20.5,9.2,7.4],atr:[0.3,1.5,2.3,0,0]},
+ "Leblon":{bp:[89.5,81.7,85.3,74.9,75.0],ped:[420,389,320,251,36],nre:[3.1,4.6,10.3,17.1,33.3],nba:[4.5,7.7,4.7,11.6,0],atr:[1.9,2.3,3.1,4.8,2.8]},
+ "Arpoador":{bp:[64.4,78.2,79.3,69.7,61.3],ped:[275,229,164,195,31],nre:[13.8,14.0,20.1,21.5,9.7],nba:[4.0,8.3,6.7,7.2,3.2],atr:[4.7,3.9,3.0,8.2,0]},
+ "Ipanema":{bp:[65.5,57.8,76.9,56.5,80.8],ped:[142,102,65,46,26],nre:[12.0,8.8,6.2,10.9,19.2],nba:[4.9,7.8,9.2,6.5,7.7],atr:[4.2,1.0,4.6,4.3,7.7]},
+ "Itaim":{bp:[72.5,75.0,72.5,79.4,84.2],ped:[437,376,178,131,57],nre:[4.1,2.9,2.8,3.1,0],nba:[17.2,23.1,16.9,16.8,17.5],atr:[3.0,5.9,1.7,3.1,1.8]},
+ "Flamengo":{bp:[63.1,69.3,68.9,65.8,63.6],ped:[268,368,209,219,44],nre:[8.6,7.6,6.2,7.8,6.8],nba:[3.4,6.0,7.2,5.5,0],atr:[2.2,1.1,4.8,3.7,0]},
+ "Novo Leblon":{bp:[62.1,82.2,77.0,77.9,88.2],ped:[140,101,74,68,17],nre:[15.0,9.9,4.1,13.2,0],nba:[10.0,17.8,14.9,22.1,0],atr:[4.3,5.9,8.1,2.9,0]},
+ "Pinheiros":{bp:[81.8,78.1,85.5,82.2,84.8],ped:[247,302,159,107,33],nre:[8.5,3.0,6.3,1.9,6.1],nba:[21.9,13.9,8.2,12.1,9.1],atr:[5.7,4.0,2.5,1.9,3.0]},
+ "Tijuca":{bp:[78.5,71.7,72.7,75.1,70.7],ped:[191,184,99,169,41],nre:[1.0,1.1,2.0,1.8,0],nba:[7.9,19.0,10.1,17.8,4.9],atr:[1.0,2.7,1.0,2.4,2.4]},
+ "Icaraí":{bp:[82.1,84.4,82.7,83.6,79.4],ped:[223,180,139,146,34],nre:[6.3,2.8,3.6,0,5.9],nba:[19.3,25.6,21.6,19.9,5.9],atr:[5.4,5.0,0.7,1.4,2.9]}
+ },
+ resumo:{ // [pedidos, BP%, NRE15%, NBA10%, Atraso%]
+ "Ipanema":[381,65.4,0.1,0.1,3.7],"Flamengo":[1108,66.8,0.1,0.1,2.5],"Arpoador":[894,71.7,0.2,0.1,4.8],
+ "Novo Leblon":[400,73.8,0.1,0.1,5.0],"Tijuca":[684,74.6,0,0.1,1.9],"Itaim":[1179,74.6,0,0.2,3.6],
+ "Pinheiros":[848,81.4,0.1,0.1,3.9],"Icaraí":[722,83.0,0,0.2,3.5],"Leblon":[1416,83.5,0.1,0.1,2.8],
+ "Botafogo":[1269,92.6,0.1,0.1,3.7],"Downtown":[416,95.0,0,0.4,3.6],"Centro":[936,96.2,0,0.2,1.0]
+ }
+};
+
+/* ================= HELPERS ================= */
+const brl = v => v==null?"—":v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const num = v => v==null?"—":v.toLocaleString('pt-BR');
+const pct = v => v==null?"—":v.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2})+"%";
+function fmt(metric,v){const t=FMT[metric];return t===1?brl(v):t===2?pct(v):num(v);}
+function evo(a,b){if(a==null||b==null||a===0)return null;return (b-a)/Math.abs(a)*100;}
+function evoTag(e,goodUp=1){
+ if(e==null||!isFinite(e))return '<span class="flat">—</span>';
+ const s=(e>0?"+":"")+e.toLocaleString('pt-BR',{maximumFractionDigits:1})+"%";
+ if(Math.abs(e)<0.5)return `<span class="flat">${s}</span>`;
+ const arrow=e>0?"▲":"▼"; // a seta SEMPRE segue o sinal real do número (subiu/desceu)
+ const good = goodUp===0 ? null : (e>0)===(goodUp>0);
+ if(good===null)return `<span class="flat">${arrow} ${s}</span>`;
+ return `<span class="${good?'up':'down'}">${arrow} ${s}</span>`; // a cor é que diz se é bom (verde) ou ruim (vermelho)
+}
+function chart(id,cfg){const el=document.getElementById(id);const ex=Chart.getChart(el);if(ex)ex.destroy();return new Chart(el,cfg);}
+Chart.defaults.font.family="Calibri,'Segoe UI',sans-serif";
+Chart.defaults.elements.line.cubicInterpolationMode='monotone';
+Chart.defaults.plugins.legend.onClick=()=>{}; // legenda é informativa; ocultar linha por clique confundia a leitura
+Chart.defaults.font.size=13;
+Chart.defaults.color="#2E2420";
+
+/* ================= TABS ================= */
+document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>{
+ document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+ document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
+ b.classList.add('active');
+ document.getElementById(b.dataset.tab).classList.add('active');
+}));
+
+/* ================= MODO (Parcial / Consolidado) ================= */
+function setMode(mode){
+ document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+ document.querySelectorAll('#subTabs .tab-btn').forEach(b=>{b.style.display=b.dataset.group===mode?'':'none';});
+ const ativo=document.querySelector('#subTabs .tab-btn.active');
+ if(!ativo||ativo.dataset.group!==mode){
+  const primeira=document.querySelector(`#subTabs .tab-btn[data-group="${mode}"]`);
+  if(primeira)primeira.click();
+ }
+}
+document.querySelectorAll('.mode-btn').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+setMode('consolidado'); // estado inicial ao abrir o dash
+
+/* ================= MENU MOBILE (accordion + auto-hide no scroll) ================= */
+(function(){
+ const toggle=document.getElementById('navToggle'),panel=document.getElementById('navPanel'),header=document.querySelector('header');
+ if(!toggle||!panel||!header)return;
+ function closeMenu(){panel.classList.remove('open');toggle.textContent='☰';toggle.setAttribute('aria-expanded','false');}
+ function openMenu(){panel.classList.add('open');toggle.textContent='✕';toggle.setAttribute('aria-expanded','true');}
+ toggle.addEventListener('click',()=>panel.classList.contains('open')?closeMenu():openMenu());
+ // fecha o menu sozinho ao escolher uma aba ou trocar de modo (mobile)
+ panel.addEventListener('click',e=>{
+  if(e.target.closest('.tab-btn,.mode-btn')&&window.innerWidth<=820)closeMenu();
+ });
+ // header some ao rolar pra baixo, reaparece ao rolar pra cima — só no mobile, e nunca com o menu aberto
+ let lastY=window.scrollY,ticking=false;
+ window.addEventListener('scroll',()=>{
+  if(ticking)return;ticking=true;
+  requestAnimationFrame(()=>{
+   const y=window.scrollY,menuAberto=panel.classList.contains('open');
+   if(window.innerWidth<=820&&!menuAberto){
+    if(y>lastY&&y>80)header.classList.add('header-hidden');
+    else header.classList.remove('header-hidden');
+   }else header.classList.remove('header-hidden');
+   lastY=y;ticking=false;
+  });
+ },{passive:true});
+})();
+
+/* ================= DASH (motor genérico) ================= */
+// Consolidado da rede para meses fechados: somas + indicadores derivados recalculados
+function aggRede(src,n){
+ const sum=(mi,t)=>LOJAS.reduce((a,l)=>a+(src[l][mi][t]||0),0);
+ const vendas=[],gmv=[],novos=[],vis=[],promo=[],sub=[];
+ for(let t=0;t<n;t++){vendas.push(sum(0,t));gmv.push(sum(1,t));novos.push(sum(3,t));vis.push(sum(4,t));promo.push(sum(7,t));sub.push(sum(8,t));}
+ return [vendas,gmv,
+  gmv.map((g,i)=>g/vendas[i]),                    // TM
+  novos,vis,
+  vendas.map((v,i)=>v/vis[i]*100),                // Conversão
+  promo.map((p,i)=>p/gmv[i]*100),                 // Budget %
+  promo,sub,
+  promo.map((p,i)=>p/vendas[i]),                  // CPO
+  promo.map((p,i)=>p>0?gmv[i]/p:null)];           // ROI ≈ fat/invest
+}
+
+
+const KPI_ORDER=[0,1,2,5,3,4,6,7,8,9,10]; // ordem de leitura: volume → qualidade → investimento
+
+function makeDash(cfg){
+ const $=id=>document.getElementById(cfg.prefix+"-"+id);
+ const mesSel=$("mes"),lojaSel=$("loja"),metSel=$("metric");
+ const keep={m:mesSel.value,l:lojaSel.value,x:metSel.value}; // preserva filtros no reload
+ mesSel.innerHTML="";lojaSel.innerHTML="";metSel.innerHTML="";
+ cfg.labels.forEach((m,i)=>mesSel.add(new Option(m,i)));
+ mesSel.value=cfg.labels.length-1;
+ lojaSel.add(new Option("Rede toda (12 lojas)","__rede"));
+ LOJAS.forEach(l=>lojaSel.add(new Option(l,l)));
+ METRICS.forEach(m=>metSel.add(new Option(m,m)));
+ metSel.value="GMV / Fat. líquido";
+ if(keep.l&&[...lojaSel.options].some(o=>o.value===keep.l))lojaSel.value=keep.l;
+ if(keep.x&&[...metSel.options].some(o=>o.value===keep.x))metSel.value=keep.x;
+ const series=loja=>loja==="__rede"?cfg.rede:cfg.src[loja];
+
+ function insightRede(t){
+  if(t===0)return `<h2>Rede toda · ${cfg.labels[t]}</h2><ul><li>Primeiro período da série — sem comparativo anterior. Use os gráficos para comparar as lojas entre si.</li></ul>`;
+  const evos=LOJAS.map(l=>({l,g:evo(cfg.src[l][1][t-1],cfg.src[l][1][t]),v:evo(cfg.src[l][0][t-1],cfg.src[l][0][t])})).sort((a,b)=>b.g-a.g);
+  const up=evos.filter(e=>e.g>0),down=evos.filter(e=>e.g<0);
+  const r=cfg.rede,eG=evo(r[1][t-1],r[1][t]),eV=evo(r[0][t-1],r[0][t]),eN=evo(r[3][t-1],r[3][t]),eB=evo(r[6][t-1],r[6][t]);
+  const f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
+  return `<h2>Rede toda · ${cfg.labels[t]} vs ${cfg.labels[t-1]}</h2><ul>
+   <li>Rede: <b>GMV ${f1(eG)}</b> · <b>Pedidos ${f1(eV)}</b> · <b>Novos clientes ${f1(eN)}</b> · <b>Budget de investimento ${f1(eB)}</b>${eB<0&&eG>0?" → <b>GMV crescendo com % de investimento menor (eficiência)</b>":eB>0&&eG<0?" → <b>% de investimento subiu e o GMV caiu (revisar alavancas)</b>":""}</li>
+   <li>🔺 Maiores altas de GMV: <b>${up.slice(0,3).map(e=>`${e.l} (GMV ${f1(e.g)})`).join(", ")||"nenhuma loja cresceu em GMV"}</b>.</li>
+   <li>🔻 Maiores quedas de GMV: <b>${down.slice(-3).reverse().map(e=>`${e.l} (GMV ${f1(e.g)})`).join(", ")||"nenhuma loja caiu em GMV"}</b> — priorize o diagnóstico nelas (alavancas, cardápio, operação/BP).</li>
+  </ul>`;
+ }
+ function insightLoja(loja,t){
+  const s=series(loja);
+  if(t===0)return `<h2>${loja} · ${cfg.labels[t]}</h2><ul><li>Primeiro período da série — sem comparativo anterior.</li></ul>`;
+  const goods=[],bads=[];
+  METRICS.forEach((m,mi)=>{
+   const e=evo(s[mi][t-1],s[mi][t]);if(e==null||!isFinite(e)||Math.abs(e)<1)return;
+   if(m==="Budget %"||m==="Promoções + Ads")return; // já tratados na frase de eficiência dedicada abaixo
+   const gu=GOOD_UP[m];
+   const txt=`${m} ${(e>0?"+":"")+e.toFixed(1)}%`;
+   ((e>0)===(gu>0)?goods:bads).push(txt);
+  });
+  const eB=evo(s[6][t-1],s[6][t]),eG=evo(s[1][t-1],s[1][t]);
+  const f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
+  let inv="";
+  if(eB!=null&&isFinite(eB)&&eG!=null&&isFinite(eG)){
+   if(eB<0&&eG>0)inv=`<li>🏆 <b>Eficiência:</b> Budget de investimento ${f1(eB)} com GMV ${f1(eG)} — economizando e crescendo.</li>`;
+   else if(eB>0&&eG<0)inv=`<li>⚠️ <b>Alerta:</b> Budget de investimento ${f1(eB)} com GMV ${f1(eG)} — o investimento não está convertendo em faturamento; revisar alavancas ativas.</li>`;
+   else if(eB>0&&eG>0)inv=`<li>Budget de investimento ${f1(eB)} sustentando o GMV em ${f1(eG)} — acompanhar CPO e ROI para não perder eficiência.</li>`;
+  }
+  const rk=LOJAS.map(l=>({l,v:cfg.src[l][1][t]})).sort((a,b)=>b.v-a.v).findIndex(x=>x.l===loja)+1;
+  return `<h2>${loja} · ${cfg.labels[t]} vs ${cfg.labels[t-1]}</h2><ul>
+   <li>Posição no ranking de GMV da rede: <b>${rk}º de ${LOJAS.length}</b>.</li>
+   <li>✅ Melhorou: <b>${goods.join(" · ")||"nada relevante (±1%)"}</b></li>
+   <li>❌ Piorou: <b>${bads.join(" · ")||"nada relevante (±1%)"}</b></li>${inv}
+  </ul>`;
+ }
+
+ function render(){
+  const t=+mesSel.value,loja=lojaSel.value,metric=metSel.value,mi=METRICS.indexOf(metric);
+  const s=series(loja);
+  // KPIs
+  $("kpis").innerHTML=KPI_ORDER.map(k=>{
+   const m=METRICS[k],v=s[k][t],e=t>0?evo(s[k][t-1],s[k][t]):null;
+   const gu=GOOD_UP[m]===-1?-1:1;
+   return `<div class="card kpi"><div class="lbl">${m}</div><div class="val">${fmt(m,v)}</div>
+    <div class="evo">${t>0?evoTag(e,gu)+' vs '+cfg.labels[t-1]:'<span class="flat">—</span>'}</div></div>`;
+  }).join('');
+  // insight
+  const avisoRede=(cfg.src===PARCIAL.data&&PARCIAL.redeOnly)?'<div style="background:#FCF3E3;border:1px solid #EBD9AE;border-radius:12px;padding:10px 16px;margin-bottom:12px;font-size:13.5px;color:#9A6A12"><b>⚠️ Esta janela ainda não tem detalhamento por loja</b> — só o total da rede foi atualizado até aqui. O filtro de loja fica sem dado até a planilha trazer a quebra por unidade nesta janela.</div>':'';
+  $("insight").innerHTML=avisoRede+(loja==="__rede"?insightRede(t):insightLoja(loja,t));
+  // Gráfico 1: comparação entre lojas no mês
+  $("t1").textContent=`${metric} por loja · ${cfg.labels[t]}`;
+  const arr=LOJAS.map(l=>({l,v:cfg.src[l][mi][t]})).sort((a,b)=>(b.v??-1)-(a.v??-1));
+  chart(cfg.prefix+"-c1",{type:'bar',data:{labels:arr.map(a=>a.l),datasets:[{data:arr.map(a=>a.v),
+   backgroundColor:arr.map(a=>loja!=="__rede"&&a.l===loja?"#7B131F":"#7B131F55"),borderRadius:8}]},
+   options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+   tooltip:{callbacks:{label:c=>fmt(metric,c.parsed.x)}}}}});
+  // Gráfico 2: evolução do escopo no tempo (+ rede tracejada como referência)
+  $("t2").textContent=`${metric} — evolução ${loja==="__rede"?"da rede":"de "+loja}`;
+  const ds=[{label:loja==="__rede"?"Rede":loja,data:s[mi],borderColor:"#7B131F",backgroundColor:"#7B131F22",fill:true,tension:.3,borderWidth:3,pointRadius:5}];
+  if(loja!=="__rede")ds.push({label:"Rede (referência)",data:cfg.redeAvg?cfg.rede[mi].map(v=>v/12):cfg.rede[mi],borderColor:"#8A7F78",borderDash:[6,4],tension:.3,borderWidth:2,pointRadius:3,hidden:FMT[metric]!==2&&mi!==2&&mi!==9&&mi!==10});
+  chart(cfg.prefix+"-c2",{type:'line',data:{labels:cfg.labels,datasets:ds},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},
+   tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(metric,c.parsed.y)}}},
+   scales:{y:{ticks:{callback:v=>FMT[metric]===1?"R$ "+v.toLocaleString('pt-BR'):FMT[metric]===2?v+"%":v.toLocaleString('pt-BR')}}}}});
+  // Tabela
+  if(loja==="__rede"){
+   $("t3").textContent=`Lojas em ${cfg.labels[t]} — principais indicadores`;
+   const cols=[["Pedidos",0],["GMV",1],["TM",2],["Conversão %",5],["Budget %",6],["CPO",9],["ROI",10]];
+   let html=`<thead><tr><th>Loja</th>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>`;
+   LOJAS.map(l=>({l,g:cfg.src[l][1][t]})).sort((a,b)=>b.g-a.g).forEach(({l})=>{
+    html+=`<tr><td><b>${l}</b></td>`+cols.map(([m,k])=>{
+     const v=cfg.src[l][k][t],e=t>0?evo(cfg.src[l][k][t-1],v):null;
+     const gu=GOOD_UP[METRICS[k]]===-1?-1:1;
+     return `<td>${fmt(METRICS[k],v)}<br>${t>0?evoTag(e,gu):''}</td>`;
+    }).join('')+"</tr>";
+   });
+   $("table").innerHTML=html+"</tbody>";
+   $("note").textContent="Ordenado por GMV. Setas = variação vs "+(t>0?cfg.labels[t-1]:"—")+". Budget %: seta cinza (leitura depende do resultado).";
+  }else{
+   $("t3").textContent=`${loja} — todos os indicadores, todos os períodos`;
+   let html=`<thead><tr><th>Indicador</th>${cfg.labels.map(x=>`<th>${x}</th>`).join('')}<th>Δ último</th></tr></thead><tbody>`;
+   METRICS.forEach((m,k)=>{
+    const d=s[k],e=evo(d[d.length-2],d[d.length-1]);
+    const gu=GOOD_UP[m]===-1?-1:1;
+    html+=`<tr><td><b>${m}</b></td>${d.map(v=>`<td>${fmt(m,v)}</td>`).join('')}<td>${evoTag(e,gu)}</td></tr>`;
+   });
+   $("table").innerHTML=html+"</tbody>";
+   $("note").textContent=cfg.noteLoja;
+  }
+ }
+ mesSel.onchange=render;lojaSel.onchange=render;metSel.onchange=render;
+ render();
+}
+
+function bootDash(){
+ const js=document.getElementById('dashp-janela');
+ if(js){js.innerHTML="";Object.keys(PARCIAIS).sort().forEach(w=>js.add(new Option("Dias "+w.replace("01-","01–"),w)));
+  js.value=JANELA;js.onchange=()=>{setJanela(js.value);boot();};}
+ makeDash({prefix:"dashf",labels:MENSAL.labels,src:MENSAL.data,rede:aggRede(MENSAL.data,MENSAL.labels.length),
+  noteLoja:"Meses fechados. GMV = faturamento líquido informado por loja; ROI da rede recalculado como faturamento ÷ investimento próprio."});
+ makeDash({prefix:"dashp",labels:PARCIAL.labels,src:PARCIAL.data,rede:PARCIAL.rede,
+  noteLoja:"Parciais comparáveis: sempre a mesma janela de dias (selecionada acima) em cada mês."});
+}
+
+function buildChips(el,selSet,onChange){
+ el.innerHTML="";
+ const all=document.createElement('button');all.className='chip'+(selSet.size===LOJAS.length?' on':'');all.textContent='Todas';
+ all.onclick=()=>{if(selSet.size===LOJAS.length){selSet.clear();}else{LOJAS.forEach(l=>selSet.add(l));}buildChips(el,selSet,onChange);onChange();};
+ el.appendChild(all);
+ LOJAS.forEach(l=>{
+  const c=document.createElement('button');c.className='chip'+(selSet.has(l)?' on':'');c.textContent=l;
+  c.onclick=()=>{selSet.has(l)?selSet.delete(l):selSet.add(l);buildChips(el,selSet,onChange);onChange();};
+  el.appendChild(c);
+ });
+}
+
+/* ================= ALAVANCAS ================= */
+const alavLoja=document.getElementById('alavLoja');
+function bootAlav(){
+ const k=alavLoja.value;alavLoja.innerHTML="";alavLoja.add(new Option("Todas as lojas","all"));
+ LOJAS.forEach(l=>alavLoja.add(new Option(l,l)));
+ if(k&&[...alavLoja.options].some(o=>o.value===k))alavLoja.value=k;
+ renderAlavInsight();
+ renderAlav();
+ renderAlavTimeline();
+}
+function alavPerf(l){ // últimos dois parciais disponíveis
+ const d=PARCIAL.data[l],n=PARCIAL.labels.length-1,p=n-1;
+ return {gmv:evo(d[1][p],d[1][n]),vendas:evo(d[0][p],d[0][n]),budget:evo(d[6][p],d[6][n]),budUlt:d[6][n],roi:d[10][n]};
+}
+// Histórico datado de ações (abas "Maio/Junho Status Alavancas" da planilha)
+// col: FLEX = Taxa/Entrega Flexível · CI · AN = Anúncio · HITS · BUD = Budget
+const ALAV_HIST=[
+ {d:"Início de Maio",ev:[
+  ["Botafogo","BUD","Budget R$ 4.602,34 (5% do faturamento bruto de abril: R$ 92.046,75)"],
+  ["Botafogo","FLEX","Entrega flexível de frete grátis"],["Botafogo","CI","Ajuste de verba para R$ 110/dia"],["Botafogo","AN","Saída do ADS"],["Botafogo","HITS","Inclusão de Hits"],
+  ["Centro","BUD","Budget R$ 2.911,74 (5% de R$ 58.234,84)"],
+  ["Centro","FLEX","Entrega Flexível para todos os públicos"],["Centro","CI","Ajuste de verba para R$ 110/dia"],["Centro","AN","Pausa no ADS"],["Centro","HITS","Saída do Hits"],
+  ["Flamengo","BUD","Budget R$ 4.542,71 (5% de R$ 90.854,20)"],
+  ["Flamengo","FLEX","Saída de duas flexíveis de entrega por PDD mínimo"],["Flamengo","AN","Ajuste de verba para R$ 25 | Lance: R$ 0,85"],["Flamengo","HITS","Entrada no Hits | Verba: R$ 100 (mínimo)"],
+  ["Icaraí","BUD","Budget R$ 2.739,47 (5% de R$ 54.789,47)"],
+  ["Icaraí","FLEX","Saída da Flexível Copart (novos e recuperar)"],["Icaraí","CI","Ajuste de verba para R$ 110/dia"],["Icaraí","AN","Ajuste de verba para R$ 35 | Lance: R$ 0,75"],
+  ["Ipanema","BUD","Budget R$ 1.176,98 (5% de R$ 23.539,61)"],
+  ["Ipanema","FLEX","Saída da Flexível"],["Ipanema","CI","Inclusão de CI | Verba: R$ 100/dia (mínimo)"],["Ipanema","AN","Saída do ADS"],
+  ["Itaim","BUD","Budget R$ 6.206,67 (5% de R$ 124.133,38)"],
+  ["Itaim","CI","Inclusão de CI | Verba: R$ 100/dia (mínimo)"],["Itaim","AN","Pausa no ADS"],
+  ["Leblon","BUD","Budget R$ 5.653,45 (5% de R$ 113.069,08)"],
+  ["Leblon","FLEX","Saída da Flexível"],["Leblon","AN","Pausa no ADS"],["Leblon","HITS","Entrada no Hits | Verba: R$ 100 (mínimo)"],
+  ["Tijuca","BUD","Budget R$ 2.722,78 (5% de R$ 54.455,63)"],
+  ["Tijuca","CI","Inclusão de CI | Verba: R$ 100/dia (mínimo)"],["Tijuca","AN","Saída do ADS"],["Tijuca","HITS","Entrada no Hits | Verba: R$ 100 (mínimo)"],
+  ["Novo Leblon","BUD","Budget R$ 2.218,25 (5% de R$ 44.364,97)"],
+  ["Novo Leblon","FLEX","Saída da Flexível"],["Novo Leblon","CI","Inclusão de CI | Verba: R$ 100/dia (mínimo)"],["Novo Leblon","AN","Saída do ADS"],["Novo Leblon","HITS","Entrada no Hits | Verba: R$ 100 (mínimo)"]
+ ]},
+ {d:"08/05/2026",ev:[
+  ["Itaim","FLEX","Saída da Flexível"],["Itaim","HITS","Retirada dos Cards de R$ 10 | Retirada da Tapioca Caipira"],
+  ["Tijuca","CI","Saída da CI antes dos 7 dias"]
+ ]},
+ {d:"18/05/2026",ev:[
+  ["Botafogo","HITS","Inclusão no Hits"],
+  ["Centro","CI","Retirada da CI"],
+  ["Icaraí","CI","Retirada da CI"],["Icaraí","AN","Verba: R$ 25 | Lance mínimo"],["Icaraí","HITS","Inclusão de Hits (R$ 100 mínimo)"],
+  ["Ipanema","FLEX","Retirada da Flexível"],
+  ["Leblon","CI","Retirada da CI"],["Leblon","AN","Verba: R$ 25"],
+  ["Pinheiros","CI","Retirada da CI"],["Pinheiros","AN","Verba: R$ 25"]
+ ]},
+ {d:"22/05/2026",ev:[
+  ["Botafogo","AN","Verba: R$ 25 (mínimo) | Lance: R$ 1,15 (máximo)"],
+  ["Centro","FLEX","Retirada de entrega flexível"],
+  ["Flamengo","HITS","Saída do Hits"],
+  ["Ipanema","CI","Retirada da CI"],
+  ["Novo Leblon","AN","Retirada de ADS"]
+ ]},
+ {d:"29/05/2026",ev:[
+  ["Arpoador","AN","ADS Bonificado: R$ 50 | Lance: R$ 0,90"],
+  ["Botafogo","AN","ADS Bonificado: R$ 50 | Lance: R$ 0,91"],
+  ["Centro","FLEX","Retirada de entrega flexível"],["Centro","AN","ADS Bonificado: R$ 50 | Lance: R$ 0,92"],
+  ["Flamengo","HITS","Saída do Hits"],
+  ["Ipanema","CI","Retirada da CI"],
+  ["Leblon","AN","ADS Bonificado: R$ 50 | Lance: R$ 0,92"]
+ ]},
+ {d:"Início de Julho",ev:LOJAS.flatMap(l=>{
+  const a=ALAV[l];if(!a)return[];
+  const _x=a,out=[["BUD",`Budget ${brl(a.budget)} (5% do faturamento bruto anterior: ${brl(a.fat)})`]];
+  out.push(["FLEX",a.tg?("Taxa grátis ativa · "+a.tg):"Taxa grátis desativada"]);
+  out.push(["CI",a.ci?("Ativa | "+a.ci):"Desativada"]);
+  out.push(["AN",a.an?("Ativo | "+a.an):"Desativado"]);
+  out.push(["HITS",a.hits?("Ativo | "+a.hits):"Desativado"]);
+  return out.map(([c,t])=>[l,c,t]);
+ })}
+];
+const ALAV_COL={FLEX:"Taxa/Entrega Flexível",CI:"Campanha Inteligente",AN:"Anúncio",HITS:"Hits",BUD:"Budget"};
+const ALAV_VIG={mes:"Julho",ant:"Junho"}; // vigência do status atual e mês-base do budget
+function acaoClasse(txt){
+ const s=deacc(txt).toUpperCase();
+ if(/SAIDA|RETIRADA|PAUSA|DESATIVAD/.test(s))return "b-bad";
+ if(/INCLUSAO|ENTRADA|ATIVA|ATIVO/.test(s))return "b-good";
+ return "b-warn"; // ajustes de verba/lance, bonificado, budget
+}
+function renderAlavTimeline(){
+ const fl=alavLoja.value, ft=document.getElementById('alavTipo').value;
+ const colFiltro={ci:"CI",anuncio:"AN",hits:"HITS",flex:"FLEX"}[ft]||null;
+ const box=document.getElementById('alavTimeline');
+ let html="";
+ ALAV_HIST.forEach(bloco=>{
+  const evs=bloco.ev.filter(([l,c])=>(fl==="all"||l===fl)&&(!colFiltro||c===colFiltro));
+  if(!evs.length)return;
+  html+=`<div style="margin-bottom:18px">
+   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <span style="background:var(--vinho);color:#fff;border-radius:12px;padding:4px 14px;font-weight:700;font-size:13px">${bloco.d}</span>
+    <span style="color:var(--neutro);font-size:12.5px">${evs.length} ação(ões)</span>
+   </div>
+   <div style="border-left:3px solid var(--borda);padding-left:14px;display:grid;gap:6px">`;
+  evs.forEach(([l,c,t])=>{
+   html+=`<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:13.5px">
+    <b style="min-width:96px">${l}</b>
+    <span class="badge ${c==="BUD"?"b-off":acaoClasse(t)}">${ALAV_COL[c]}</span>
+    <span>${t}</span></div>`;
+  });
+  html+=`</div></div>`;
+ });
+ box.innerHTML=html||'<p class="note">Nenhuma ação registrada para este filtro.</p>';
+}
+function renderAlavInsight(){
+ const n=PARCIAL.labels.length-1,p=n-1,f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
+ const nCI=LOJAS.filter(l=>ALAV[l].ci).length,nAn=LOJAS.filter(l=>ALAV[l].an).length,nHits=LOJAS.filter(l=>ALAV[l].hits).length,nTG=LOJAS.filter(l=>ALAV[l].tg).length;
+ const semAlav=LOJAS.filter(l=>{const a=ALAV[l];return !a.ci&&!a.an&&!a.hits&&!a.tg;});
+ const semTxt=semAlav.map(l=>`${l} (GMV ${f1(alavPerf(l).gmv)} no parcial ${PARCIAL.labels[n]} × ${PARCIAL.labels[p]})`);
+ document.getElementById('alavInsight').innerHTML=`
+  <h2>Status das alavancas de investimento — vigência de ${ALAV_VIG.mes} (budget calculado sobre ${ALAV_VIG.ant})</h2>
+  <ul>
+   <li>Budget definido como <b>5% do faturamento bruto do mês anterior</b> por loja.</li>
+   <li>Alavancas ativas: <b>Anúncio (CPC)</b> em ${nAn} de ${LOJAS.length} lojas · <b>Campanha Inteligente</b> em ${nCI} · <b>Hits</b> em ${nHits} · <b>Taxa Grátis</b> em ${nTG}.</li>
+   <li>${semAlav.length?`Sem nenhuma alavanca ativa: <b>${semTxt.join(" e ")}</b>${semAlav.every(l=>alavPerf(l).gmv>0)?" — crescimento de GMV orgânico, sem investimento":""}.`:"Todas as lojas têm ao menos uma alavanca ativa."}</li>
+  </ul>`;
+}
+function renderAlav(){
+ const fl=alavLoja.value, ft=document.getElementById('alavTipo').value;
+ const grid=document.getElementById('alavGrid');grid.innerHTML="";
+ LOJAS.forEach(l=>{
+  if(fl!=='all'&&l!==fl)return;
+  const a=ALAV[l];
+  const none=!a.ci&&!a.an&&!a.hits&&!a.tg;
+  if(ft==='ci'&&!a.ci)return;if(ft==='anuncio'&&!a.an)return;if(ft==='hits'&&!a.hits)return;if(ft==='nenhuma'&&!none)return;
+  const p=alavPerf(l);
+  const badge=(v,name)=>v?`<span class="badge b-on">Ativo · ${v}</span>`:`<span class="badge b-off">Desativado</span>`;
+  grid.insertAdjacentHTML('beforeend',`<div class="card alav-card">
+   <h3>${l} ${none?'<span class="badge b-warn">Sem alavancas</span>':''}</h3>
+   <div class="alav-row"><span class="k">Budget de ${ALAV_VIG.mes} (5% do fat. de ${ALAV_VIG.ant})</span><b>${brl(a.budget)}</b></div>
+   <div class="alav-row"><span class="k">Fat. bruto de ${ALAV_VIG.ant} (mês anterior)</span><span>${brl(a.fat)}</span></div>
+   <div class="alav-row"><span class="k">Taxa Grátis</span>${badge(a.tg)}</div>
+   <div class="alav-row"><span class="k">Campanha Inteligente</span>${badge(a.ci)}</div>
+   <div class="alav-row"><span class="k">Anúncio (CPC)</span>${badge(a.an)}</div>
+   <div class="alav-row"><span class="k">Hits</span>${badge(a.hits)}</div>
+   <div class="alav-row" style="border-top:2px solid var(--borda);margin-top:4px;padding-top:8px">
+     <span class="k">Efeito — parcial ${PARCIAL.labels[PARCIAL.labels.length-1]} vs ${PARCIAL.labels[PARCIAL.labels.length-2]}</span>
+     <span>GMV ${evoTag(p.gmv)} · Pedidos ${evoTag(p.vendas)}</span></div>
+   <div class="alav-row"><span class="k">Budget usado no parcial de ${PARCIAL.labels[PARCIAL.labels.length-1]}</span>
+     <span>${pct(p.budUlt)} do GMV · ROI ${p.roi?brl(p.roi):'—'}</span></div>
+  </div>`);
+ });
+ if(!grid.children.length)grid.innerHTML='<div class="card">Nenhuma loja corresponde ao filtro.</div>';
+}
+
+
+/* ================= INVESTIMENTO ================= */
+const invMes=document.getElementById('invMes'),invMetric=document.getElementById('invMetric');
+// Consolidado da Rede (Pedidos × GMV × Budget) — Pedidos só existe nos meses cobertos pela aba Mensal
+const INV_PEDIDOS_MES={}; // "Abril"->idx em MENSAL.labels, etc.
+MENSAL.labels.forEach((m,i)=>INV_PEDIDOS_MES[m]=i);
+function invRedeMes(mi){ // mi = índice do mês em INV.meses
+ const mesNome=INV.meses[mi];
+ let promo=0,anun=0,tot=0,fat=0,pedidos=0,temPedidos=false;
+ LOJAS.forEach(l=>{
+  const d=INV.data[l][mi];promo+=d[0];anun+=d[1];tot+=d[2];fat+=d[3];
+  const pi=INV_PEDIDOS_MES[mesNome];
+  if(pi!=null&&MENSAL.data[l][0][pi]!=null){pedidos+=MENSAL.data[l][0][pi];temPedidos=true;}
+ });
+ return {pedidos:temPedidos?pedidos:null,gmv:fat,budget:fat?tot/fat*100:null};
+}
+let invMesesSel=new Set(INV.meses);
+function buildMonthChips(el,selSet,onChange){
+ el.innerHTML="";
+ const all=document.createElement('button');all.className='chip'+(selSet.size===INV.meses.length?' on':'');all.textContent='Todos';
+ all.onclick=()=>{selSet.size===INV.meses.length?selSet.clear():INV.meses.forEach(m=>selSet.add(m));buildMonthChips(el,selSet,onChange);onChange();};
+ el.appendChild(all);
+ INV.meses.forEach(m=>{
+  const c=document.createElement('button');c.className='chip'+(selSet.has(m)?' on':'');c.textContent=m;
+  c.onclick=()=>{selSet.has(m)?selSet.delete(m):selSet.add(m);buildMonthChips(el,selSet,onChange);onChange();};
+  el.appendChild(c);
+ });
+}
+function renderInvCons(){
+ const meses=INV.meses.filter(m=>invMesesSel.has(m));
+ const idx=meses.map(m=>INV.meses.indexOf(m));
+ const serie=idx.map(mi=>invRedeMes(mi));
+ chart('invConsChart',{type:'bar',
+  data:{labels:meses,datasets:[
+   {type:'bar',label:'Pedidos (rede)',data:serie.map(s=>s.pedidos),backgroundColor:"#16808A99",yAxisID:'yPed',borderRadius:6,order:3},
+   {type:'line',label:'GMV / Fat. líquido (rede)',data:serie.map(s=>s.gmv),borderColor:"#7B131F",backgroundColor:"#7B131F22",yAxisID:'yGmv',tension:.3,borderWidth:3,pointRadius:5,order:1},
+   {type:'line',label:'Budget de investimento % (rede)',data:serie.map(s=>s.budget),borderColor:"#B8860B",backgroundColor:"#B8860B22",yAxisID:'yBud',tension:.3,borderWidth:2.5,borderDash:[6,3],pointRadius:4,order:2}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+   plugins:{legend:{position:'bottom'},
+    tooltip:{callbacks:{label:c=>{
+     if(c.dataset.yAxisID==='yGmv')return c.dataset.label+": "+brl(c.parsed.y);
+     if(c.dataset.yAxisID==='yBud')return c.dataset.label+": "+pct(c.parsed.y);
+     return c.dataset.label+": "+(c.parsed.y==null?"sem dado":num(c.parsed.y));
+    }}}},
+   scales:{
+    yGmv:{position:'left',ticks:{callback:v=>"R$ "+(v/1000).toLocaleString('pt-BR')+"k"},title:{display:true,text:'GMV (R$)'}},
+    yPed:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>v.toLocaleString('pt-BR')},title:{display:true,text:'Pedidos'}},
+    yBud:{display:false,min:0}
+   }}});
+ const semPedidos=meses.filter(m=>invRedeMes(INV.meses.indexOf(m)).pedidos==null);
+ document.getElementById('invConsNote').textContent=semPedidos.length
+  ?`Pedidos não disponíveis para ${semPedidos.join(", ")} (a aba de Investimento desses meses não traz contagem de pedidos — só a partir de ${MENSAL.labels[0]} a planilha traz esse dado). GMV e Budget % cobrem todos os meses selecionados.`
+  :"Pedidos, GMV e Budget de investimento consolidados das 12 lojas nos meses selecionados.";
+}
+function bootInv(){
+ invMes.innerHTML="";invMetric.innerHTML="";
+ INV.meses.forEach((m,i)=>invMes.add(new Option(m,i)));
+ invMes.value=INV.meses.length-1;
+ INV.cols.forEach((c,i)=>invMetric.add(new Option(c,i)));
+ invMetric.value=2;
+ renderInv();renderInvEvo();
+ buildMonthChips(document.getElementById('invMesesChips'),invMesesSel,renderInvCons);
+ renderInvCons();
+}
+const invFmt=(ci,v)=>ci===4?pct(v):(ci===6||ci===7)?num(v):brl(v);
+function renderInv(){
+ const mi=+invMes.value,ci=+invMetric.value;
+ const arr=LOJAS.map(l=>({l,v:INV.data[l][mi][ci]})).sort((a,b)=>b.v-a.v);
+ chart('invChart',{type:'bar',data:{labels:arr.map(a=>a.l),datasets:[{data:arr.map(a=>a.v),backgroundColor:"#7B131FCC",borderRadius:8}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:INV.cols[ci]+" · "+INV.meses[mi],color:"#7B131F",font:{size:15,weight:'bold'}},tooltip:{callbacks:{label:c=>invFmt(ci,c.parsed.y)}}}}});
+ // matriz
+ let html=`<thead><tr><th>Loja</th>${INV.cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+ LOJAS.forEach(l=>{
+  const d=INV.data[l][mi];
+  html+=`<tr><td><b>${l}</b></td>`+d.map((v,i)=>{
+   if(i===4){const cls=v<5?'b-good':v<9?'b-warn':'b-bad';return `<td><span class="badge ${cls}">${pct(v)}</span></td>`;}
+   return `<td>${invFmt(i,v)}</td>`;
+  }).join('')+"</tr>";
+ });
+ document.getElementById('invTable').innerHTML=html+"</tbody>";
+}
+let invHi=new Set(); // vazio = todas com o mesmo peso; com itens = destacadas (demais esmaecidas)
+function buildChipsHi(el,hiSet,onChange){
+ el.innerHTML="";
+ const all=document.createElement('button');
+ all.className='chip'+(hiSet.size===0?' on':'');all.textContent='Todas';
+ all.onclick=()=>{hiSet.clear();buildChipsHi(el,hiSet,onChange);onChange();};
+ el.appendChild(all);
+ LOJAS.forEach(l=>{
+  const c=document.createElement('button');c.className='chip'+(hiSet.has(l)?' on':'');c.textContent=l;
+  c.onclick=()=>{hiSet.has(l)?hiSet.delete(l):hiSet.add(l);buildChipsHi(el,hiSet,onChange);onChange();};
+  el.appendChild(c);
+ });
+}
+function renderInvEvo(){
+ const temHi=invHi.size>0;
+ const ds=LOJAS.map(l=>{
+  const hi=!temHi||invHi.has(l),i=LOJAS.indexOf(l);
+  return {label:l,data:INV.data[l].map(m=>m[2]),
+   borderColor:hi?CORES[i]:"#DCD2C8",backgroundColor:hi?CORES[i]:"#DCD2C8",
+   borderWidth:hi?(temHi?3.5:2.5):1.4,pointRadius:hi?4:0,order:hi?0:1,__hi:hi};
+ });
+ chart('invEvoChart',{type:'line',data:{labels:INV.meses,datasets:ds},
+ options:{responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{position:'bottom',labels:{filter:(item,data)=>data.datasets[item.datasetIndex].__hi}},
+   tooltip:{filter:c=>c.dataset.__hi,callbacks:{label:c=>c.dataset.label+": "+brl(c.parsed.y)}}},
+  scales:{y:{ticks:{callback:v=>"R$ "+v.toLocaleString('pt-BR')}}}}});
+}
+
+
+
+/* ================= MARGEM / DRE VIRTUAL ================= */
+// Percentuais fixos (aba "Margem" da planilha; atualizados ao vivo quando encontrados lá)
+let DRE_FIX=[["Imposto",9],["CMV",30],["ROY",6],["FPP",1],["Tx iFood",16],["Tx iFood POL",2.6]];
+const DIAS_MES={JANEIRO:31,FEVEREIRO:28,MARCO:31,MARÇO:31,ABRIL:30,MAIO:31,JUNHO:30,JULHO:31,AGOSTO:31,SETEMBRO:30,OUTUBRO:31,NOVEMBRO:30,DEZEMBRO:31};
+const mesDoLabel=lb=>deacc(lb).toUpperCase().replace(/\s*\(.*\)/,"").trim();
+const fpp=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+" p.p.";
+
+function dreCalc(loja,tipo,t){ // tipo: "M"|"P" · t: índice do período
+ const cfg=tipo==="M"?{src:MENSAL.data,labels:MENSAL.labels,rede:aggRede(MENSAL.data,MENSAL.labels.length)}
+                     :{src:PARCIAL.data,labels:PARCIAL.labels,rede:PARCIAL.rede};
+ const s=loja==="__rede"?cfg.rede:cfg.src[loja];
+ const fat=s[1][t],bud=s[6][t]==null?0:s[6][t];
+ if(fat==null)return null;
+ const fixos=DRE_FIX.map(([n,p])=>({n,p,v:fat*p/100}));
+ const custoPct=DRE_FIX.reduce((a,[,p])=>a+p,0)+bud;
+ const margemPct=100-custoPct, margemR=fat*margemPct/100;
+ return {fat,bud,fixos,custoPct,margemPct,margemR,label:cfg.labels[t],labels:cfg.labels,s,tipo,t};
+}
+function bootMargem(){
+ const lojaSel=document.getElementById('mg-loja'),perSel=document.getElementById('mg-per');
+ const keep={l:lojaSel.value,p:perSel.value};
+ lojaSel.innerHTML="";perSel.innerHTML="";
+ lojaSel.add(new Option("Rede toda (12 lojas)","__rede"));
+ LOJAS.forEach(l=>lojaSel.add(new Option(l,l)));
+ MENSAL.labels.forEach((m,i)=>perSel.add(new Option(m+" · mês fechado","M:"+i)));
+ PARCIAL.labels.forEach((m,i)=>perSel.add(new Option(m+" · parcial","P:"+i)));
+ perSel.value="P:"+(PARCIAL.labels.length-1);
+ if(keep.l&&[...lojaSel.options].some(o=>o.value===keep.l))lojaSel.value=keep.l;
+ if(keep.p&&[...perSel.options].some(o=>o.value===keep.p))perSel.value=keep.p;
+ lojaSel.onchange=renderMargem;perSel.onchange=renderMargem;
+ renderMargem();
+}
+function renderMargem(){
+ const loja=document.getElementById('mg-loja').value;
+ const [tipo,ti]=document.getElementById('mg-per').value.split(":");const t=+ti;
+ const d=dreCalc(loja,tipo,t);if(!d)return;
+ const nomeLoja=loja==="__rede"?"Rede toda":loja;
+ const f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
+ // projeção mensal quando parcial (proporcional aos dias)
+ const dias=DIAS_MES[mesDoLabel(d.label)]||30;
+ const diasJan=parseInt((d.label.match(/01[–-](\d{1,2})/)||[0,"7"])[1],10)||7;
+ const proj=tipo==="P"?{fat:d.fat/diasJan*dias,mar:d.margemR/diasJan*dias}:null;
+ // período anterior do mesmo tipo
+ const prev=t>0?dreCalc(loja,tipo,t-1):null;
+ const dMar=prev?d.margemPct-prev.margemPct:null;         // Δ em pontos percentuais
+ const gFat=prev?evo(prev.fat,d.fat):null;                // crescimento de FAT
+ const gRent=prev?evo(prev.margemR,d.margemR):null;       // crescimento de RENT (margem R$)
+ // KPIs
+ document.getElementById('mg-kpis').innerHTML=[
+  ["Faturamento iFood do período (base do DRE)",brl(d.fat),prev?evoTag(gFat)+" FAT vs "+prev.label:'<span class="flat">—</span>'],
+  ["Custo total do Delivery % (fixos + alavancas)",pct(d.custoPct),prev?`<span class="${d.custoPct-prev.custoPct>0.05?'down':d.custoPct-prev.custoPct<-0.05?'up':'flat'}">${fpp(d.custoPct-prev.custoPct)}</span> vs ${prev.label}`:'<span class="flat">—</span>'],
+  ["Margem de Contribuição iFood % (sobre o FAT do período)",pct(d.margemPct),prev?fpp(dMar)+" vs "+prev.label:'<span class="flat">—</span>'],
+  ["Margem de Contribuição iFood R$ (no período)",brl(d.margemR),prev?evoTag(gRent)+" RENT vs "+prev.label:'<span class="flat">—</span>'],
+  ...(proj?[["Projeção da Margem iFood para o mês fechado (R$)",brl(proj.mar),`<span class="flat">${d.label} ÷ ${diasJan} dias × ${dias} dias de ${cap(mesDoLabel(d.label))}</span>`]]:[])
+ ].map(([l,v,e])=>`<div class="card kpi"><div class="lbl">${l}</div><div class="val">${v}</div><div class="evo">${e}</div></div>`).join('');
+ // DRE tabela
+ let html=`<thead><tr><th>Linha do DRE</th><th>%</th><th>R$ no período</th></tr></thead><tbody>
+  <tr><td><b>Faturamento (${d.label})</b></td><td>100%</td><td><b>${brl(d.fat)}</b></td></tr>`;
+ d.fixos.forEach(fx=>{html+=`<tr><td>(−) ${fx.n} <span class="badge b-off">fixo</span></td><td>${pct(fx.p)}</td><td>− ${brl(fx.v)}</td></tr>`;});
+ html+=`<tr><td>(−) Alavancas — Budget de investimento real de ${nomeLoja} em ${d.label}</td><td>${pct(d.bud)}</td><td>− ${brl(d.fat*d.bud/100)}</td></tr>
+  <tr><td><b>(=) Custo total</b></td><td><b>${pct(d.custoPct)}</b></td><td><b>− ${brl(d.fat*d.custoPct/100)}</b></td></tr>
+  <tr style="background:var(--verde-bg)"><td><b>(=) Margem de Contribuição iFood</b></td><td><b>${pct(d.margemPct)}</b></td><td><b>${brl(d.margemR)}</b></td></tr>`;
+ if(proj)html+=`<tr><td>Projeção mensal proporcional (${dias} dias)</td><td>${pct(d.margemPct)}</td><td>${brl(proj.mar)} <span class="badge b-warn">estimativa</span></td></tr>`;
+ document.getElementById('mg-dre').innerHTML=html+"</tbody>";
+ document.getElementById('mg-t1').textContent=`DRE Virtual — Delivery · ${nomeLoja} · ${d.label}`;
+ document.getElementById('mg-note').textContent=tipo==="P"
+  ?`Parcial de ${diasJan} dias. A projeção assume o mesmo ritmo diário de faturamento iFood pelos ${dias} dias de ${cap(mesDoLabel(d.label))}.`
+  :"Mês fechado: DRE sobre o faturamento total do mês.";
+ // Gráfico: evolução da Margem % da loja × rede, todos os períodos do tipo
+ const serie=d.labels.map((_,i)=>{const x=dreCalc(loja,tipo,i);return x?x.margemPct:null;});
+ const serieRede=d.labels.map((_,i)=>{const x=dreCalc("__rede",tipo,i);return x?x.margemPct:null;});
+ document.getElementById('mg-t2').textContent=`Margem de Contribuição iFood % — ${nomeLoja} (${tipo==="M"?"meses fechados":"parciais 01–07"})`;
+ const ds=[{label:nomeLoja,data:serie,borderColor:"#7B131F",backgroundColor:"#7B131F22",fill:true,tension:.3,borderWidth:3,pointRadius:5}];
+ if(loja!=="__rede")ds.push({label:"Rede",data:serieRede,borderColor:"#8A7F78",borderDash:[6,4],tension:.3,borderWidth:2,pointRadius:3});
+ chart('mg-chart',{type:'line',data:{labels:d.labels,datasets:ds},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},
+  tooltip:{callbacks:{label:c=>c.dataset.label+": Margem iFood "+pct(c.parsed.y)}}},scales:{y:{ticks:{callback:v=>v+"%"}}}}});
+ // Ranking de margem % por loja no período
+ const arr=LOJAS.map(l=>{const x=dreCalc(l,tipo,t);return {l,v:x?x.margemPct:null};}).sort((a,b)=>(b.v??-99)-(a.v??-99));
+ chart('mg-rank',{type:'bar',data:{labels:arr.map(a=>a.l),datasets:[{data:arr.map(a=>a.v),
+  backgroundColor:arr.map(a=>loja!=="__rede"&&a.l===loja?"#7B131F":(a.v>=30?"#1E7A46CC":a.v>=25?"#B8860BCC":"#B3261ECC")),borderRadius:8}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+  tooltip:{callbacks:{label:c=>"Margem de Contribuição iFood "+pct(c.parsed.x)}}},scales:{x:{ticks:{callback:v=>v+"%"}}}}});
+ // Insight
+ const rk=arr.findIndex(a=>a.l===loja)+1;
+ const redeAtual=dreCalc("__rede",tipo,t);
+ const fixTot=DRE_FIX.reduce((a,[,p])=>a+p,0);
+ let ls=[];
+ ls.push(`Estrutura do período: custos fixos somam <b>${pct(fixTot)}</b> do faturamento; Alavancas de ${nomeLoja} consumiram <b>${pct(d.bud)}</b> (${brl(d.fat*d.bud/100)}), resultando em <b>Margem de Contribuição iFood de ${pct(d.margemPct)} do FAT = ${brl(d.margemR)}</b>.`);
+ if(prev)ls.push(`Vs ${prev.label}: <b>FAT iFood ${f1(gFat)}</b> e <b>Margem de Contribuição iFood em R$ (RENT) ${f1(gRent)}</b>; a Margem iFood % variou <b>${fpp(dMar)}</b>${dMar!=null&&gFat!=null?(gRent>gFat?" — a rentabilidade cresceu mais que o faturamento (mix de investimento mais eficiente)":gRent<gFat&&gFat>0?" — o faturamento cresceu, mas a margem cresceu menos (investimento pesando)":""):""}.`);
+ if(loja!=="__rede"&&redeAtual)ls.push(`Posição na rede: <b>${rk}º de ${LOJAS.length}</b> em Margem de Contribuição iFood % no período — ${nomeLoja} ${d.margemPct>=redeAtual.margemPct?"acima":"abaixo"} da Margem iFood da rede (${pct(redeAtual.margemPct)}) por <b>${fpp(d.margemPct-redeAtual.margemPct)}</b>.`);
+ if(tipo==="P")ls.push(`Projeção mensal proporcional: mantendo o ritmo diário do parcial, ${nomeLoja} fecharia ${cap(mesDoLabel(d.label))} com <b>Margem de Contribuição iFood de ${brl(proj.mar)}</b> sobre FAT iFood projetado de ${brl(proj.fat)}.`);
+ document.getElementById('mg-insight').innerHTML=`<h2>Leitura do DRE · ${nomeLoja} · ${d.label}</h2><ul>${ls.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+}
+// Parser ao vivo dos percentuais fixos (procura as linhas na aba de Margem)
+function scanDreFix(aoa){
+ const alvo=[["Imposto",/^IMPOSTO/],["CMV",/^CMV/],["ROY",/^ROY/],["FPP",/^FPP/],["Tx iFood POL",/^TX\s*IFOOD\s*POL/],["Tx iFood",/^TX\s*IFOOD(?!\s*POL)/]];
+ const found={};
+ aoa.forEach(row=>{(row||[]).forEach((v,c)=>{
+  if(typeof v!=="string")return;
+  const s=deacc(v).toUpperCase().replace(/\(%\)/,"").trim();
+  alvo.forEach(([nome,rx])=>{
+   if(found[nome]!=null||!rx.test(s))return;
+   for(let cc=c+1;cc<c+6;cc++){
+    let [n,jaPct]=parseCell(row[cc]);
+    if(n!=null){if(!jaPct&&Math.abs(n)<=1.5)n*=100;found[nome]=n;break;}
+   }
+  });
+ });});
+ return Object.keys(found).length>=4?found:null;
+}
+function renderJJ(){
+ const n=PARCIAL.labels.length-1,p=n-1; // últimos dois parciais disponíveis
+ const LP=PARCIAL.labels[p],LN=PARCIAL.labels[n];
+ const f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
+ const rows=[];
+ LOJAS.forEach(l=>{
+  const d=PARCIAL.data[l];
+  const eVendas=evo(d[0][p],d[0][n]),eGmv=evo(d[1][p],d[1][n]),eTm=evo(d[2][p],d[2][n]),eNovos=evo(d[3][p],d[3][n]),
+        eVis=evo(d[4][p],d[4][n]),eConv=evo(d[5][p],d[5][n]),eBud=evo(d[6][p],d[6][n]),eCpo=evo(d[9][p],d[9][n]);
+  const eficiente = (eBud!=null&&eBud<0||d[6][n]===0&&d[6][p]===0) && eVendas>0 && eGmv>0;
+  const critico = eBud!=null&&eBud>0 && eGmv<0;
+  rows.push({l,d,eVendas,eGmv,eTm,eNovos,eVis,eConv,eBud,eCpo,eficiente,critico});
+ });
+ // insight — todos os números calculados dos dados vigentes, com o indicador sempre nomeado
+ const R=PARCIAL.rede;
+ const rV=evo(R[0][p],R[0][n]),rG=evo(R[1][p],R[1][n]),rP=evo(R[7][p],R[7][n]),rNov=evo(R[3][p],R[3][n]);
+ const efic=rows.filter(r=>r.eficiente).map(r=>`${r.l} (Budget ${f1(r.eBud)}, Pedidos ${f1(r.eVendas)}, GMV ${f1(r.eGmv)})`);
+ const cresc=rows.filter(r=>r.eGmv>0).length;
+ const queda=rows.filter(r=>r.eGmv<0).sort((a,b)=>a.eGmv-b.eGmv).map(r=>`${r.l} (GMV ${f1(r.eGmv)})`);
+ const piorTm=rows.slice().sort((a,b)=>a.eTm-b.eTm)[0];
+ const piorNov=rows.slice().sort((a,b)=>a.eNovos-b.eNovos)[0];
+ document.getElementById('jjInsight').innerHTML=`<h2>Leitura do parcial · ${LN} × ${LP}</h2><ul>
+  <li><b>${cresc} de ${rows.length} lojas cresceram em GMV</b>. Rede: Pedidos ${f1(rV)}, GMV ${f1(rG)}, Promoções+Ads ${f1(rP)} (CPO: ${brl(R[9][p])} → ${brl(R[9][n])}; ROI: ${brl(R[10][p])} → ${brl(R[10][n])}).</li>
+  <li>🏆 <b>Eficiência (Budget de investimento ↓ com Pedidos ↑ e GMV ↑):</b> ${efic.join(" · ")||"nenhuma loja neste recorte"}.</li>
+  <li>⚠️ <b>Em queda de GMV:</b> ${queda.join(", ")||"nenhuma loja"}.</li>
+  <li>Pontos de atenção — <b>Novos clientes da rede: ${f1(rNov)}</b>${rNov<0?" (crescimento vindo de recorrência, não de aquisição)":""}; maior queda de TM: <b>${piorTm.l} (TM ${f1(piorTm.eTm)})</b>; maior queda de Novos: <b>${piorNov.l} (Novos ${f1(piorNov.eNovos)})</b>.</li></ul>`;
+ document.getElementById('jjTitle').textContent=`Parcial · ${LP} × ${LN} — matriz de destaque`;
+ document.getElementById('jjT1').textContent=`Variação de GMV % (${LN} × ${LP})`;
+ document.getElementById('jjT2').textContent=`Eficiência: Δ Budget de investimento % × Δ GMV %`;
+ // tabela
+ let html=`<thead><tr><th>Loja</th><th>Pedidos</th><th>GMV</th><th>TM</th><th>Novos</th><th>Visitas</th><th>Conversão %</th><th>Budget %</th><th>CPO</th><th>Status</th></tr></thead><tbody>`;
+ rows.forEach(r=>{
+  const c=(a,b,e,f,gu=1)=>`${f(a)} → ${f(b)}<br>${evoTag(e,gu)}`;
+  const d=r.d;
+  const status=r.eficiente?'<span class="badge b-good">🏆 Budget ↓ · Pedidos ↑ · GMV ↑</span>':r.critico?'<span class="badge b-bad">Budget ↑ · GMV ↓ (crítico)</span>':r.eGmv>0?'<span class="badge b-good">GMV em alta</span>':'<span class="badge b-bad">GMV em queda</span>';
+  html+=`<tr><td><b>${r.l}</b></td>
+   <td>${c(d[0][p],d[0][n],r.eVendas,num)}</td>
+   <td>${c(d[1][p],d[1][n],r.eGmv,brl)}</td>
+   <td>${c(d[2][p],d[2][n],r.eTm,brl)}</td>
+   <td>${c(d[3][p],d[3][n],r.eNovos,num)}</td>
+   <td>${c(d[4][p],d[4][n],r.eVis,num)}</td>
+   <td>${c(d[5][p],d[5][n],r.eConv,pct)}</td>
+   <td>${pct(d[6][p])} → ${pct(d[6][n])}<br>${evoTag(r.eBud,-1)}</td>
+   <td>${c(d[9][p],d[9][n],r.eCpo,brl,-1)}</td>
+   <td>${status}</td></tr>`;
+ });
+ document.getElementById('jjTable').innerHTML=html+"</tbody>";
+ // gráfico GMV delta
+ const arr=rows.slice().sort((a,b)=>b.eGmv-a.eGmv);
+ chart('jjGmvChart',{type:'bar',data:{labels:arr.map(r=>r.l),datasets:[{data:arr.map(r=>r.eGmv),backgroundColor:arr.map(r=>r.eGmv>=0?"#1E7A46CC":"#B3261ECC"),borderRadius:8}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(1)+"%"}}},scales:{y:{ticks:{callback:v=>v+"%"}}}}});
+ // scatter
+ chart('jjScatter',{type:'scatter',data:{datasets:rows.map(r=>({label:r.l,data:[{x:r.eBud==null?0:r.eBud,y:r.eGmv}],backgroundColor:CORES[LOJAS.indexOf(r.l)],pointRadius:7}))},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label+`: Δbudget ${c.parsed.x.toFixed(1)}% · ΔGMV ${c.parsed.y.toFixed(1)}%`}}},
+ scales:{x:{title:{display:true,text:"Δ Budget de investimento %"},grid:{color:ctx=>ctx.tick.value===0?"#7B131F":"#E8DDD3"}},y:{title:{display:true,text:"Δ GMV %"},grid:{color:ctx=>ctx.tick.value===0?"#7B131F":"#E8DDD3"}}}}});
+}
+
+/* ================= BP ================= */
+let bpSel=new Set(["Centro","Downtown","Leblon","Flamengo","Ipanema"]);
+function renderBP(){
+ const m=document.getElementById('bpMetric').value;
+ const key={BP:'bp',pedidos:'ped',nre15:'nre',nba10:'nba',atraso:'atr'}[m];
+ const isPct=m!=='pedidos';
+ const ds=[...bpSel].map(l=>({label:l,data:BP.data[l][key],borderColor:CORES[LOJAS.indexOf(l)],backgroundColor:CORES[LOJAS.indexOf(l)],tension:.3,borderWidth:2.5,pointRadius:4}));
+ chart('bpChart',{type:'line',data:{labels:BP.semanas.map(s=>"Sem. "+s),datasets:ds},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{ticks:{callback:v=>isPct?v+"%":v}}}}});
+}
+
+
+// tabela resumo
+function renderBPTable(){
+ const entries=Object.entries(BP.resumo).sort((a,b)=>b[1][1]-a[1][1]);
+ let html=`<thead><tr><th>#</th><th>Loja</th><th>Pedidos</th><th>BP %</th><th>NRE15 %</th><th>NBA10 %</th><th>Atraso crítico %</th><th>Classificação</th></tr></thead><tbody>`;
+ entries.forEach(([l,d],i)=>{
+  const cls=d[1]>=90?['b-good','Excelente']:d[1]>=75?['b-warn','Atenção']:['b-bad','Crítico'];
+  html+=`<tr><td>${i+1}º</td><td><b>${l}</b></td><td>${num(d[0])}</td><td><b>${pct(d[1])}</b></td><td>${pct(d[2])}</td><td>${pct(d[3])}</td><td>${pct(d[4])}</td><td><span class="badge ${cls[0]}">${cls[1]}</span></td></tr>`;
+ });
+ document.getElementById('bpTable').innerHTML=html+"</tbody>";
+}
+
+/* ================= MÉTODO FTW (benchmarks referenciados) ================= */
+const FTW_REFS=[
+ {id:"conv",nome:"Conversão de cardápio %",regra:{tipo:"faixa",a:25,b:35},unid:"pct",
+  ref:"25–35% saudável para cardápio digital de delivery",fonte:"Brendi · Conversão de cardápio (2026)",url:"https://brendi.com.br/blog/cardapio-digital-conversao-2026/"},
+ {id:"tm",nome:"Ticket médio (TM)",regra:{tipo:"min",m:50},unid:"brl",
+  ref:"TM de delivery saudável acima de R$ 50",fonte:"Brendi · KPIs de dashboard de vendas (2026)",url:"https://brendi.com.br/blog/dashboard-vendas-restaurante/"},
+ {id:"roi",nome:"ROI de investimento (proxy ROAS)",regra:{tipo:"min",m:4},unid:"x",
+  ref:"ROAS alvo do setor 4:1 · média iFood Anúncios 8,5:1",fonte:"DoorDash/Grubhub (benchmark setorial) · iFood institucional (2025)",url:"https://institucional.ifood.com.br/restaurantes/as-vantagens-que-o-ifood-oferece-aos-negocios-parceiros-2/"},
+ {id:"budget",nome:"Budget de investimento %",regra:{tipo:"max",m:5},unid:"pct",
+  ref:"Teto interno Tapí: 5% do faturamento",fonte:"Regra interna Tapí (aba Status Alavancas)",url:null},
+ {id:"margem",nome:"Margem de Contribuição iFood %",regra:{tipo:"faixa",a:30,b:40},unid:"pct",
+  ref:"Margem-alvo de precificação no food service: 30–40%",fonte:"SisFood · Precificação de cardápio (2026)",url:"https://www.sisfood.com.br/saiba-mais/gestao-financeira/como-precificar-cardapio-restaurante"},
+ {id:"atraso",nome:"Atraso crítico % (proxy taxa de problemas)",regra:{tipo:"max",m:2.5},unid:"pct",
+  ref:"Selo Super Restaurantes iFood: problemas ≤ 2,5% (inclui atrasos)",fonte:"iFood Parceiros · critérios do Selo Super (2026)",url:"https://blog-parceiros.ifood.com.br/aparecer-no-ifood/"},
+ {id:"cmv",nome:"CMV % (parâmetro do DRE)",regra:{tipo:"faixa",a:28,b:35},unid:"pct",
+  ref:"CMV ideal no food service: 28–35% do faturamento",fonte:"Takeat · Guia de gestão de restaurantes (2026)",url:"https://www.takeat.app/guia-completo-gestao-restaurantes"}
+];
+const FTW_EXTRA_FONTES=[
+ ["Taxas iFood 12–23% de comissão + 3,2–3,5% de pagamento (contexto dos custos fixos do DRE)","Brendi · Taxas do iFood (2026)","https://brendi.com.br/blog/porcentagem-taxa-ifood-2026/"],
+ ["Retenção média do setor restaurantes/hospitalidade ≈ 55% (contexto para a leitura de Novos × recorrência)","Exploding Topics, via Zendesk BR","https://www.zendesk.com.br/blog/indice-retencao-clientes/"],
+ ["Central de Crescimento iFood: +40% pedidos e +36% GMV no 1º mês de investimento (referência de efeito esperado de alavancas)","iFood institucional (2025)","https://institucional.ifood.com.br/restaurantes/as-vantagens-que-o-ifood-oferece-aos-negocios-parceiros-2/"],
+ ["Mix saudável de canais: 60–70% marketplace / 30–40% canal próprio (visão estratégica de dependência)","Takeat · Guia de gestão (2026)","https://www.takeat.app/guia-completo-gestao-restaurantes"]
+];
+function ftwFarol(regra,v){ // → 2 verde | 1 amarelo | 0 vermelho | null sem dado
+ if(v==null||!isFinite(v))return null;
+ if(regra.tipo==="faixa"){
+  if(v>=regra.a&&v<=regra.b)return 2;
+  const d=v<regra.a?(regra.a-v)/regra.a:(v-regra.b)/regra.b;
+  return d<=0.25?1:0;
+ }
+ if(regra.tipo==="min")return v>=regra.m?2:v>=regra.m*0.7?1:0;
+ return v<=regra.m?2:v<=regra.m*1.3?1:0; // max
+}
+const FTW_ACTIVE=FTW_REFS;
+const FTW_ICON=["🔴","🟡","🟢"];
+function ftwValores(loja){ // valores no período mais recente (loja ou "__rede")
+ const n=PARCIAL.labels.length-1;
+ const s=loja==="__rede"?PARCIAL.rede:PARCIAL.data[loja];
+ const dre=dreCalc(loja,"P",n);
+ return {
+  conv:s[5][n], tm:s[2][n], roi:s[10][n], budget:s[6][n],
+  margem:dre?dre.margemPct:null,
+  atraso:loja==="__rede"?(LOJAS.reduce((a,l)=>a+BP.resumo[l][4]*BP.resumo[l][0],0)/LOJAS.reduce((a,l)=>a+BP.resumo[l][0],0)):BP.resumo[loja][4],
+  cmv:(DRE_FIX.find(x=>x[0]==="CMV")||[,30])[1]
+ };
+}
+function ftwFmt(unid,v){return v==null?"—":unid==="brl"?brl(v):unid==="x"?(v.toLocaleString('pt-BR',{maximumFractionDigits:1})+" : 1"):pct(v);}
+function renderFTW(){
+ const n=PARCIAL.labels.length-1,LN=PARCIAL.labels[n];
+ document.getElementById('ftw-t1').textContent=`Benchmarks × Rede Tapí · ${LN}`;
+ document.getElementById('ftw-t2').textContent=`Farol FTW por loja · ${LN}`;
+ // Tabela rede
+ const vr=ftwValores("__rede");
+ let html=`<thead><tr><th>Indicador</th><th>Referência de mercado</th><th>Rede Tapí (${LN})</th><th>Farol</th><th>Fonte</th></tr></thead><tbody>`;
+ FTW_ACTIVE.forEach(r=>{
+  const v=vr[r.id],f=ftwFarol(r.regra,v);
+  html+=`<tr><td><b>${r.nome}</b></td><td>${r.ref}</td><td><b>${ftwFmt(r.unid,v)}</b></td>
+   <td style="font-size:17px">${f==null?"—":FTW_ICON[f]}</td>
+   <td>${r.url?`<a href="${r.url}" target="_blank" style="color:var(--vinho)">${r.fonte}</a>`:r.fonte}</td></tr>`;
+ });
+ document.getElementById('ftw-rede').innerHTML=html+"</tbody>";
+ document.getElementById('ftw-nota-rede').textContent=`Conversão, TM, ROI, Budget e Margem calculados no parcial ${LN}; atraso crítico = média ponderada por pedidos do resumo BP; CMV = parâmetro vigente do DRE (${pct(vr.cmv)}).`;
+ // Farol por loja + Score
+ const linhas=LOJAS.map(l=>{
+  const v=ftwValores(l);
+  const fs=FTW_ACTIVE.map(r=>({r,f:ftwFarol(r.regra,v[r.id]),v:v[r.id]}));
+  const valid=fs.filter(x=>x.f!=null);
+  const score=valid.length?valid.reduce((a,x)=>a+x.f,0)/(valid.length*2)*10:null;
+  return {l,fs,score};
+ }).sort((a,b)=>(b.score??-1)-(a.score??-1));
+ let fh=`<thead><tr><th>#</th><th>Loja</th>${FTW_ACTIVE.map(r=>`<th title="${r.ref}">${r.nome.split(" ")[0]}${r.id==="margem"?" iFood":""}</th>`).join('')}<th>Score FTW</th></tr></thead><tbody>`;
+ linhas.forEach((x,i)=>{
+  fh+=`<tr><td>${i+1}º</td><td><b>${x.l}</b></td>`+x.fs.map(({r,f,v})=>
+   `<td title="${r.nome}: ${ftwFmt(r.unid,v)} · ref.: ${r.ref}" style="font-size:16px;text-align:center">${f==null?"—":FTW_ICON[f]}<br><span style="font-size:11.5px;color:var(--neutro)">${ftwFmt(r.unid,v)}</span></td>`).join('')+
+   `<td><b>${x.score==null?"—":x.score.toLocaleString('pt-BR',{maximumFractionDigits:1})+" / 10"}</b></td></tr>`;
+ });
+ document.getElementById('ftw-farol').innerHTML=fh+"</tbody>";
+ // Gráfico de score
+ chart('ftw-chart',{type:'bar',data:{labels:linhas.map(x=>x.l),datasets:[{data:linhas.map(x=>x.score),
+  backgroundColor:linhas.map(x=>x.score>=7.5?"#1E7A46CC":x.score>=5?"#B8860BCC":"#B3261ECC"),borderRadius:8}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+  tooltip:{callbacks:{label:c=>"Score FTW "+c.parsed.x.toLocaleString('pt-BR',{maximumFractionDigits:1})+" / 10"}}},
+  scales:{x:{min:0,max:10}}}});
+ // Fontes
+ document.getElementById('ftw-fontes').innerHTML=
+  FTW_ACTIVE.filter(r=>r.url).map(r=>`• <a href="${r.url}" target="_blank" style="color:var(--vinho)"><b>${r.fonte}</b></a> — ${r.ref}.`).join('<br>')+'<br>'+
+  FTW_EXTRA_FONTES.map(([t,f,u])=>`• <a href="${u}" target="_blank" style="color:var(--vinho)"><b>${f}</b></a> — ${t}.`).join('<br>')+
+  '<br><span class="note">Referências consultadas em 09/07/2026. Benchmarks setoriais mudam; recomenda-se revisão trimestral das fontes.</span>';
+}
+
+/* ================= BOOT + INTEGRAÇÃO GOOGLE SHEETS ================= */
+function boot(){
+ const w=document.getElementById('jsWarn');if(w)w.style.display='none';
+ if(!JANELA)setJanela(janelaAtiva());
+ bootDash();bootAlav();bootInv();bootMargem();renderJJ();renderBP();renderBPTable();renderCruz();renderFTW();
+}
+
+const SHEET_ID="1LTirsKT8tnPq6dmlqpvRFvE5bjntqtnXarURdm03-gk"; // [Tapí Tapioca] Dashboard
+const MESES_ORD={JANEIRO:1,FEVEREIRO:2,MARCO:3,MARÇO:3,ABRIL:4,MAIO:5,JUNHO:6,JULHO:7,AGOSTO:8,SETEMBRO:9,OUTUBRO:10,NOVEMBRO:11,DEZEMBRO:12};
+const REDE_ALIASES=["REDE"]; // adicionar aqui o nome da marca se a aba de totais não usar literalmente "REDE" (ex.: Spesso usa "SPESSO")
+const cap=s=>s.charAt(0)+s.slice(1).toLowerCase();
+const deacc=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const LOJA_KEY={};LOJAS.forEach(l=>LOJA_KEY[deacc(l).toUpperCase()]=l);
+
+function parseCell(v){ // → [num|null, jaEmPercent]
+ if(v==null||v==="")return [null,false];
+ if(typeof v==="number")return [isFinite(v)?v:null,false];
+ let s=String(v).trim();
+ if(/DIV\/0|N\/A|^[-–—x]$/i.test(s))return [null,false];
+ const hadPct=s.includes("%");
+ s=s.replace(/R\$|\s|%/g,"");
+ if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");
+ else if(/^\d{1,3}(\.\d{3})+$/.test(s))s=s.replace(/\./g,"");
+ const n=parseFloat(s);
+ return [isFinite(n)?n:null,hadPct];
+}
+function metricIdx(name){
+ const s=deacc(String(name)).toUpperCase();
+ if(/^VENDAS/.test(s))return 0;
+ if(/^GMV|FATURAMENTO/.test(s))return 1;
+ if(/^TM/.test(s))return 2;
+ if(/^NOVOS/.test(s))return 3;
+ if(/^VISITAS/.test(s))return 4;
+ if(/CONVERS/.test(s))return 5;
+ if(/BUDGET/.test(s))return 6;
+ if(/PROMOC/.test(s))return 7;
+ if(/SUB/.test(s))return 8;
+ if(/^CPO/.test(s))return 9;
+ if(/^ROI/.test(s))return 10;
+ return -1;
+}
+// Varre uma aba (matriz) e extrai blocos "UNIDADE: X" / "REDE" → {parcial:{...}, mensal:{...}}
+function scanSheet(aoa){
+ const out={parciais:{},mensal:{},mesesPW:{},mesesM:new Set()};
+ for(let r=0;r<aoa.length;r++){const row=aoa[r]||[];
+  for(let c=0;c<row.length;c++){
+   const v=row[c];if(typeof v!=="string")continue;
+   const s=v.trim(),su=deacc(s).toUpperCase();
+   let name=null;
+   const m=/^UNIDADE:\s*(.+)$/i.exec(s);
+   if(m)name=LOJA_KEY[deacc(m[1].trim()).toUpperCase()]||null;
+   else if(REDE_ALIASES.includes(su))name="__REDE";
+   if(!name)continue;
+   // linha de cabeçalho "Métrica" (1 ou 2 linhas abaixo)
+   let hr=-1;
+   for(const dr of [1,2]){const h=(aoa[r+dr]||[])[c];if(typeof h==="string"&&/m[eé]trica/i.test(h)){hr=r+dr;break;}}
+   if(hr<0)continue;
+   // colunas de período contíguas após a coluna Métrica
+   const cols=[];
+   for(let cc=c+1;cc<c+30;cc++){
+    const h=(aoa[hr]||[])[cc];
+    if(h==null||h==="")break;
+    const hs=deacc(String(h)).toUpperCase().trim();
+    let mm=/^([A-Z]+)\s*\((01-\d{2})\)$/.exec(hs);
+    if(mm&&MESES_ORD[mm[1]]&&["01-07","01-14","01-21","01-28"].includes(mm[2])){cols.push({cc,mes:mm[1],tipo:"P",win:mm[2]});continue;}
+    if(MESES_ORD[hs])cols.push({cc,mes:hs,tipo:"M"});
+   }
+   if(!cols.length)continue;
+   // linhas de métricas
+   for(let rr=hr+1;rr<hr+16;rr++){
+    const mname=(aoa[rr]||[])[c];if(mname==null||mname==="")break;
+    const mi=metricIdx(mname);if(mi<0)continue;
+    cols.forEach(({cc,mes,tipo,win})=>{
+     let [val,jaPct]=parseCell((aoa[rr]||[])[cc]);
+     if(val!=null&&!jaPct&&(mi===5||mi===6)&&Math.abs(val)<=1.5)val*=100; // fração de % do Sheets
+     let bag,ms;
+     if(tipo==="P"){out.parciais[win]=out.parciais[win]||{};out.mesesPW[win]=out.mesesPW[win]||new Set();bag=out.parciais[win];ms=out.mesesPW[win];}
+     else{bag=out.mensal;ms=out.mesesM;}
+     ms.add(mes);
+     if(!bag[name])bag[name]={};
+     if(!bag[name][mes])bag[name][mes]=Array(11).fill(null);
+     if(bag[name][mes][mi]==null)bag[name][mes][mi]=val;
+    });
+   }
+  }
+ }
+ return out;
+}
+function applyBag(bag,mesesSet,target,tipo,win){
+ const meses=[...mesesSet].sort((a,b)=>MESES_ORD[a]-MESES_ORD[b]);
+ // aceita se houver cobertura mínima por loja OU se existir um bloco de rede real cobrindo todos os meses
+ // (algumas planilhas atualizam o total da rede mais rápido que a quebra por loja — não pode travar nesse caso)
+ const lojasOk=LOJAS.filter(l=>bag[l]&&meses.every(m=>bag[l][m]&&bag[l][m][0]!=null));
+ const minLojas=Math.max(2,Math.ceil(LOJAS.length*0.7)); // escala com o tamanho da rede (não trava redes pequenas como Spesso/Pato)
+ const temRede=bag.__REDE&&meses.every(m=>bag.__REDE[m]);
+ if(meses.length<2||(lojasOk.length<minLojas&&!temRede))return false;
+ target.labels=meses.map(m=>tipo==="P"?cap(m)+" (01–"+win.split("-")[1]+")":cap(m));
+ LOJAS.forEach(l=>{
+  const src=bag[l]||{};
+  target.data[l]=Array.from({length:11},(_,mi)=>meses.map(m=>src[m]?src[m][mi]:null));
+ });
+ if(tipo==="P"){
+  if(temRede)target.rede=Array.from({length:11},(_,mi)=>meses.map(m=>bag.__REDE[m][mi]));
+  else target.rede=aggRede(target.data,meses.length);
+ }
+ target.redeOnly=lojasOk.length<minLojas; // aviso: esta janela não tem quebra por loja suficiente
+ return true;
+}
+function setStatus(msg,cls){
+ const el=document.getElementById('liveStatus');
+ el.textContent=msg;
+ el.style.color=cls==='ok'?'var(--verde)':cls==='warn'?'#9A6A12':'var(--neutro)';
+}
+function csvToAoa(text){ // parser CSV com aspas
+ const rows=[];let row=[],cell="",q=false;
+ for(let i=0;i<text.length;i++){const ch=text[i];
+  if(q){ if(ch==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=ch; }
+  else if(ch==='"')q=true;
+  else if(ch===','){row.push(cell);cell="";}
+  else if(ch==='\n'){row.push(cell);rows.push(row);row=[];cell="";}
+  else if(ch!=='\r')cell+=ch;
+ }
+ if(cell!==""||row.length){row.push(cell);rows.push(row);}
+ return rows.map(r=>r.map(c=>c===""?null:c));
+}
+async function fetchWorkbookAoas(){
+ // 1ª tentativa: exportação xlsx (todas as abas)
+ try{
+  const r=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx`,{redirect:'follow'});
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  const wb=XLSX.read(await r.arrayBuffer(),{type:"array"});
+  return wb.SheetNames.map(sn=>XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null}));
+ }catch(e1){
+  // 2ª tentativa: gviz CSV da 1ª aba (aba principal do Dash) — endpoint com CORS liberado
+  const r=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`,{redirect:'follow'});
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  return [csvToAoa(await r.text())];
+ }
+}
+function scoreBag(bag,mesesSet){ // quantas lojas cobrem 100% dos meses da janela + se existe bloco de rede real
+ const meses=[...mesesSet];
+ const lojasOk=LOJAS.filter(l=>bag[l]&&meses.every(m=>bag[l][m]&&bag[l][m][0]!=null)).length;
+ const temRede=!!(bag.__REDE&&meses.every(m=>bag.__REDE[m]));
+ return {lojasOk,temRede};
+}
+async function loadLive(){
+ setStatus("Carregando dados da planilha Google…");
+ try{
+  const aoas=await fetchWorkbookAoas();
+  // Cada aba é avaliada de forma INDEPENDENTE por janela — não mistura abas com cobertura de meses
+  // incompatível entre si (ex.: uma aba com só o total da rede em meses novos e outra com detalhe por
+  // loja em meses antigos). Fica sempre a MELHOR fonte isolada por janela (mais lojas cobertas primeiro,
+  // depois se tem bloco de rede real).
+  const bestP={}; // win -> {bag,mesesSet,lojasOk,temRede}
+  const mensalBag={},mensalMeses=new Set();
+  aoas.forEach(aoa=>{
+   const res=scanSheet(aoa);
+   Object.entries(res.parciais).forEach(([win,bag])=>{
+    const mesesSet=res.mesesPW[win];
+    const sc=scoreBag(bag,mesesSet);
+    const atual=bestP[win];
+    const melhor=!atual||sc.lojasOk>atual.sc.lojasOk||(sc.lojasOk===atual.sc.lojasOk&&sc.temRede&&!atual.sc.temRede);
+    if(melhor)bestP[win]={bag,mesesSet,sc};
+   });
+   Object.entries(res.mensal).forEach(([loja,byMes])=>{
+    if(!mensalBag[loja])mensalBag[loja]={};
+    Object.entries(byMes).forEach(([mes,vals])=>{if(!mensalBag[loja][mes])mensalBag[loja][mes]=vals;});
+   });
+   res.mesesM.forEach(m=>mensalMeses.add(m));
+  });
+
+  let okP=false;
+  Object.entries(bestP).forEach(([win,{bag,mesesSet}])=>{
+   if(!PARCIAIS[win])PARCIAIS[win]={labels:[],data:{},rede:null};
+   if(applyBag(bag,mesesSet,PARCIAIS[win],"P",win))okP=true;
+  });
+  if(okP)setJanela(janelaAtiva());
+  const okM=applyBag(mensalBag,mensalMeses,MENSAL,"M");
+  let okD=false;
+  for(const aoa of aoas){const fx=scanDreFix(aoa);
+   if(fx){DRE_FIX=DRE_FIX.map(([n,p])=>[n,fx[n]!=null?fx[n]:p]);okD=true;break;}}
+  if(!okP&&!okM)throw new Error("estrutura não reconhecida");
+  boot();
+  const janelaAvisoRede=okP&&PARCIAL.redeOnly?" — ⚠️ esta janela mostra só o total da rede, sem quebra por loja ainda":"";
+  setStatus(`● Dados ao vivo da planilha [Tapí Tapioca] Dashboard · ${okP?"parciais (janela "+JANELA+")":""}${okP&&okM?" + ":""}${okM?"meses fechados":""}${okD?" + % fixos do DRE":""}${janelaAvisoRede} · ${new Date().toLocaleString('pt-BR')}`,'ok');
+ }catch(e){
+  setStatus("○ Sem conexão com a planilha neste momento — exibindo os últimos dados salvos. Toque em ↻ Atualizar dados para tentar de novo.",'warn');
+ }
+}
+document.getElementById('btnRefresh').onclick=loadLive;
+
+/* ================= CRUZAMENTO ================= */
+function renderCruz(){
+ const n=PARCIAL.labels.length-1,p=n-1,mM=MENSAL.labels.length-1;
+ const LP=PARCIAL.labels[p],LN=PARCIAL.labels[n],LM=MENSAL.labels[mM];
+ const f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
+ const rows=LOJAS.map(l=>{
+  const bp=BP.resumo[l][1];
+  const conv=MENSAL.data[l][5][mM];
+  const eGmv=evo(PARCIAL.data[l][1][p],PARCIAL.data[l][1][n]);
+  const eVendas=evo(PARCIAL.data[l][0][p],PARCIAL.data[l][0][n]);
+  const eNovos=evo(PARCIAL.data[l][3][p],PARCIAL.data[l][3][n]);
+  const eBud=evo(PARCIAL.data[l][6][p],PARCIAL.data[l][6][n]);
+  const tm=MENSAL.data[l][2][mM];
+  return {l,bp,conv,eGmv,eVendas,eNovos,eBud,tm};
+ });
+ // correlação simples BP vs conversão
+ function corr(xs,ys){const n=xs.length,mx=xs.reduce((a,b)=>a+b)/n,my=ys.reduce((a,b)=>a+b)/n;
+  let num=0,dx=0,dy=0;for(let i=0;i<n;i++){num+=(xs[i]-mx)*(ys[i]-my);dx+=(xs[i]-mx)**2;dy+=(ys[i]-my)**2;}
+  return num/Math.sqrt(dx*dy);}
+ const cConv=corr(rows.map(r=>r.bp),rows.map(r=>r.conv));
+ const cGmv=corr(rows.map(r=>r.bp),rows.map(r=>r.eGmv));
+ const top3=rows.slice().sort((a,b)=>b.bp-a.bp).slice(0,3);
+ const bot3=rows.slice().sort((a,b)=>a.bp-b.bp).slice(0,3);
+ const avg=a=>a.reduce((x,y)=>x+y)/a.length;
+ const piorNovos=rows.slice().sort((a,b)=>a.eNovos-b.eNovos).slice(0,2);
+ const melhorBP=rows.slice().sort((a,b)=>b.bp-a.bp)[0];
+ const reprimida=rows.filter(r=>r.bp<75&&r.eGmv>0).sort((a,b)=>b.eGmv-a.eGmv)[0];
+ const corTxt=r=>Math.abs(r)>=0.7?"forte":Math.abs(r)>=0.4?"moderada":Math.abs(r)>=0.2?"fraca":"quase nula";
+ document.getElementById('cruzInsight').innerHTML=`<h2>Cruzamento: eficiência de despacho (BP) × performance comercial</h2><ul>
+  <li>As 3 lojas com <b>melhor BP %</b> (${top3.map(r=>`${r.l} (BP ${pct(r.bp)})`).join(", ")}) tiveram variação média de <b>GMV ${f1(avg(top3.map(r=>r.eGmv)))}</b> no parcial ${LN} × ${LP}.</li>
+  <li>As 3 lojas com <b>pior BP %</b> (${bot3.map(r=>`${r.l} (BP ${pct(r.bp)})`).join(", ")}) tiveram variação média de <b>GMV ${f1(avg(bot3.map(r=>r.eGmv)))}</b> no mesmo recorte. Maiores quedas de Novos clientes da rede: ${piorNovos.map(r=>`${r.l} (Novos ${f1(r.eNovos)})`).join(" e ")}.</li>
+  <li>Correlação BP % × variação de GMV: <b>r = ${cGmv.toFixed(2)}</b> (${corTxt(cGmv)}). Correlação BP % × Conversão de cardápio (${LM}): <b>r = ${cConv.toFixed(2)}</b> (${corTxt(cConv)}).</li>
+  <li>Caso a observar: <b>${melhorBP.l}</b> — melhor BP da rede (${pct(melhorBP.bp)}) com GMV ${f1(melhorBP.eGmv)} e Budget de investimento ${f1(melhorBP.eBud)} no parcial.${reprimida?` Já <b>${reprimida.l}</b> cresce em GMV (${f1(reprimida.eGmv)}) apesar do BP de ${pct(reprimida.bp)} — potencial reprimido pela operação de despacho.`:""}</li></ul>`;
+ // charts
+ function scatterCfg(yKey,yLabel){return {type:'scatter',data:{datasets:rows.map(r=>({label:r.l,data:[{x:r.bp,y:r[yKey]}],backgroundColor:CORES[LOJAS.indexOf(r.l)],pointRadius:7}))},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label+`: BP ${c.parsed.x.toFixed(1)}% · ${yLabel} ${c.parsed.y.toFixed(1)}%`}}},
+  scales:{x:{title:{display:true,text:"BP % médio (despacho no prazo)"}},y:{title:{display:true,text:yLabel}}}}};}
+ chart('cruzConv',scatterCfg('conv',`Conversão % (${LM})`));
+ chart('cruzGmv',scatterCfg('eGmv',`Δ GMV % (${LN} × ${LP})`));
+ document.getElementById('cruzT1').textContent=`BP % médio × Conversão de cardápio (${LM})`;
+ document.getElementById('cruzT2').textContent=`BP % médio × Δ GMV (${LN} × ${LP})`;
+ // tabela
+ let html=`<thead><tr><th>Loja</th><th>BP %</th><th>Atraso crítico %</th><th>Conversão % (${LM})</th><th>Δ GMV (${LN}×${LP})</th><th>Δ Pedidos (${LN}×${LP})</th><th>TM (${LM})</th><th>Leitura</th></tr></thead><tbody>`;
+ rows.slice().sort((a,b)=>b.bp-a.bp).forEach(r=>{
+  const atr=BP.resumo[r.l][4];
+  let leitura;
+  if(r.bp>=90&&r.eGmv>0)leitura='<span class="badge b-good">BP alto + GMV em alta: operação sustenta o crescimento</span>';
+  else if(r.bp<75&&r.eGmv<0)leitura='<span class="badge b-bad">BP baixo + GMV em queda: prioridade máxima</span>';
+  else if(r.bp<75&&r.eGmv>0)leitura='<span class="badge b-warn">GMV cresce apesar do BP baixo: potencial reprimido</span>';
+  else leitura='<span class="badge b-off">Intermediário</span>';
+  html+=`<tr><td><b>${r.l}</b></td><td>${pct(r.bp)}</td><td>${pct(atr)}</td><td>${pct(r.conv)}</td><td>${evoTag(r.eGmv)}</td><td>${evoTag(r.eVendas)}</td><td>${brl(r.tm)}</td><td>${leitura}</td></tr>`;
+ });
+ document.getElementById('cruzTable').innerHTML=html+"</tbody>";
+}
+
+boot();
+loadLive();
+</script>
+</body>
+</html>

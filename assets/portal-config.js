@@ -41,6 +41,14 @@ const PORTAL_CLIENTS = [
     color: '#221F1D',
     logo: 'assets/logos/kimura.jpg',
     passwordHash: '0507a6306c35c2aeaa12bbfa69be2d95306367e1b4c62c0fa6d7003449c70356'
+  },
+  {
+    slug: 'tapi',
+    name: 'Tapí Tapioca',
+    file: 'clientes/tapi.html',
+    color: '#7B131F',
+    logo: 'assets/logos/tapi.png',
+    passwordHash: '5bac5240c27d3b36ca03b18f6876ec72b6d9dc128bf41a8e371c1217d00db9fe'
   }
 ];
 
