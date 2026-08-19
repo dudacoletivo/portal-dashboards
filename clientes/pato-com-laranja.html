@@ -592,20 +592,69 @@ const CUM_METRICS = { ...MONTHLY_METRICS, 'GMV': {label:'GMV (faturamento bruto)
 
 function monthlyKeyFor(coreKey){ return coreKey==='GMV' ? 'FATURAMENTO LÍQUIDO' : coreKey; }
 
-const SUM_METRICS_MONTHLY = ['VENDAS','FATURAMENTO LÍQUIDO','NOVOS','VISITAS','PROMOÇÕES + ADS','SUB IFOOD'];
-const SUM_METRICS_CUM = ['VENDAS','GMV','NOVOS','VISITAS','PROMOÇÕES + ADS','SUB IFOOD'];
-
+// Métricas percentuais/de razão NUNCA podem ser agregadas fazendo média simples entre lojas
+// (isso ignora o tamanho de cada loja e distorce o resultado da Rede). O jeito certo é somar
+// os absolutos que compõem a razão e dividir depois — por isso cada uma é redefinida aqui em
+// função de outras métricas (já somadas corretamente), em vez de ter seu próprio valor médio.
 function aggregateMonthlyValue(metric, month, stores){
+  if(metric === 'TM'){
+    const gmv = aggregateMonthlyValue('FATURAMENTO LÍQUIDO', month, stores);
+    const vendas = aggregateMonthlyValue('VENDAS', month, stores);
+    return (gmv!=null && vendas) ? gmv/vendas : null;
+  }
+  if(metric === 'CONVERSÃO %'){
+    const vendas = aggregateMonthlyValue('VENDAS', month, stores);
+    const visitas = aggregateMonthlyValue('VISITAS', month, stores);
+    return (vendas!=null && visitas) ? vendas/visitas : null;
+  }
+  if(metric === 'Budget de investimento'){
+    const ads = aggregateMonthlyValue('PROMOÇÕES + ADS', month, stores);
+    const gmv = aggregateMonthlyValue('FATURAMENTO LÍQUIDO', month, stores);
+    return (ads!=null && gmv) ? ads/gmv : null;
+  }
+  if(metric === 'CPO'){
+    const ads = aggregateMonthlyValue('PROMOÇÕES + ADS', month, stores);
+    const vendas = aggregateMonthlyValue('VENDAS', month, stores);
+    return (ads!=null && vendas) ? ads/vendas : null;
+  }
+  if(metric === 'ROI'){
+    const gmv = aggregateMonthlyValue('FATURAMENTO LÍQUIDO', month, stores);
+    const ads = aggregateMonthlyValue('PROMOÇÕES + ADS', month, stores);
+    return (gmv!=null && ads) ? (gmv/ads)-1 : null;
+  }
   const vals = stores.map(s=> MONTHLY[s]?.[metric]?.[month]).filter(v=>v!==null && v!==undefined);
   if(vals.length===0) return null;
-  if(SUM_METRICS_MONTHLY.includes(metric)) return vals.reduce((a,b)=>a+b,0);
-  return vals.reduce((a,b)=>a+b,0)/vals.length;
+  return vals.reduce((a,b)=>a+b,0);
 }
 function aggregateCumValue(metric, period, monthKey, stores){
+  if(metric === 'TM'){
+    const gmv = aggregateCumValue('GMV', period, monthKey, stores);
+    const vendas = aggregateCumValue('VENDAS', period, monthKey, stores);
+    return (gmv!=null && vendas) ? gmv/vendas : null;
+  }
+  if(metric === 'CONVERSÃO %'){
+    const vendas = aggregateCumValue('VENDAS', period, monthKey, stores);
+    const visitas = aggregateCumValue('VISITAS', period, monthKey, stores);
+    return (vendas!=null && visitas) ? vendas/visitas : null;
+  }
+  if(metric === 'Budget de investimento'){
+    const ads = aggregateCumValue('PROMOÇÕES + ADS', period, monthKey, stores);
+    const gmv = aggregateCumValue('GMV', period, monthKey, stores);
+    return (ads!=null && gmv) ? ads/gmv : null;
+  }
+  if(metric === 'CPO'){
+    const ads = aggregateCumValue('PROMOÇÕES + ADS', period, monthKey, stores);
+    const vendas = aggregateCumValue('VENDAS', period, monthKey, stores);
+    return (ads!=null && vendas) ? ads/vendas : null;
+  }
+  if(metric === 'ROI'){
+    const gmv = aggregateCumValue('GMV', period, monthKey, stores);
+    const ads = aggregateCumValue('PROMOÇÕES + ADS', period, monthKey, stores);
+    return (gmv!=null && ads) ? (gmv/ads)-1 : null;
+  }
   const vals = stores.map(s=> CUM[s]?.[metric]?.[period]?.[monthKey]).filter(v=>v!==null && v!==undefined);
   if(vals.length===0) return null;
-  if(SUM_METRICS_CUM.includes(metric)) return vals.reduce((a,b)=>a+b,0);
-  return vals.reduce((a,b)=>a+b,0)/vals.length;
+  return vals.reduce((a,b)=>a+b,0);
 }
 function getMonthlyCore(coreKey, month, scope){
   const stores = scope==='REDE' ? STORES : [scope];
