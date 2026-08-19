@@ -2687,14 +2687,16 @@ function aggregate(ds, win, month){
     promoAds += (d['PROMOÇÕES + ADS'][month]||0);
     subIfood += (d['SUB IFOOD'][month]||0);
   });
-  const invest = promoAds+subIfood;
+  // Budget/CPO/ROI usam só Promoções+Ads (não soma Sub iFood) — confirmado batendo com o valor
+  // de cada loja vindo direto da planilha (ex: Cumbuca-Tijuca 4,78% = Ads/GMV, não (Ads+Sub)/GMV).
+  const invest = promoAds+subIfood; // total ads+sub, exibido separadamente (ex: "Investimento total")
   return {
     gmv, vendas, visitas, novos, promoAds, subIfood, invest,
     tm: vendas? gmv/vendas : 0,
     conversao: visitas? vendas/visitas : 0,
-    budget: gmv? invest/gmv : 0,
-    cpo: vendas? invest/vendas : 0,
-    roi: invest? (gmv/invest - 1) : 0
+    budget: gmv? promoAds/gmv : 0,
+    cpo: vendas? promoAds/vendas : 0,
+    roi: promoAds? (gmv/promoAds - 1) : 0
   };
 }
 
