@@ -2729,13 +2729,13 @@ function consolidatedValues(ds, storeSel, win){
       subIfood += (d['SUB IFOOD'][month]||0);
     });
   });
-  const invest = promoAds+subIfood;
+  // Budget/CPO/ROI usam só Promoções+Ads, não Ads+Sub iFood (mesmo motivo do aggregate() acima).
   return {
     VENDAS:vendas, GMV:gmv, TM: vendas?gmv/vendas:0, NOVOS:novos, VISITAS:visitas,
     'CONVERSÃO %': visitas? vendas/visitas:0,
-    'Budget de investimento': gmv? invest/gmv:0,
+    'Budget de investimento': gmv? promoAds/gmv:0,
     'PROMOÇÕES + ADS':promoAds, 'SUB IFOOD':subIfood,
-    CPO: vendas? invest/vendas:0, ROI: invest? (gmv/invest-1):0
+    CPO: vendas? promoAds/vendas:0, ROI: promoAds? (gmv/promoAds-1):0
   };
 }
 
