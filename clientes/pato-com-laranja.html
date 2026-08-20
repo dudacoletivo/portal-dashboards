@@ -1046,9 +1046,32 @@ function cortesForPair(pair){
   });
 }
 
+// Opções de "mês x mês" pro seletor da Parcial e do Comparativo 7 dias — derivadas dos meses
+// que realmente têm dado na planilha (em vez de fixas tipo "Junho x Julho"), pra não precisar
+// editar o código toda vez que passa um mês.
+const MONTH_ORDER = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+function availableCumMonths(){
+  const months = new Set();
+  const sampleStore = STORES[0];
+  Object.values(CUM[sampleStore]?.['VENDAS'] || {}).forEach(monthsObj=>{
+    Object.keys(monthsObj || {}).forEach(m=>months.add(m));
+  });
+  return MONTH_ORDER.filter(m=>months.has(m));
+}
+function availableMonthPairs(){
+  const months = availableCumMonths();
+  const pairs = [];
+  for(let i=1;i<months.length;i++){
+    const prev = months[i-1], cur = months[i];
+    const label = s => s.charAt(0)+s.slice(1).toLowerCase();
+    pairs.push({ value: prev+'_'+cur, label: `${label(prev)} × ${label(cur)}` });
+  }
+  return pairs;
+}
+
 function renderParcial(){
   renderPillGroup('dpLojaChips', STORE_SCOPE_OPTIONS, dpLoja, (v)=>{ dpLoja=v; renderParcial(); }, true);
-  renderPillGroup('dpParChips', [{value:'MAIO_JUNHO',label:'Maio × Junho'},{value:'JUNHO_JULHO',label:'Junho × Julho'}], dpPair, (v)=>{
+  renderPillGroup('dpParChips', availableMonthPairs(), dpPair, (v)=>{
     dpPair=v;
     const cortes = cortesForPair(v);
     if(!cortes.includes(dpCorte)) dpCorte = cortes[cortes.length-1];
@@ -1216,7 +1239,7 @@ try { renderInvestimento(); } catch(e) { console.error('renderInvestimento faile
 let c7Pair = 'JUNHO_JULHO';
 
 function renderComp7(){
-  renderPillGroup('c7ParChips', [{value:'MAIO_JUNHO',label:'Maio × Junho'},{value:'JUNHO_JULHO',label:'Junho × Julho'}], c7Pair, (v)=>{ c7Pair=v; renderComp7(); });
+  renderPillGroup('c7ParChips', availableMonthPairs(), c7Pair, (v)=>{ c7Pair=v; renderComp7(); });
   const [prevKey, curKey] = c7Pair.split('_');
 
   const perStore = STORES.map(s=>{

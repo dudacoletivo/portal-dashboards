@@ -8,18 +8,37 @@
   const GID_ALAVANCAS = '14456487';   // aba "Status das alavancas"
 
   const CANCEL_SHEET_ID = '1egzISBKxkvqVy-RuiXMni40-Fu2oONPnOmzpiKfIutw';
-  const CANCEL_SOURCES = [
-    { gid: '1278186316', unit: 'BARRA DA TIJUCA' }, // [BARRA] Julho
-    { gid: '977972087', unit: 'LEBLON' },           // [LEBLON] Julho
-    { gid: '1534779477', unit: 'LEBLON' },          // [LEBLON] Maio (01-28) — nome da aba não reflete o conteúdo
-    { gid: '461897780', unit: 'BARRA DA TIJUCA' }   // [BARRA] Maio (01-28) — idem
+  // A planilha ganha uma aba nova por unidade a cada mês (ex: "[BARRA] Agosto"), então em vez
+  // de fixar os gids aqui (que ficam desatualizados todo mês), descobrimos as abas na hora lendo
+  // a lista de abas publicada da própria planilha e pegando todas que começam com "[BARRA]" ou
+  // "[LEBLON]" — cobre qualquer aba nova sem precisar editar este arquivo de novo.
+  const CANCEL_UNIT_PREFIXES = [
+    { prefix: '[BARRA]', unit: 'BARRA DA TIJUCA' },
+    { prefix: '[LEBLON]', unit: 'LEBLON' }
   ];
+
+  async function discoverCancelSources() {
+    const res = await fetch(`https://docs.google.com/spreadsheets/d/${CANCEL_SHEET_ID}/htmlview`, { cache: 'no-store' });
+    const text = await res.text();
+    const re = /items\.push\(\{name:\s*"((?:[^"\\]|\\.)*)",\s*pageUrl:[^,]+,\s*gid:\s*"(-?\d+)"/g;
+    const decode = s => s.replace(/\\x([0-9a-fA-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\\//g, '/');
+    const sources = [];
+    let m;
+    while ((m = re.exec(text))) {
+      const name = decode(m[1]).trim().toUpperCase();
+      const found = CANCEL_UNIT_PREFIXES.find(p => name.startsWith(p.prefix));
+      if (found) sources.push({ gid: m[2], unit: found.unit });
+    }
+    if (!sources.length) throw new Error('Nenhuma aba de cancelamentos encontrada na planilha');
+    return sources;
+  }
 
   const METRIC_ORDER_MONTHLY = ['VENDAS', ['FATURAMENTO LÍQUIDO', 'GMV'], 'TM', 'NOVOS', 'VISITAS', 'CONVERSÃO %', 'Budget de investimento', 'PROMOÇÕES + ADS', 'SUB IFOOD', 'CPO', 'ROI'];
   const METRIC_ORDER_CUM = ['VENDAS', 'GMV', 'TM', 'NOVOS', 'VISITAS', 'CONVERSÃO %', 'Budget de investimento', 'PROMOÇÕES + ADS', 'SUB IFOOD', 'CPO', 'ROI'];
 
   async function loadCancelamentos() {
-    const perTab = await Promise.all(CANCEL_SOURCES.map(async (s) => {
+    const sources = await discoverCancelSources();
+    const perTab = await Promise.all(sources.map(async (s) => {
       const rows = await SheetsSync.fetchCsvRows(CANCEL_SHEET_ID, s.gid);
       return SheetsSync.parseCancelRecordsSheet(rows, s.unit);
     }));
