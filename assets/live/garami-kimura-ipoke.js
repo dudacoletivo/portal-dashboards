@@ -10,7 +10,7 @@
 (function () {
   const BRANDS = {
     garami: { sheetId: '1c_powOd8OiVtUklTr-2UsBNEz32X1AK8', mensalGid: '355980983', units: { 'TIJUCA': '1888630153', 'ZONA SUL': '391980038', 'BARRA DA TIJUCA': '851230337' } },
-    kimura: { sheetId: '1ANlsxqVBeMT6gliU-uMt_LkauDRJiNEJ', mensalGid: null, units: { 'TIJUCA': '1888630153', 'ZONA SUL': '391980038', 'BARRA DA TIJUCA': '851230337' } },
+    kimura: { sheetId: '1oSzxN3RdWgizyN9aTLnKufPxh1i1pOZC', mensalGid: '190482939', units: { 'TIJUCA': '1888630153', 'ZONA SUL': '391980038', 'BARRA DA TIJUCA': '851230337' } },
     ipoke: { sheetId: '1YqrViXiMUPWx-Zo_iT-aGouMUExnaDDe', mensalGid: '1613983242', units: { 'TIJUCA': '1888630153', 'BARRA DA TIJUCA': '1014280698', 'ZONA SUL': '1966828362' } }
   };
   const UNIT_TO_ID = { 'TIJUCA': 'tijuca', 'ZONA SUL': 'zonasul', 'BARRA DA TIJUCA': 'barra' };
