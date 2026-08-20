@@ -8,7 +8,9 @@
   var authorized = session && session.client === slug;
 
   if (!authorized) {
-    window.location.replace('../index.html?client=' + encodeURIComponent(slug) + '&reason=login');
+    // Sem slug/nome do cliente na URL de redirecionamento — a tela de login é única
+    // e não deve vazar qual cliente estava sendo acessado, nem na barra de endereço.
+    window.location.replace('../index.html');
     return;
   }
 
