@@ -2542,6 +2542,13 @@ const DATA_PRODUCTS = {
 };
 // ---------- METADATA ----------
 const STORE_KEYS = Object.keys(DATA_PARTIAL);
+// Filtro consolidado por unidade física, somando as 3 marcas que dividem o mesmo endereço
+// (ex: "Tijuca (consolidado)" = Cumbuca + Cumbuca Brasileira + Wraps, todas na Tijuca).
+// Baseado em .endsWith() pra continuar funcionando sozinho se uma marca/unidade for adicionada.
+const CONSOLIDATED_STORES = {
+  'Tijuca (consolidado)': STORE_KEYS.filter(s => s.endsWith(' - Tijuca')),
+  'Zona Sul (consolidado)': STORE_KEYS.filter(s => s.endsWith(' - Zona Sul'))
+};
 const BRAND_COLOR = {
   'Cumbuca': '#5e1255',
   'Cumbuca Brasileira': '#50887a',
@@ -2677,9 +2684,10 @@ function renderInsightsInto(elId, list){
 }
 
 // ---------- AGGREGATION (across stores, single month, single dataset) ----------
-function aggregate(ds, win, month){
+function aggregate(ds, win, month, storesList){
+  const stores = storesList || STORE_KEYS;
   let gmv=0,vendas=0,visitas=0,novos=0,promoAds=0,subIfood=0;
-  STORE_KEYS.forEach(s=>{
+  stores.forEach(s=>{
     const d = ds.getRaw(s, win);
     gmv += (d['GMV'][month]||0);
     vendas += (d['VENDAS'][month]||0);
@@ -2703,8 +2711,8 @@ function aggregate(ds, win, month){
 
 // values for exactly one month, for a store or for "REDE" (whole network)
 function monthlyValues(ds, storeSel, win, month){
-  if(storeSel==='REDE'){
-    const a = aggregate(ds, win, month);
+  if(storeSel==='REDE' || CONSOLIDATED_STORES[storeSel]){
+    const a = aggregate(ds, win, month, CONSOLIDATED_STORES[storeSel]);
     const out={};
     METRICS.forEach(m=> out[m.key] = a[METRIC_TO_AGG[m.key]]);
     return out;
@@ -2718,7 +2726,7 @@ function monthlyValues(ds, storeSel, win, month){
 // sum across all months of the dataset (quarter/trimester total), ratios recomputed
 function consolidatedValues(ds, storeSel, win){
   let gmv=0,vendas=0,visitas=0,novos=0,promoAds=0,subIfood=0;
-  const stores = storeSel==='REDE' ? STORE_KEYS : [storeSel];
+  const stores = storeSel==='REDE' ? STORE_KEYS : (CONSOLIDATED_STORES[storeSel] || [storeSel]);
   activeMonths(ds, win).forEach(month=>{
     stores.forEach(s=>{
       const d = ds.getRaw(s, win);
@@ -2812,6 +2820,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 function populateSelectors(prefix){
   const storeSel = document.getElementById(prefix+'_store');
   storeSel.innerHTML = `<option value="REDE">🌐 Rede toda (6 lojas)</option>` +
+    Object.keys(CONSOLIDATED_STORES).map(k=>`<option value="${k}">📍 ${k}</option>`).join('') +
     STORE_KEYS.map(s=>`<option value="${s}">${shortStore(s)}</option>`).join('');
   const metricSel = document.getElementById(prefix+'_metric');
   metricSel.innerHTML = METRICS.map(m=>`<option value="${m.key}">${m.label}</option>`).join('');
@@ -2968,11 +2977,11 @@ function renderEvoChartFor(prefix, ds, win, storeSel, metric, monthSel){
   document.getElementById(prefix+'_evoTitle').textContent = metric.label;
   const monthsHere = activeMonths(ds, win);
   const values = monthsHere.map(m=>{
-    if(storeSel==='REDE'){ const a = aggregate(ds, win, m); return a[METRIC_TO_AGG[metric.key]]; }
+    if(storeSel==='REDE' || CONSOLIDATED_STORES[storeSel]){ const a = aggregate(ds, win, m, CONSOLIDATED_STORES[storeSel]); return a[METRIC_TO_AGG[metric.key]]; }
     return ds.getRaw(storeSel, win)[metric.key][m];
   });
   const highlightIndex = monthSel==='consolidado' ? -1 : monthsHere.indexOf(monthSel);
-  const color = storeSel==='REDE' ? '#5e1255' : BRAND_COLOR[brandOf(storeSel)];
+  const color = (storeSel==='REDE' || CONSOLIDATED_STORES[storeSel]) ? '#5e1255' : BRAND_COLOR[brandOf(storeSel)];
   const svg = svgLineChart({
     labels: monthsHere.map(m=>MONTH_LABEL[m]),
     values, color, highlightIndex,
@@ -3016,7 +3025,7 @@ function renderDashScreen(prefix){
   const win = ds.hasWindow ? document.getElementById(prefix+'_window').value : null;
   const metric = METRIC_BY_KEY[metricKey];
   const snapshot = getSnapshot(ds, storeSel, win, monthSel);
-  const scopeLabel = storeSel==='REDE' ? 'Rede toda' : shortStore(storeSel);
+  const scopeLabel = storeSel==='REDE' ? 'Rede toda' : (CONSOLIDATED_STORES[storeSel] ? storeSel : shortStore(storeSel));
 
   document.getElementById(prefix+'_period').textContent = monthSel==='consolidado'
     ? `${scopeLabel} · Consolidado (soma ${activeMonths(ds, win).map(m=>MONTH_LABEL[m]).join('+')})`
