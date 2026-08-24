@@ -1517,30 +1517,28 @@ async function fetchWorkbookAoas(){
   return [csvToAoa(await r.text())];
  }
 }
-function scoreBag(bag,mesesSet){ // quantas lojas cobrem 100% dos meses da janela + se existe bloco de rede real
- const meses=[...mesesSet];
- const lojasOk=LOJAS.filter(l=>bag[l]&&meses.every(m=>bag[l][m]&&bag[l][m][0]!=null)).length;
- const temRede=!!(bag.__REDE&&meses.every(m=>bag.__REDE[m]));
- return {lojasOk,temRede};
-}
 async function loadLive(){
  setStatus("Carregando dados da planilha Google…");
  try{
   const aoas=await fetchWorkbookAoas();
-  // Cada aba é avaliada de forma INDEPENDENTE por janela — não mistura abas com cobertura de meses
-  // incompatível entre si (ex.: uma aba com só o total da rede em meses novos e outra com detalhe por
-  // loja em meses antigos). Fica sempre a MELHOR fonte isolada por janela (mais lojas cobertas primeiro,
-  // depois se tem bloco de rede real).
-  const bestP={}; // win -> {bag,mesesSet,lojasOk,temRede}
+  // A planilha ganha uma aba nova por mês, e cada aba só traz as janelas parciais mais recentes
+  // (ex.: a aba de agosto tem maio-agosto, a de julho tem abril-julho...). Por isso NÃO dá pra
+  // escolher "a melhor aba" por janela — os meses de uma mesma janela ficam espalhados em abas
+  // diferentes. Em vez disso, mesclamos por loja+mês de TODAS as abas (mesma lógica já usada
+  // abaixo para os meses fechados), então um mês novo aparece assim que existir em qualquer aba,
+  // sem depender de qual aba "venceu".
+  const parciaisBag={}; // win -> {bag,mesesSet}
   const mensalBag={},mensalMeses=new Set();
   aoas.forEach(aoa=>{
    const res=scanSheet(aoa);
    Object.entries(res.parciais).forEach(([win,bag])=>{
-    const mesesSet=res.mesesPW[win];
-    const sc=scoreBag(bag,mesesSet);
-    const atual=bestP[win];
-    const melhor=!atual||sc.lojasOk>atual.sc.lojasOk||(sc.lojasOk===atual.sc.lojasOk&&sc.temRede&&!atual.sc.temRede);
-    if(melhor)bestP[win]={bag,mesesSet,sc};
+    if(!parciaisBag[win])parciaisBag[win]={bag:{},mesesSet:new Set()};
+    const alvo=parciaisBag[win];
+    res.mesesPW[win].forEach(m=>alvo.mesesSet.add(m));
+    Object.entries(bag).forEach(([loja,byMes])=>{
+     if(!alvo.bag[loja])alvo.bag[loja]={};
+     Object.entries(byMes).forEach(([mes,vals])=>{if(!alvo.bag[loja][mes])alvo.bag[loja][mes]=vals;});
+    });
    });
    Object.entries(res.mensal).forEach(([loja,byMes])=>{
     if(!mensalBag[loja])mensalBag[loja]={};
@@ -1550,7 +1548,7 @@ async function loadLive(){
   });
 
   let okP=false;
-  Object.entries(bestP).forEach(([win,{bag,mesesSet}])=>{
+  Object.entries(parciaisBag).forEach(([win,{bag,mesesSet}])=>{
    if(!PARCIAIS[win])PARCIAIS[win]={labels:[],data:{},rede:null};
    if(applyBag(bag,mesesSet,PARCIAIS[win],"P",win))okP=true;
   });
