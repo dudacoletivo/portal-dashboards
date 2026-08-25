@@ -284,13 +284,7 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
   <div class="filterbar">
     <div class="filter-group">
       <label>Mês</label>
-      <select id="F_month">
-        <option value="consolidado">Consolidado (Abr+Mai+Jun+Jul)</option>
-        <option value="abril">Abril (fechado)</option>
-        <option value="maio">Maio (fechado)</option>
-        <option value="junho">Junho (fechado)</option>
-        <option value="julho" selected>Julho (fechado)</option>
-      </select>
+      <select id="F_month"><!-- gerado via JS a partir dos dados ao vivo --></select>
     </div>
     <div class="filter-group">
       <label>Loja</label>
@@ -309,7 +303,7 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
 
   <div class="grid-2">
     <div class="card">
-      <h3>Evolução — <span id="F_evoTitle"></span> <small>Abril · Maio · Junho — meses fechados</small></h3>
+      <h3>Evolução — <span id="F_evoTitle"></span> <small id="F_evoSub"></small></h3>
       <div id="F_evoChart" class="chart-holder"></div>
     </div>
     <div class="card">
@@ -334,13 +328,7 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
   <div class="filterbar">
     <div class="filter-group">
       <label>Mês</label>
-      <select id="P_month">
-        <option value="consolidado">Consolidado (Mai+Jun+Jul+Ago)</option>
-        <option value="maio">Maio (parcial)</option>
-        <option value="junho">Junho (parcial)</option>
-        <option value="julho">Julho (parcial)</option>
-        <option value="agosto" selected>Agosto (parcial)</option>
-      </select>
+      <select id="P_month"><!-- gerado via JS a partir dos dados ao vivo --></select>
     </div>
     <div class="filter-group">
       <label>Janela parcial</label>
@@ -368,7 +356,7 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
 
   <div class="grid-2">
     <div class="card">
-      <h3>Evolução — <span id="P_evoTitle"></span> <small>Maio · Junho · Julho — janela parcial selecionada</small></h3>
+      <h3>Evolução — <span id="P_evoTitle"></span> <small id="P_evoSub"></small></h3>
       <div id="P_evoChart" class="chart-holder"></div>
     </div>
     <div class="card">
@@ -393,12 +381,7 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
   <div class="filterbar">
     <div class="filter-group">
       <label>Mês de referência</label>
-      <select id="alavMonth">
-        <option value="maio">Maio</option>
-        <option value="junho">Junho</option>
-        <option value="julho" selected>Julho</option>
-        <option value="agosto">Agosto</option>
-      </select>
+      <select id="alavMonth"><!-- gerado via JS a partir dos dados ao vivo --></select>
     </div>
     <div class="filter-group">
       <label>Janela</label>
@@ -419,12 +402,7 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
   <div class="filterbar">
     <div class="filter-group">
       <label>Mês</label>
-      <select id="invMonth">
-        <option value="maio">Maio</option>
-        <option value="junho">Junho</option>
-        <option value="julho" selected>Julho</option>
-        <option value="agosto">Agosto</option>
-      </select>
+      <select id="invMonth"><!-- gerado via JS a partir dos dados ao vivo --></select>
     </div>
     <div class="filter-group">
       <label>Janela</label>
@@ -472,20 +450,11 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
     </div>
     <div class="filter-group">
       <label>Mês A (base)</label>
-      <select id="parcialA">
-        <option value="maio">Maio</option>
-        <option value="junho" selected>Junho</option>
-        <option value="julho">Julho</option>
-        <option value="agosto">Agosto</option>
-      </select>
+      <select id="parcialA"><!-- gerado via JS a partir dos dados ao vivo --></select>
     </div>
     <div class="filter-group">
       <label>Mês B (comparado)</label>
-      <select id="parcialB">
-        <option value="junho">Junho</option>
-        <option value="julho" selected>Julho</option>
-        <option value="agosto">Agosto</option>
-      </select>
+      <select id="parcialB"><!-- gerado via JS a partir dos dados ao vivo --></select>
     </div>
   </div>
   <div class="insight-box" id="parcialInsights"></div>
@@ -2554,8 +2523,30 @@ const BRAND_COLOR = {
   'Cumbuca Brasileira': '#50887a',
   'Wraps': '#c32525'
 };
-const MONTH_LABEL = {abril:'Abril', maio:'Maio', junho:'Junho', julho:'Julho', agosto:'Agosto'};
+const MONTH_LABEL = {janeiro:'Janeiro', fevereiro:'Fevereiro', marco:'Março', abril:'Abril', maio:'Maio', junho:'Junho', julho:'Julho', agosto:'Agosto', setembro:'Setembro', outubro:'Outubro', novembro:'Novembro', dezembro:'Dezembro'};
+const MONTH_ORDER = {janeiro:1, fevereiro:2, marco:3, abril:4, maio:5, junho:6, julho:7, agosto:8, setembro:9, outubro:10, novembro:11, dezembro:12};
 const WINDOW_LABEL = {w7:'7 dias (01–07)', w14:'14 dias (01–14)', w21:'21 dias (01–21)', w28:'28 dias (01–28)'};
+function sortMonths(list){ return [...new Set(list)].sort((a,b)=>(MONTH_ORDER[a]||99)-(MONTH_ORDER[b]||99)); }
+// Meses nunca ficam fixos em array — são descobertos a partir do que a planilha realmente trouxe
+// (DATA_CLOSED/DATA_PARTIAL), tanto na carga inicial quanto a cada "Atualizar" ao vivo. Assim um
+// mês novo (ex.: Setembro) aparece sozinho nos filtros das 6 abas, sem editar este arquivo.
+function discoverClosedMonths(){
+  const set = new Set();
+  STORE_KEYS.forEach(s=>{ const d = DATA_CLOSED[s]; if(d && d['VENDAS']) Object.keys(d['VENDAS']).forEach(m=>set.add(m)); });
+  return sortMonths([...set]);
+}
+function discoverPartialMonths(){
+  const set = new Set();
+  ['w7','w14','w21','w28'].forEach(w=>{
+    STORE_KEYS.forEach(s=>{ const d = DATA_PARTIAL[s] && DATA_PARTIAL[s][w]; if(d && d['VENDAS']) Object.keys(d['VENDAS']).forEach(m=>set.add(m)); });
+  });
+  return sortMonths([...set]);
+}
+function prevMapFor(months){
+  const map = {};
+  months.forEach((m,i)=>{ map[m] = i>0 ? months[i-1] : null; });
+  return map;
+}
 
 const METRICS = [
   {key:'VENDAS', label:'Pedidos (VENDAS)', type:'int', good:'up'},
@@ -2584,14 +2575,14 @@ const METRIC_TO_AGG = {
 const DATASETS = {
   F: {
     getRaw(store, win){ return DATA_CLOSED[store]; },
-    months: ['abril','maio','junho','julho'],
-    prevMap: {abril:null, maio:'abril', junho:'maio', julho:'junho'},
+    get months(){ return discoverClosedMonths(); },
+    get prevMap(){ return prevMapFor(this.months); },
     hasWindow: false,
   },
   P: {
     getRaw(store, win){ return DATA_PARTIAL[store][win]; },
-    months: ['maio','junho','julho','agosto'],
-    prevMap: {maio:null, junho:'maio', julho:'junho', agosto:'julho'},
+    get months(){ return discoverPartialMonths(); },
+    get prevMap(){ return prevMapFor(this.months); },
     hasWindow: true,
   }
 };
@@ -2825,6 +2816,45 @@ function populateSelectors(prefix){
   const metricSel = document.getElementById(prefix+'_metric');
   metricSel.innerHTML = METRICS.map(m=>`<option value="${m.key}">${m.label}</option>`).join('');
   metricSel.value = 'GMV';
+}
+
+// Constrói as <option> de um <select> de mês a partir de uma lista de meses já descoberta
+// (DATASETS.F.months / DATASETS.P.months) — nenhum nome de mês fica hardcoded no HTML.
+function populateMonthSelect(selId, months, opts){
+  const sel = document.getElementById(selId);
+  if(!sel) return;
+  opts = opts || {};
+  let html = '';
+  if(opts.consolidatedLabel) html += `<option value="consolidado">${opts.consolidatedLabel}</option>`;
+  html += months.map(m=>`<option value="${m}">${MONTH_LABEL[m]}${opts.suffix?(' '+opts.suffix):''}</option>`).join('');
+  sel.innerHTML = html;
+}
+function consolidatedLabelFor(months){
+  return 'Consolidado (' + months.map(m=>MONTH_LABEL[m].slice(0,3)).join('+') + ')';
+}
+function populateMonthSelects(){
+  const fMonths = DATASETS.F.months, pMonths = DATASETS.P.months;
+  const fSub = document.getElementById('F_evoSub'); if(fSub) fSub.textContent = fMonths.map(m=>MONTH_LABEL[m]).join(' · ') + ' — meses fechados';
+  const pSub = document.getElementById('P_evoSub'); if(pSub) pSub.textContent = pMonths.map(m=>MONTH_LABEL[m]).join(' · ') + ' — janela parcial selecionada';
+
+  populateMonthSelect('F_month', fMonths, {consolidatedLabel: consolidatedLabelFor(fMonths), suffix:'(fechado)'});
+  document.getElementById('F_month').value = fMonths.length ? fMonths[fMonths.length-1] : 'consolidado';
+
+  populateMonthSelect('P_month', pMonths, {consolidatedLabel: consolidatedLabelFor(pMonths), suffix:'(parcial)'});
+  document.getElementById('P_month').value = pMonths.length ? pMonths[pMonths.length-1] : 'consolidado';
+
+  populateMonthSelect('alavMonth', pMonths);
+  if(pMonths.length) document.getElementById('alavMonth').value = pMonths[pMonths.length-1];
+
+  populateMonthSelect('invMonth', pMonths);
+  if(pMonths.length) document.getElementById('invMonth').value = pMonths[pMonths.length-1];
+
+  populateMonthSelect('parcialA', pMonths);
+  populateMonthSelect('parcialB', pMonths);
+  if(pMonths.length>=2){
+    document.getElementById('parcialA').value = pMonths[pMonths.length-2];
+    document.getElementById('parcialB').value = pMonths[pMonths.length-1];
+  }
 }
 
 // ---------- SVG CHARTS (sem dependência externa — funcionam offline e sem CDN) ----------
@@ -3283,7 +3313,7 @@ function bindDashScreen(prefix, filterIds){
 }
 
 function init(){
-  safe('seletores', ()=>{ populateSelectors('F'); populateSelectors('P'); });
+  safe('seletores', ()=>{ populateSelectors('F'); populateSelectors('P'); populateMonthSelects(); });
 
   // Sincroniza opções de mês disponíveis com a janela escolhida em cada aba parcial
   // (ex.: Agosto só existe na janela de 7 dias por enquanto — evita "buracos" de dado).

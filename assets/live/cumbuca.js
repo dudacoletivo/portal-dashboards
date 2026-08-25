@@ -161,7 +161,7 @@
   function rerenderAll() {
     // Espelha o que init() faz em cumbuca.html, sem repetir o registro dos listeners de evento
     // (senão cada "Atualizar" duplicaria os handlers de change nos seletores).
-    safe('seletores', () => { populateSelectors('F'); populateSelectors('P'); });
+    safe('seletores', () => { populateSelectors('F'); populateSelectors('P'); populateMonthSelects(); });
     safe('sincronizar meses parciais', () => {
       syncMonthOptionsToWindow('P_month', 'P_window');
       syncMonthOptionsToWindow('alavMonth', 'alavWindow');
