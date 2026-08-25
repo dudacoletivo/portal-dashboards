@@ -107,12 +107,19 @@
   // Não há seleção de cliente na tela — a senha digitada é comparada contra o hash de
   // cada cliente cadastrado até achar a correspondência, e só então redireciona.
   // Isso é proposital: nenhuma marca/nome de cliente aparece nessa tela em nenhum momento.
+  // A senha de admin (ADMIN_PASSWORD_HASH) é checada primeiro e leva ao painel que lista
+  // todos os clientes, em vez de ir direto para um dashboard.
   async function attemptLogin() {
     const value = passwordInput.value;
     if (!value) return;
     submitBtn.disabled = true;
     errorMsg.classList.remove('show');
     const hash = await portalSha256Hex(value);
+    if (hash === ADMIN_PASSWORD_HASH) {
+      portalSetAdminSession();
+      window.location.href = 'admin/painel.html';
+      return;
+    }
     const match = PORTAL_CLIENTS.find(c => c.passwordHash === hash);
     if (match) {
       portalSetSession(match.slug);

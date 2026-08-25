@@ -15,9 +15,13 @@
   }
 
   window.addEventListener('DOMContentLoaded', function () {
+    // Quem entrou via painel admin (admin/painel.html) volta pro painel ao sair deste
+    // dashboard, em vez de cair no login único — não precisa digitar a senha de admin de novo
+    // a cada troca de cliente, só quando a sessão de admin expirar (12h) ou clicar "Sair" lá.
+    var isAdmin = (typeof portalGetAdminSession === 'function') && !!portalGetAdminSession();
     var btn = document.createElement('button');
     btn.type = 'button';
-    btn.textContent = 'Sair';
+    btn.textContent = isAdmin ? '← Painel admin' : 'Sair';
     btn.setAttribute(
       'style',
       'position:fixed;top:14px;right:14px;z-index:99999;background:#221F1D;color:#fff;' +
@@ -27,6 +31,10 @@
     btn.addEventListener('mouseenter', function () { btn.style.opacity = 1; });
     btn.addEventListener('mouseleave', function () { btn.style.opacity = .82; });
     btn.addEventListener('click', function () {
+      if (isAdmin) {
+        window.location.href = '../admin/painel.html';
+        return;
+      }
       portalLogout();
       window.location.href = '../index.html';
     });

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Admin · Portal de Dashboards</title>
+<link rel="icon" type="image/jpeg" href="../assets/logos/agencia-coletivo.jpg">
+<style>
+  :root{
+    --ink:#1b2430;
+    --ink-soft:#5b6675;
+    --bg:#f4f6fb;
+    --card:#ffffff;
+    --line:#e7ebf3;
+    --accent:#4f5eff;
+    --accent-soft:#eef0ff;
+    --shadow: 0 1px 2px rgba(16,38,73,.05), 0 8px 24px rgba(16,38,73,.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family: Calibri, 'Segoe UI', Candara, Optima, Arial, sans-serif;
+    background:
+      radial-gradient(560px 340px at 8% 0%, rgba(79,94,255,.07), transparent 60%),
+      radial-gradient(620px 380px at 96% 18%, rgba(200,67,61,.06), transparent 60%),
+      var(--bg);
+    color: var(--ink);
+    min-height:100vh;
+    display:flex; flex-direction:column;
+    position:relative;
+    overflow-x:hidden;
+  }
+
+  /* Elementos decorativos discretos no fundo */
+  .deco{ position:absolute; border-radius:50%; filter:blur(60px); pointer-events:none; z-index:0; }
+  .deco-1{ width:340px; height:340px; top:-120px; left:-120px; background:rgba(79,94,255,.14); }
+  .deco-2{ width:300px; height:300px; bottom:-100px; right:-80px; background:rgba(248,158,38,.13); }
+  .deco-3{ width:220px; height:220px; top:38%; right:6%; background:rgba(94,18,85,.08); }
+
+  .wrap{ max-width:1040px; margin:0 auto; padding:56px 24px 60px; width:100%; position:relative; z-index:1; }
+
+  .admin-badge{
+    position:fixed; top:16px; right:16px; z-index:50;
+    display:flex; align-items:center; gap:10px;
+    background:#fff; border-radius:999px; padding:8px 10px 8px 16px;
+    box-shadow:var(--shadow); font-size:12.5px; font-weight:700; color:var(--ink-soft);
+  }
+  .admin-badge span.dot{ width:7px; height:7px; border-radius:50%; background:#1E7A46; display:inline-block; }
+  .admin-badge button{
+    font-family:inherit; font-size:12.5px; font-weight:700; color:#fff; background:#221F1D;
+    border:none; padding:8px 16px; border-radius:999px; cursor:pointer; opacity:.88; transition:opacity .15s ease;
+  }
+  .admin-badge button:hover{ opacity:1; }
+
+  header.hero{ text-align:center; margin-bottom:44px; }
+  .hero-icon{
+    width:52px; height:52px; margin:0 auto 18px; border-radius:16px;
+    background:linear-gradient(150deg, var(--accent), #7c86ff);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 10px 24px rgba(79,94,255,.35);
+  }
+  header.hero h1{ margin:0 0 10px; font-size:32px; font-weight:800; letter-spacing:.2px; color:#12172a; }
+  header.hero p{ margin:0 0 16px; color:var(--ink-soft); font-size:15px; }
+  .hero-rule{ width:52px; height:4px; border-radius:99px; background:linear-gradient(90deg, var(--accent), #ff8a5b); margin:0 auto; }
+
+  .grid{
+    display:flex; flex-wrap:wrap; justify-content:center; gap:22px;
+  }
+  .client-card{
+    background:var(--card); border:1.5px solid transparent; border-radius:22px;
+    padding:30px 26px 26px; box-shadow:var(--shadow); cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    font-family:inherit;
+    width:100%; max-width:300px; flex:1 1 280px;
+  }
+  .client-card:hover{
+    transform:translateY(-5px);
+    box-shadow:0 16px 34px rgba(16,38,73,.16);
+    border-color: var(--card-color, var(--accent));
+  }
+
+  .avatar{
+    width:88px; height:88px; border-radius:24px; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:26px; letter-spacing:.02em;
+    background:#fff; overflow:hidden; flex-shrink:0; margin-bottom:16px;
+    box-shadow:0 10px 22px rgba(16,38,73,.14), inset 0 0 0 1px rgba(16,38,73,.05);
+    transition: transform .18s ease;
+  }
+  .client-card:hover .avatar{ transform:scale(1.04); }
+  .avatar.has-logo{ padding:7px; }
+  .avatar img{ width:100%; height:100%; object-fit:contain; border-radius:12px; }
+
+  .client-card h3{ margin:0; font-size:17px; font-weight:800; color:#12172a; }
+  .client-card .card-sub{ margin:2px 0 14px; font-size:12.5px; color:var(--ink-soft); }
+
+  .cta{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:9px 20px; border-radius:999px; font-size:13px; font-weight:700;
+    border:1.5px solid var(--card-color, var(--accent)); color:var(--card-color, var(--accent));
+    transition: background .18s ease, color .18s ease;
+  }
+  .client-card:hover .cta{ background:var(--card-color, var(--accent)); color:#fff; }
+
+  footer.foot{ text-align:center; font-size:12px; color:#a3adbb; padding:24px; position:relative; z-index:1; }
+
+  @media (max-width:520px){
+    .client-card{ max-width:100%; }
+    .admin-badge{ font-size:11.5px; padding:7px 8px 7px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deco deco-1"></div>
+<div class="deco deco-2"></div>
+<div class="deco deco-3"></div>
+
+<div class="admin-badge">
+  <span class="dot"></span> Modo admin
+  <button type="button" id="adminLogoutBtn">Sair</button>
+</div>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="12" width="4" height="8" rx="1.2" fill="#fff"/>
+        <rect x="10" y="7" width="4" height="13" rx="1.2" fill="#fff" fill-opacity=".85"/>
+        <rect x="16" y="3" width="4" height="17" rx="1.2" fill="#fff" fill-opacity=".7"/>
+      </svg>
+    </div>
+    <h1>Painel Admin</h1>
+    <p>Acesso direto a todos os dashboards ativos — sem precisar da senha de cada cliente.</p>
+    <div class="hero-rule"></div>
+  </header>
+
+  <div class="grid" id="clientGrid"></div>
+</div>
+
+<footer class="foot">Painel administrativo &middot; visível apenas com a senha de admin</footer>
+
+<script src="../assets/portal-config.js"></script>
+<script>
+  // Guarda de acesso: sem sessão de admin válida, volta pro login único (não existe link
+  // público pra esta página em lugar nenhum do portal).
+  if (!portalGetAdminSession()) {
+    window.location.replace('../index.html');
+  } else {
+    document.getElementById('adminLogoutBtn').addEventListener('click', () => {
+      portalAdminLogout();
+      window.location.href = '../index.html';
+    });
+
+    const grid = document.getElementById('clientGrid');
+
+    function initials(name) {
+      return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    }
+
+    function avatarHTML(client) {
+      if (!client.logo) {
+        return `<div class="avatar" style="background:${client.color}">${initials(client.name)}</div>`;
+      }
+      return `<div class="avatar has-logo"><img src="../${client.logo}" alt="${client.name}"></div>`;
+    }
+
+    // Clicando no card, entra direto no dashboard daquele cliente — a sessão de admin já
+    // comprova quem está entrando, então não pede a senha individual do cliente de novo.
+    function enterClient(client) {
+      portalSetSession(client.slug);
+      window.location.href = '../' + client.file;
+    }
+
+    function renderGrid() {
+      grid.innerHTML = '';
+      PORTAL_CLIENTS.forEach(client => {
+        const card = document.createElement('button');
+        card.className = 'client-card';
+        card.type = 'button';
+        card.style.setProperty('--card-color', client.color);
+        card.innerHTML = `
+          ${avatarHTML(client)}
+          <h3>${client.name}</h3>
+          <p class="card-sub">Dashboard de performance</p>
+          <span class="cta">Acessar dashboard →</span>
+        `;
+        card.addEventListener('click', () => enterClient(client));
+        grid.appendChild(card);
+      });
+    }
+
+    renderGrid();
+  }
+</script>
+</body>
+</html>

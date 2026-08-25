@@ -52,6 +52,11 @@ const PORTAL_CLIENTS = [
   }
 ];
 
+// Senha de admin — dá acesso ao painel em admin/painel.html, que lista todos os clientes
+// ativos acima e entra em qualquer dashboard sem pedir a senha individual de cada um.
+// Para trocar, gere um novo hash em admin/gerar-senha.html e substitua o valor abaixo.
+const ADMIN_PASSWORD_HASH = '2a72293915eb10146b8ebc474eadf388d7d28bbd13e3661450ffbfae410f22b5';
+
 // Sessão fica válida por 12 horas neste navegador.
 const PORTAL_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
@@ -80,4 +85,25 @@ function portalSetSession(slug) {
 
 function portalLogout() {
   localStorage.removeItem('portal_session');
+}
+
+function portalGetAdminSession() {
+  try {
+    const raw = localStorage.getItem('portal_admin_session');
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    if (!session || !session.admin || !session.ts) return null;
+    if (Date.now() - session.ts > PORTAL_SESSION_TTL_MS) return null;
+    return session;
+  } catch (e) {
+    return null;
+  }
+}
+
+function portalSetAdminSession() {
+  localStorage.setItem('portal_admin_session', JSON.stringify({ admin: true, ts: Date.now() }));
+}
+
+function portalAdminLogout() {
+  localStorage.removeItem('portal_admin_session');
 }
