@@ -259,12 +259,7 @@
       <div class="filterbar">
         <div>
           <label>Mês</label>
-          <div class="seg" id="monthSeg">
-            <button data-idx="0">Abril</button>
-            <button data-idx="1">Maio</button>
-            <button data-idx="2">Junho</button>
-            <button data-idx="3" class="active">Julho</button>
-          </div>
+          <div class="seg" id="monthSeg"><!-- gerado via JS a partir dos dados ao vivo --></div>
         </div>
         <div>
           <label>Indicador do gráfico</label>
@@ -305,11 +300,7 @@
       <div class="filterbar">
         <div>
           <label>Mês</label>
-          <div class="seg" id="parcialMonthSeg">
-            <button data-idx="0">Maio</button>
-            <button data-idx="1">Junho</button>
-            <button data-idx="2" class="active">Julho (atual)</button>
-          </div>
+          <div class="seg" id="parcialMonthSeg"><!-- gerado via JS a partir dos dados ao vivo --></div>
         </div>
         <div>
           <label>Janela de dias</label>
@@ -671,8 +662,22 @@ document.getElementById("storeSelect").addEventListener("change", (e)=>{
 });
 
 /* ============ MÊS FECHADO ============ */
-let selectedMonthIdx = 3;
+let selectedMonthIdx = MONTH_LABELS.length - 1;
 let evoChartMF, compChartMF;
+
+// Reconstrói os botões de mês a partir de MONTH_LABELS (que o live-sync mantém em dia via
+// mutateArrayInPlace a cada "Atualizar" — ver assets/live/spesso.js). Chamado a cada renderAll(),
+// então um mês novo aparece sozinho no filtro assim que a planilha trouxer ele.
+function syncMonthSeg(){
+  // syncMonthSeg só roda na carga inicial e logo após um refresh ao vivo (nunca em resposta a
+  // clique do usuário — os botões chamam renderMesFechado() direto) — então é sempre seguro (e
+  // desejável) pular pro mês mais recente quando dado novo chega.
+  selectedMonthIdx = MONTH_LABELS.length - 1;
+  const seg = document.getElementById('monthSeg');
+  seg.innerHTML = MONTH_LABELS.map((label,i)=>
+    `<button data-idx="${i}"${i===selectedMonthIdx?' class="active"':''}>${label}</button>`
+  ).join('');
+}
 
 function populateIndicatorSelectMF(){
   const sel = document.getElementById("indicatorSelectMF");
@@ -849,11 +854,38 @@ function renderMesFechado(){
 
 /* ============ PARCIAL ============ */
 let currentPeriod = 7;
-let selectedParcialMonthIdx = 2; // 0=Maio, 1=Junho, 2=Julho (mês atual por padrão)
 let parcialChartInst;
 const KPI_KEYS_PARCIAL = ["vendas","gmv","tm","conversao","budget","roi"];
-const PARCIAL_MONTH_KEYS = ["mai","jun","jul"];
-const PARCIAL_MONTH_LABELS = ["Maio","Junho","Julho"];
+// Meses do parcial nunca ficam fixos — P (getActiveParcial()[periodo]) é um dicionário por mês
+// (chave de 3 letras, ex.: "jul"), então descobrimos os meses reais direto dos dados a cada
+// render, em vez de manter um array hardcoded que precisaria de edição manual todo mês.
+const MONTH_ORDER_3 = {jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+const MONTH_LABEL_3 = {jan:'Janeiro',fev:'Fevereiro',mar:'Março',abr:'Abril',mai:'Maio',jun:'Junho',jul:'Julho',ago:'Agosto',set:'Setembro',out:'Outubro',nov:'Novembro',dez:'Dezembro'};
+function discoverParcialMonths(){
+  const set = new Set();
+  Object.values(getActiveParcial()).forEach(periodObj=>{
+    Object.values(periodObj).forEach(row=>{
+      Object.keys(row).forEach(k=>{ if(MONTH_ORDER_3[k]) set.add(k); });
+    });
+  });
+  return [...set].sort((a,b)=>MONTH_ORDER_3[a]-MONTH_ORDER_3[b]);
+}
+let PARCIAL_MONTH_KEYS = discoverParcialMonths();
+let PARCIAL_MONTH_LABELS = PARCIAL_MONTH_KEYS.map(k=>MONTH_LABEL_3[k]);
+let selectedParcialMonthIdx = Math.max(0, PARCIAL_MONTH_KEYS.length - 1); // mês mais recente por padrão
+
+function syncParcialMonthSeg(){
+  // Mesma lógica de syncMonthSeg(): só roda na carga inicial e após refresh ao vivo, então
+  // sempre pula pro mês mais recente disponível.
+  PARCIAL_MONTH_KEYS = discoverParcialMonths();
+  PARCIAL_MONTH_LABELS = PARCIAL_MONTH_KEYS.map(k=>MONTH_LABEL_3[k]);
+  selectedParcialMonthIdx = Math.max(0, PARCIAL_MONTH_KEYS.length - 1);
+  const seg = document.getElementById('parcialMonthSeg');
+  seg.innerHTML = PARCIAL_MONTH_LABELS.map((label,i)=>{
+    const isLast = i===PARCIAL_MONTH_LABELS.length-1;
+    return `<button data-idx="${i}"${i===selectedParcialMonthIdx?' class="active"':''}>${label}${isLast?' (atual)':''}</button>`;
+  }).join('');
+}
 
 document.getElementById("periodSeg").addEventListener("click",(e)=>{
   const btn = e.target.closest("button"); if(!btn) return;
@@ -1364,6 +1396,8 @@ function renderAvaliacoes(){
 
 /* ============ INIT / RENDER ALL ============ */
 function renderAll(){
+  syncMonthSeg();
+  syncParcialMonthSeg();
   renderMesFechado();
   renderParcial();
   renderInvestimento();

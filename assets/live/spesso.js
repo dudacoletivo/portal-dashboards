@@ -182,7 +182,7 @@
       buildMonthly(), buildParcial(), buildAlavancas(), buildCancelamentos(), buildAvaliacoes()
     ]);
     if (!Object.keys(parcial).length) throw new Error('Parcial vazio');
-    return { monthly: monthlyRes.data, parcial, alavancas, cancelamentos, avaliacoes };
+    return { monthly: monthlyRes.data, monthLabels: monthlyRes.monthLabels, parcial, alavancas, cancelamentos, avaliacoes };
   }
 
   function init() {
@@ -194,6 +194,10 @@
       try {
         const fresh = await loadLive();
         SheetsSync.mutateObjectInPlace(STORE_DATA.spesso.monthly, fresh.monthly);
+        // MONTH_LABELS é um array posicional (M.<metrica>.values[i] corresponde a MONTH_LABELS[i]) —
+        // sem isso, um mes novo entraria nos arrays de dados mas o filtro/rotulos ficariam presos
+        // no tamanho antigo. mutateArrayInPlace preserva a mesma referencia (é const em spesso.html).
+        SheetsSync.mutateArrayInPlace(MONTH_LABELS, fresh.monthLabels);
         SheetsSync.mutateObjectInPlace(STORE_DATA.spesso.parcial, fresh.parcial);
         SheetsSync.mutateObjectInPlace(ALAVANCAS_DATA, fresh.alavancas);
         SheetsSync.mutateObjectInPlace(CANCELAMENTOS_DATA, fresh.cancelamentos);
