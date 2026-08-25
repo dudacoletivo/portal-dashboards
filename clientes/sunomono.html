@@ -195,11 +195,7 @@ footer.foot{text-align:center;color:var(--ink-soft);font-size:.75rem;margin-top:
     <div class="filterbar">
       <div class="filtergroup">
         <label class="title">Mês fechado</label>
-        <div class="seg" id="dfMonthSeg">
-          <button data-month="maio">Maio</button>
-          <button data-month="junho">Junho</button>
-          <button data-month="julho" class="on">Julho</button>
-        </div>
+        <div class="seg" id="dfMonthSeg"><!-- gerado via JS a partir dos dados ao vivo --></div>
       </div>
       <div class="filtergroup">
         <label class="title">Loja</label>
@@ -242,12 +238,7 @@ footer.foot{text-align:center;color:var(--ink-soft);font-size:.75rem;margin-top:
     <div class="filterbar">
       <div class="filtergroup">
         <label class="title">Mês</label>
-        <div class="seg" id="dpMonthSeg">
-          <button data-month="maio">Maio</button>
-          <button data-month="junho">Junho</button>
-          <button data-month="julho">Julho</button>
-          <button data-month="agosto" class="on">Agosto</button>
-        </div>
+        <div class="seg" id="dpMonthSeg"><!-- gerado via JS a partir dos dados ao vivo --></div>
       </div>
       <div class="filtergroup">
         <label class="title">Janela parcial (dias 01&ndash;N)</label>
@@ -299,11 +290,7 @@ footer.foot{text-align:center;color:var(--ink-soft);font-size:.75rem;margin-top:
     <div class="filterbar">
       <div class="filtergroup">
         <label class="title">Mês</label>
-        <div class="seg" id="investMonthSeg">
-          <button data-month="maio">Maio</button>
-          <button data-month="junho">Junho</button>
-          <button data-month="julho" class="on">Julho</button>
-        </div>
+        <div class="seg" id="investMonthSeg"><!-- gerado via JS a partir dos dados ao vivo --></div>
       </div>
     </div>
 
@@ -337,12 +324,7 @@ footer.foot{text-align:center;color:var(--ink-soft);font-size:.75rem;margin-top:
       </div>
       <div class="filtergroup">
         <label class="title">Comparar</label>
-        <select id="parcialPair">
-          <option value="maio-junho">Maio → Junho</option>
-          <option value="junho-julho">Junho → Julho</option>
-          <option value="maio-julho">Maio → Julho</option>
-          <option value="julho-agosto" selected>Julho → Agosto</option>
-        </select>
+        <select id="parcialPair"><!-- gerado via JS a partir dos dados ao vivo --></select>
       </div>
     </div>
 
@@ -410,13 +392,86 @@ window.addEventListener('error', function(e){
 /* ============ DATA & CONSTANTS ============ */
 const DATA = JSON.parse(document.getElementById('storesData').textContent);
 const STORE_NAMES = Object.keys(DATA).sort((a,b)=>a.localeCompare(b,'pt-BR'));
-const MONTHS = ['maio','junho','julho'];
-const WEEK_MONTHS = ['maio','junho','julho','agosto'];
-const MONTH_LABEL = {maio:'Maio', junho:'Junho', julho:'Julho', agosto:'Agosto'};
-const MONTH_SHORT = {maio:'Mai', junho:'Jun', julho:'Jul', agosto:'Ago'};
-const PREV_MONTH = {maio:null, junho:'maio', julho:'junho', agosto:'julho'};
 const WEEK_WINDOWS = ['01-07','01-14','01-21','01-28'];
 const REDE = '__REDE__';
+const MONTH_ORDER = {janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+const MONTH_LABEL = {janeiro:'Janeiro',fevereiro:'Fevereiro',marco:'Março',abril:'Abril',maio:'Maio',junho:'Junho',julho:'Julho',agosto:'Agosto',setembro:'Setembro',outubro:'Outubro',novembro:'Novembro',dezembro:'Dezembro'};
+const MONTH_SHORT = {janeiro:'Jan',fevereiro:'Fev',marco:'Mar',abril:'Abr',maio:'Mai',junho:'Jun',julho:'Jul',agosto:'Ago',setembro:'Set',outubro:'Out',novembro:'Nov',dezembro:'Dez'};
+
+// Meses nunca ficam fixos em array — são descobertos a partir do que DATA realmente contém
+// (as 20 unidades), tanto na carga inicial quanto a cada "Atualizar" ao vivo (rerenderAll() em
+// assets/live/sunomono.js chama syncMonthSegs()). Assim um mês novo aparece sozinho nos filtros
+// de mês (Fechado/Parcial/Investimento) e no seletor de comparação, sem editar este arquivo.
+function sortMonths(list){ return [...new Set(list)].sort((a,b)=>(MONTH_ORDER[a]||99)-(MONTH_ORDER[b]||99)); }
+function discoverMonths(kind){
+  const set = new Set();
+  // Filtra por MONTH_ORDER[m]: o snapshot embutido tem uma chave extra "evol" (evolução %) ao
+  // lado dos meses em cada registro semanal — sem esse filtro ela entraria como um "mês" fantasma.
+  const addIfMonth = m => { if(MONTH_ORDER[m]) set.add(m); };
+  STORE_NAMES.forEach(store=>{
+    const bucket = DATA[store] && DATA[store][kind];
+    if(!bucket) return;
+    if(kind==='monthly'){
+      Object.values(bucket).forEach(metricObj=>{ Object.keys(metricObj||{}).forEach(addIfMonth); });
+    } else {
+      WEEK_WINDOWS.forEach(w=>{
+        Object.values(bucket).forEach(metricObj=>{ const rec = metricObj && metricObj[w]; if(rec) Object.keys(rec).forEach(addIfMonth); });
+      });
+    }
+  });
+  return sortMonths([...set]);
+}
+function prevMapFor(months){
+  const map = {};
+  months.forEach((m,i)=>{ map[m] = i>0 ? months[i-1] : null; });
+  return map;
+}
+let MONTHS = discoverMonths('monthly');
+let WEEK_MONTHS = discoverMonths('weekly');
+let PREV_MONTH = prevMapFor(WEEK_MONTHS); // superset cobre tanto MONTHS quanto WEEK_MONTHS
+
+// Reconstrói os 3 segs de mês (botões) e o seletor de comparação da aba Parcial a partir dos
+// meses reais descobertos acima. Cada wireMonthSeg() recria os botões via innerHTML e religa os
+// listeners nos elementos novos — não há acúmulo de listener porque os antigos são descartados
+// junto com os nós de botão antigos.
+function wireMonthSeg(containerId, months, stateSetter, afterClick){
+  const seg = document.getElementById(containerId);
+  if(!seg) return;
+  seg.innerHTML = months.map((m,i)=>
+    `<button data-month="${m}"${i===months.length-1?' class="on"':''}>${MONTH_LABEL[m]}</button>`
+  ).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      stateSetter(b.dataset.month);
+      afterClick();
+    });
+  });
+}
+function syncMonthSegs(){
+  MONTHS = discoverMonths('monthly');
+  WEEK_MONTHS = discoverMonths('weekly');
+  PREV_MONTH = prevMapFor(WEEK_MONTHS);
+
+  if(MONTHS.length) dfMonth = MONTHS[MONTHS.length-1];
+  wireMonthSeg('dfMonthSeg', MONTHS, v=>{ dfMonth=v; }, ()=>renderDashFechado());
+
+  if(WEEK_MONTHS.length) dpMonth = WEEK_MONTHS[WEEK_MONTHS.length-1];
+  wireMonthSeg('dpMonthSeg', WEEK_MONTHS, v=>{ dpMonth=v; }, ()=>renderDashParcial());
+
+  if(MONTHS.length) investMonth = MONTHS[MONTHS.length-1];
+  wireMonthSeg('investMonthSeg', MONTHS, v=>{ investMonth=v; }, ()=>renderInvest());
+
+  const pairSel = document.getElementById('parcialPair');
+  const pairs = [];
+  for(let i=1;i<WEEK_MONTHS.length;i++) pairs.push(WEEK_MONTHS[i-1]+'-'+WEEK_MONTHS[i]);
+  pairSel.innerHTML = pairs.map(p=>{
+    const [a,b] = p.split('-');
+    return `<option value="${p}">${MONTH_LABEL[a]} → ${MONTH_LABEL[b]}</option>`;
+  }).join('');
+  if(pairs.length){ parcialPair = pairs[pairs.length-1]; pairSel.value = parcialPair; }
+}
 
 const SUM_METRICS = ['VENDAS','GMV','NOVOS','VISITAS','PROMOADS','SUBIFOOD'];
 
@@ -475,7 +530,7 @@ function storeWeekly(store, metric, window){
 
 function aggregateMonthly(stores){
   const sums = {};
-  SUM_METRICS.forEach(k=>{ sums[k] = {maio:0,junho:0,julho:0}; });
+  SUM_METRICS.forEach(k=>{ sums[k] = {}; MONTHS.forEach(mo=>sums[k][mo]=0); });
   stores.forEach(s=>{
     SUM_METRICS.forEach(k=>{
       const rec = storeMonthly(s,k);
@@ -495,7 +550,7 @@ function aggregateMonthly(stores){
 }
 function aggregateWeekly(stores, window){
   const sums = {};
-  SUM_METRICS.forEach(k=>{ sums[k] = {maio:0,junho:0,julho:0,agosto:0}; });
+  SUM_METRICS.forEach(k=>{ sums[k] = {}; WEEK_MONTHS.forEach(mo=>sums[k][mo]=0); });
   stores.forEach(s=>{
     SUM_METRICS.forEach(k=>{
       const rec = storeWeekly(s,k,window);
@@ -555,18 +610,9 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 /* ==========================================================
    DASH · MÊS FECHADO
    ========================================================== */
-let dfMonth = 'julho';
+let dfMonth = 'julho'; // valor de arranque; syncMonthSegs() ajusta pro mês mais recente real
 let dfStore = REDE;
 let dfChart1=null, dfChart2=null;
-
-document.querySelectorAll('#dfMonthSeg button').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('#dfMonthSeg button').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on');
-    dfMonth = b.dataset.month;
-    renderDashFechado();
-  });
-});
 buildStoreSelect(document.getElementById('dfStoreSelect'), (e)=>{ dfStore = e.target.value; renderDashFechado(); });
 
 function bestWorstByMetric(metric, month, prevMonth){
@@ -805,17 +851,11 @@ TAB_RENDERERS['dashfechado'] = renderDashFechado;
 /* ==========================================================
    DASH · PARCIAL
    ========================================================== */
-let dpMonth = 'agosto';
+let dpMonth = 'agosto'; // valor de arranque; syncMonthSegs() ajusta pro mês mais recente real
 let dpWindow = '01-07';
 let dpStore = REDE;
 let dpChart1=null, dpChart2=null;
 
-document.querySelectorAll('#dpMonthSeg button').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('#dpMonthSeg button').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on'); dpMonth = b.dataset.month; renderDashParcial();
-  });
-});
 document.querySelectorAll('#dpWindowSeg button').forEach(b=>{
   b.addEventListener('click',()=>{
     document.querySelectorAll('#dpWindowSeg button').forEach(x=>x.classList.remove('on'));
@@ -986,7 +1026,7 @@ TAB_RENDERERS['dashparcial'] = renderDashParcial;
 /* ==========================================================
    INVESTIMENTO
    ========================================================== */
-let investMonth = 'julho';
+let investMonth = 'julho'; // valor de arranque; syncMonthSegs() ajusta pro mês mais recente real
 let investChart=null;
 const INVEST_COLS = [
   {key:'VENDAS', label:'Pedidos', unit:'num'},
@@ -997,13 +1037,6 @@ const INVEST_COLS = [
   {key:'CPO', label:'CPO', unit:'currency'},
   {key:'ROI', label:'ROI', unit:'ratio'},
 ];
-
-document.querySelectorAll('#investMonthSeg button').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('#investMonthSeg button').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on'); investMonth = b.dataset.month; renderInvest();
-  });
-});
 
 function renderInvestInsight(){
   const rows = STORE_NAMES.map(s=>{
@@ -1109,7 +1142,7 @@ TAB_RENDERERS['invest'] = renderInvest;
    COMPARATIVO PARCIAL
    ========================================================== */
 let parcialWindow = '01-07';
-let parcialPair = 'julho-agosto';
+let parcialPair = 'julho-agosto'; // valor de arranque; syncMonthSegs() ajusta pro par mais recente real
 
 document.querySelectorAll('#parcialWindowSeg button').forEach(b=>{
   b.addEventListener('click',()=>{
@@ -1279,6 +1312,7 @@ document.getElementById('dpExportBtn').addEventListener('click', ()=>{
 });
 
 /* ============ INIT ============ */
+syncMonthSegs();
 renderDashFechado();
 renderLegend();
 
