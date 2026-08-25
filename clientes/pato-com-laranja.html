@@ -931,16 +931,27 @@ document.getElementById('tabNav').addEventListener('click', (e)=>{
 // ============================================================
 // DASH — MÊS FECHADO
 // ============================================================
+// Meses fechados nunca ficam fixos em array — são descobertos a partir do que a planilha
+// realmente trouxe em MONTHLY (em vez de fixos tipo ['ABRIL',...,'JULHO']), pra não precisar
+// editar o código toda vez que um mês fecha.
+const MONTH_ORDER = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+function availableClosedMonths(){
+  const months = new Set();
+  const sampleStore = STORES[0];
+  Object.keys(MONTHLY[sampleStore]?.['VENDAS'] || {}).forEach(m=>months.add(m));
+  return MONTH_ORDER.filter(m=>months.has(m));
+}
 let mfLoja = 'REDE';
-let mfMes = 'JULHO';
+let mfMes = availableClosedMonths().slice(-1)[0] || 'JULHO';
 let mfIndicator = 'GMV';
 let mfChart;
-const MESES_FECHADOS = ['ABRIL','MAIO','JUNHO','JULHO'];
-function prevClosedMonth(m){ const i = MESES_FECHADOS.indexOf(m); return i>0 ? MESES_FECHADOS[i-1] : null; }
+function prevClosedMonth(m){ const months = availableClosedMonths(); const i = months.indexOf(m); return i>0 ? months[i-1] : null; }
 
 function renderMesFechado(){
+  const mesesFechados = availableClosedMonths();
+  if(!mesesFechados.includes(mfMes)) mfMes = mesesFechados.slice(-1)[0] || mfMes;
   renderPillGroup('mfLojaChips', STORE_SCOPE_OPTIONS, mfLoja, (v)=>{ mfLoja=v; renderMesFechado(); }, true);
-  renderPillGroup('mfMesChips', MESES_FECHADOS.map(m=>({value:m,label:m.charAt(0)+m.slice(1).toLowerCase()})), mfMes, (v)=>{ mfMes=v; renderMesFechado(); });
+  renderPillGroup('mfMesChips', mesesFechados.map(m=>({value:m,label:m.charAt(0)+m.slice(1).toLowerCase()})), mfMes, (v)=>{ mfMes=v; renderMesFechado(); });
   const selEl = document.getElementById('mfIndicatorSelect');
   buildIndicatorSelect(selEl, mfIndicator, (v)=>{ mfIndicator=v; renderMesFechado(); }, CORE_METRICS_CLOSED);
 
@@ -966,9 +977,9 @@ function renderMesFechado(){
 
   // chart: evolution across 3 months for selected indicator
   document.getElementById('mfChartLabel').textContent = CORE_BY_KEY_CLOSED[mfIndicator].label + (mfLoja==='REDE' ? ' — Rede toda' : ' — '+storeLabel(mfLoja));
-  const chartData = MESES_FECHADOS.map(mo => getMonthlyCore(mfIndicator, mo, mfLoja));
+  const chartData = mesesFechados.map(mo => getMonthlyCore(mfIndicator, mo, mfLoja));
   document.getElementById('mfChart').innerHTML = svgLineChart({
-    labels: MESES_FECHADOS.map(m=>m.charAt(0)+m.slice(1).toLowerCase()),
+    labels: mesesFechados.map(m=>m.charAt(0)+m.slice(1).toLowerCase()),
     series: [{ label: CORE_BY_KEY_CLOSED[mfIndicator].label, data: chartData, color: '#EF6A2F' }],
     valueFormatter: (v)=> fmtByType(v, CORE_BY_KEY_CLOSED[mfIndicator].type),
     axisFormatter: (v)=> fmtCompact(v, CORE_BY_KEY_CLOSED[mfIndicator].type),
@@ -1048,8 +1059,8 @@ function cortesForPair(pair){
 
 // Opções de "mês x mês" pro seletor da Parcial e do Comparativo 7 dias — derivadas dos meses
 // que realmente têm dado na planilha (em vez de fixas tipo "Junho x Julho"), pra não precisar
-// editar o código toda vez que passa um mês.
-const MONTH_ORDER = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+// editar o código toda vez que passa um mês. MONTH_ORDER já foi declarado acima, junto com
+// availableClosedMonths().
 function availableCumMonths(){
   const months = new Set();
   const sampleStore = STORES[0];
@@ -1165,11 +1176,13 @@ try { renderParcial(); } catch(e) { console.error('renderParcial failed:', e); }
 // ============================================================
 // INVESTIMENTO
 // ============================================================
-let invMonth = 'JULHO';
+let invMonth = availableClosedMonths().slice(-1)[0] || 'JULHO';
 const INV_COLS = ['VENDAS','FATURAMENTO LÍQUIDO','Budget de investimento','CPO','ROI'];
 
 function renderInvestimento(){
-  renderPillGroup('invMonthToggle', MESES_FECHADOS.map(m=>({value:m,label:m.charAt(0)+m.slice(1).toLowerCase()})), invMonth, (v)=>{ invMonth=v; renderInvestimento(); });
+  const mesesFechadosInv = availableClosedMonths();
+  if(!mesesFechadosInv.includes(invMonth)) invMonth = mesesFechadosInv.slice(-1)[0] || invMonth;
+  renderPillGroup('invMonthToggle', mesesFechadosInv.map(m=>({value:m,label:m.charAt(0)+m.slice(1).toLowerCase()})), invMonth, (v)=>{ invMonth=v; renderInvestimento(); });
 
   // insights: find best/worst efficiency store
   const perStore = STORES.map(s=>({
