@@ -175,6 +175,7 @@
     safe('Investimento', renderInvestimento);
     safe('Diagnóstico Parcial', renderParcial);
     safe('Top 10 Produtos', () => { populateTopStoreSelector(); syncTopWindowOptions(); renderTopProducts(); });
+    safe('Projeção', () => { populateProjStoreSelect(); renderProjecao(); });
   }
 
   function init() {
