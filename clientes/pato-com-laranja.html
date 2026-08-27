@@ -210,6 +210,7 @@
     <button data-tab="comp7">🔍 Comparativo 7 dias</button>
     <button data-tab="alavancas">🕹️ Status das Alavancas</button>
     <button data-tab="cancelamentos">🚫 Cancelamentos</button>
+    <button data-tab="projecao">🔮 Projeção</button>
   </nav>
 
   <!-- ================= DASH MÊS FECHADO ================= -->
@@ -463,6 +464,30 @@
     </div>
   </section>
 
+  <!-- ================= PROJEÇÃO DE FECHAMENTO ================= -->
+  <section class="tabpanel" id="tab-projecao">
+    <div class="panel">
+      <h2>Projeção de fechamento</h2>
+      <p class="sub">A planilha não traz dado dia a dia — só os cortes parciais de 01–07, 01–14, 01–21 e 01–28. Esta projeção usa o corte mais recente disponível no mês corrente e assume que o ritmo observado até aqui se mantém pelo resto do mês. É uma estimativa proporcional, não uma garantia de fechamento.</p>
+      <div class="filterbar">
+        <div class="filtergroup">
+          <label class="title">Loja</label>
+          <div class="chipset" id="projLojaChips"></div>
+        </div>
+      </div>
+      <p class="sub" id="projSub"></p>
+    </div>
+
+    <div class="panel">
+      <div class="kpi-grid" id="projKpiGrid"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Leitura automática</h2>
+      <div class="insight-box" id="projInsights"></div>
+    </div>
+  </section>
+
   <div class="panel" style="text-align:center;">
     <button class="glossary-btn" id="glossaryBtn">📖 Glossário de indicadores</button>
   </div>
@@ -667,6 +692,46 @@ function getCumCore(coreKey, period, monthKey, scope){
 }
 
 const STORE_SCOPE_OPTIONS = [{value:'REDE', label:'Rede toda'}, ...STORES.map(s=>({value:s, label:storeLabel(s)}))];
+
+// ---------- PROJEÇÃO DE FECHAMENTO ----------
+// A planilha não tem dado dia a dia — só os 4 cortes parciais (01-07/14/21/28). A projeção
+// assume ritmo constante: valor do corte mais recente ÷ dias já passados × dias do mês.
+function cumWindowAvailable(period, monthKey){
+  return STORES.every(s=>{
+    const vendas = CUM[s]?.['VENDAS']?.[period]?.[monthKey];
+    const gmv = CUM[s]?.['GMV']?.[period]?.[monthKey];
+    return vendas!=null && gmv!=null;
+  });
+}
+function latestCumWindowWithData(monthKey){
+  const order = ['01-28','01-21','01-14','01-07'];
+  for(const p of order){ if(cumWindowAvailable(p, monthKey)) return p; }
+  return null;
+}
+function daysInMonthOf(monthKey){
+  const idx = MONTH_ORDER.indexOf(monthKey)+1;
+  if(idx<1) return 30;
+  const year = new Date().getFullYear();
+  return new Date(year, idx, 0).getDate();
+}
+function computeProjection(scope){
+  const months = availableCumMonths();
+  if(!months.length) return null;
+  const month = months[months.length-1];
+  const period = latestCumWindowWithData(month);
+  if(!period) return null;
+  const diasPassados = parseInt(period.split('-')[1],10);
+  const diasNoMes = daysInMonthOf(month);
+  const fator = diasNoMes/diasPassados;
+  const vendas = getCumCore('VENDAS', period, month, scope) || 0;
+  const gmv = getCumCore('GMV', period, month, scope) || 0;
+  const projVendas = vendas*fator;
+  const projGmv = gmv*fator;
+  const closedMonths = availableClosedMonths();
+  const prevClosedMonth = closedMonths.filter(m=>MONTH_ORDER.indexOf(m)<MONTH_ORDER.indexOf(month)).slice(-1)[0] || null;
+  const prevClosedGmv = prevClosedMonth ? getMonthlyCore('GMV', prevClosedMonth, scope) : null;
+  return {month, period, diasPassados, diasNoMes, vendas, gmv, projVendas, projGmv, prevClosedMonth, prevClosedGmv};
+}
 
 function renderPillGroup(containerId, options, currentValue, onChange, redeClass){
   const el = document.getElementById(containerId);
@@ -1467,6 +1532,49 @@ function renderCancelamentos(){
   table.innerHTML = html;
 }
 try { renderCancelamentos(); } catch(e) { console.error('renderCancelamentos failed:', e); }
+
+// ============================================================
+// PROJEÇÃO DE FECHAMENTO
+// ============================================================
+let projLoja = 'REDE';
+
+function renderProjecao(){
+  renderPillGroup('projLojaChips', STORE_SCOPE_OPTIONS, projLoja, (v)=>{ projLoja=v; renderProjecao(); }, true);
+
+  const p = computeProjection(projLoja);
+  const kpiGrid = document.getElementById('projKpiGrid');
+  const sub = document.getElementById('projSub');
+  if(!p){
+    kpiGrid.innerHTML = '';
+    sub.textContent = '';
+    renderInsightBox('projInsights', [{type:'neutral', ic:'ℹ️', text:'Ainda não há corte parcial do mês corrente na planilha para calcular a projeção.'}]);
+    return;
+  }
+  const scopeLabel = projLoja==='REDE' ? 'a rede toda' : storeLabel(projLoja);
+  const mesLabel = p.month.charAt(0)+p.month.slice(1).toLowerCase();
+  sub.textContent = `${scopeLabel} · com base no corte de ${p.diasPassados} dias de ${mesLabel} (dados até ${p.period}) · faltam ${p.diasNoMes-p.diasPassados} dias para fechar o mês`;
+
+  kpiGrid.innerHTML = `
+    <div class="kpi"><div class="label">Pedidos até agora</div><div class="value">${fmtByType(p.vendas,'number')}</div></div>
+    <div class="kpi"><div class="label">GMV até agora</div><div class="value">${fmtByType(p.gmv,'currency')}</div></div>
+    <div class="kpi"><div class="label">Pedidos projetados (mês fechado)</div><div class="value">${fmtByType(p.projVendas,'number')}</div></div>
+    <div class="kpi"><div class="label">GMV projetado (mês fechado)</div><div class="value">${fmtByType(p.projGmv,'currency')}</div></div>
+  `;
+
+  const bullets = [{type:'neutral', ic:'📈', text:`Mantendo o ritmo dos primeiros ${p.diasPassados} dias, <b>${scopeLabel}</b> fecharia ${mesLabel} com <b>${fmtByType(p.projVendas,'number')} pedidos</b> e <b>${fmtByType(p.projGmv,'currency')}</b> em GMV.`}];
+  if(p.prevClosedGmv){
+    const delta = p.projGmv/p.prevClosedGmv - 1;
+    const prevLabel = p.prevClosedMonth.charAt(0)+p.prevClosedMonth.slice(1).toLowerCase();
+    bullets.push({
+      type: delta>=0 ? 'pos' : 'neg',
+      ic: delta>=0 ? '✅' : '⚠️',
+      text: `Isso seria <b>${delta>=0?'▲':'▼'} ${fmtDeltaPct(Math.abs(delta))}</b> em GMV frente ao fechado de ${prevLabel} (${fmtByType(p.prevClosedGmv,'currency')}).`
+    });
+  }
+  bullets.push({type:'neutral', ic:'ℹ️', text:'Projeção proporcional: sem dado diário na planilha, o cálculo assume que o ritmo observado até aqui se mantém pelo resto do mês — trate como estimativa, não como garantia.'});
+  renderInsightBox('projInsights', bullets);
+}
+try { renderProjecao(); } catch(e) { console.error('renderProjecao failed:', e); }
 
 // ============================================================
 // GLOSSARY MODAL

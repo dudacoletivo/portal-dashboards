@@ -67,6 +67,7 @@
     try { renderInvestimento(); } catch (e) { console.error('renderInvestimento falhou:', e); }
     try { renderAlavancas(); } catch (e) { console.error('renderAlavancas falhou:', e); }
     try { renderCancelamentos(); } catch (e) { console.error('renderCancelamentos falhou:', e); }
+    try { renderProjecao(); } catch (e) { console.error('renderProjecao falhou:', e); }
   }
 
   function init() {
