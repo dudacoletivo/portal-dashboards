@@ -250,6 +250,7 @@
     <button class="tab-btn" data-tab="alavancas">Status de Alavancas</button>
     <button class="tab-btn" data-tab="cancelamentos">Cancelamentos</button>
     <button class="tab-btn" data-tab="avaliacoes">Avaliações</button>
+    <button class="tab-btn" data-tab="projecao">Projeção</button>
     <button class="tab-btn" data-tab="legenda">Legenda</button>
   </nav>
 
@@ -427,6 +428,20 @@
   </section>
 
   <!-- ================= LEGENDA ================= -->
+  <!-- ================= PROJEÇÃO DE FECHAMENTO ================= -->
+  <section class="panel" id="panel-projecao">
+    <div class="card">
+      <h2>Projeção de fechamento</h2>
+      <p class="sub">A planilha não traz dado dia a dia — só os cortes parciais de 01–07, 01–14, 01–21 e 01–28. Esta projeção usa o corte mais recente disponível no mês corrente e assume que o ritmo observado até aqui se mantém pelo resto do mês. É uma estimativa proporcional, não uma garantia de fechamento.</p>
+      <p class="sub" id="projSub"></p>
+      <div class="kpi-grid" id="projKpiGrid"></div>
+    </div>
+    <div class="card">
+      <h2>Leitura automática</h2>
+      <div id="projInsights"></div>
+    </div>
+  </section>
+
   <section class="panel" id="panel-legenda">
     <div class="card">
       <h2>Legenda dos indicadores</h2>
@@ -885,6 +900,83 @@ function syncParcialMonthSeg(){
     const isLast = i===PARCIAL_MONTH_LABELS.length-1;
     return `<button data-idx="${i}"${i===selectedParcialMonthIdx?' class="active"':''}>${label}${isLast?' (atual)':''}</button>`;
   }).join('');
+}
+
+/* ============ PROJEÇÃO DE FECHAMENTO ============ */
+// A planilha não tem dado dia a dia — só os 4 cortes parciais (7/14/21/28). A projeção assume
+// ritmo constante: valor do corte mais recente ÷ dias já passados × dias do mês.
+function parcialWindowAvailable(period, monthKey){
+  const P = getActiveParcial()[period];
+  return !!(P && P.vendas && P.vendas[monthKey]!=null && P.gmv && P.gmv[monthKey]!=null);
+}
+function latestParcialWindowWithData(monthKey){
+  const order = [28,21,14,7];
+  for(const p of order){ if(parcialWindowAvailable(p, monthKey)) return p; }
+  return null;
+}
+function daysInMonthOf3(monthKey){
+  const idx = MONTH_ORDER_3[monthKey];
+  if(!idx) return 30;
+  const year = new Date().getFullYear();
+  return new Date(year, idx, 0).getDate();
+}
+// A monthly (Mês Fechado) usa array posicional alinhado com MONTH_LABELS (nomes completos),
+// diferente do parcial (dicionário por chave de 3 letras) — casa os dois pelas 3 primeiras
+// letras do nome pra achar o mês fechado anterior ao mês parcial corrente.
+function prevClosedMonthGmv(monthKey){
+  let idx = MONTH_LABELS.length-1;
+  while(idx>=0 && MONTH_LABELS[idx].slice(0,3).toLowerCase()===monthKey) idx--;
+  if(idx<0) return null;
+  const M = getActiveMonthly();
+  return {label: MONTH_LABELS[idx], gmv: M.faturamento.values[idx]};
+}
+function computeProjection(){
+  const months = PARCIAL_MONTH_KEYS;
+  if(!months.length) return null;
+  const monthKey = months[months.length-1];
+  const period = latestParcialWindowWithData(monthKey);
+  if(period==null) return null;
+  const diasPassados = period;
+  const diasNoMes = daysInMonthOf3(monthKey);
+  const fator = diasNoMes/diasPassados;
+  const P = getActiveParcial()[period];
+  const vendas = P.vendas[monthKey]||0;
+  const gmv = P.gmv[monthKey]||0;
+  const projVendas = vendas*fator;
+  const projGmv = gmv*fator;
+  const prev = prevClosedMonthGmv(monthKey);
+  return {monthKey, period, diasPassados, diasNoMes, vendas, gmv, projVendas, projGmv, prev};
+}
+function renderProjecao(){
+  const p = computeProjection();
+  const grid = document.getElementById('projKpiGrid');
+  const sub = document.getElementById('projSub');
+  if(!p){
+    grid.innerHTML = '';
+    sub.textContent = '';
+    renderInsightBox('projInsights','neutral','ℹ️','Sem dado suficiente',['Ainda não há corte parcial do mês corrente na planilha para calcular a projeção.']);
+    return;
+  }
+  const mesLabel = MONTH_LABEL_3[p.monthKey];
+  sub.textContent = `Com base no corte de ${p.diasPassados} dias de ${mesLabel} (dados até 01–${String(p.diasPassados).padStart(2,'0')}) · faltam ${p.diasNoMes-p.diasPassados} dias para fechar o mês`;
+
+  grid.innerHTML = `
+    <div class="kpi"><div class="label">Pedidos até agora</div><div class="value">${fmt(p.vendas,'num')}</div></div>
+    <div class="kpi"><div class="label">GMV até agora</div><div class="value">${fmt(p.gmv,'money')}</div></div>
+    <div class="kpi"><div class="label">Pedidos projetados (mês fechado)</div><div class="value">${fmt(Math.round(p.projVendas),'num')}</div></div>
+    <div class="kpi"><div class="label">GMV projetado (mês fechado)</div><div class="value">${fmt(p.projGmv,'money')}</div></div>
+  `;
+
+  const lines = [`Mantendo o ritmo dos primeiros ${p.diasPassados} dias, a Spesso fecharia ${mesLabel} com <b>${fmt(Math.round(p.projVendas),'num')} pedidos</b> e <b>${fmt(p.projGmv,'money')}</b> em GMV.`];
+  let type = 'neutral', icon = '📈', title = 'Projeção de fechamento';
+  if(p.prev && p.prev.gmv){
+    const delta = p.projGmv/p.prev.gmv - 1;
+    lines.push(`Isso seria ${delta>=0?'▲':'▼'} ${Math.abs(delta*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% em GMV frente ao fechado de ${p.prev.label} (${fmt(p.prev.gmv,'money')}).`);
+    type = delta>=0 ? 'good' : 'bad';
+    icon = delta>=0 ? '✅' : '⚠️';
+  }
+  lines.push('Projeção proporcional: sem dado diário na planilha, o cálculo assume que o ritmo observado até aqui se mantém pelo resto do mês — trate como estimativa, não como garantia.');
+  renderInsightBox('projInsights', type, icon, title, lines);
 }
 
 document.getElementById("periodSeg").addEventListener("click",(e)=>{
@@ -1404,6 +1496,7 @@ function renderAll(){
   renderAlavancas();
   renderCancelamentos();
   renderAvaliacoes();
+  renderProjecao();
 }
 renderAll();
 </script>
