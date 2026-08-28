@@ -65,6 +65,7 @@
     try { renderMesFechado(); } catch (e) { console.error('renderMesFechado falhou:', e); }
     try { renderParcial(); } catch (e) { console.error('renderParcial falhou:', e); }
     try { renderInvestimento(); } catch (e) { console.error('renderInvestimento falhou:', e); }
+    try { renderComp7(); } catch (e) { console.error('renderComp7 falhou:', e); }
     try { renderAlavancas(); } catch (e) { console.error('renderAlavancas falhou:', e); }
     try { renderCancelamentos(); } catch (e) { console.error('renderCancelamentos falhou:', e); }
     try { renderProjecao(); } catch (e) { console.error('renderProjecao falhou:', e); }
