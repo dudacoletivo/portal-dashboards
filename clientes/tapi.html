@@ -1506,13 +1506,13 @@ function csvToAoa(text){ // parser CSV com aspas
 async function fetchWorkbookAoas(){
  // 1ª tentativa: exportação xlsx (todas as abas)
  try{
-  const r=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx`,{redirect:'follow'});
+  const r=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx`,{redirect:'follow',cache:'no-store'});
   if(!r.ok)throw new Error("HTTP "+r.status);
   const wb=XLSX.read(await r.arrayBuffer(),{type:"array"});
   return wb.SheetNames.map(sn=>XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null}));
  }catch(e1){
   // 2ª tentativa: gviz CSV da 1ª aba (aba principal do Dash) — endpoint com CORS liberado
-  const r=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`,{redirect:'follow'});
+  const r=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`,{redirect:'follow',cache:'no-store'});
   if(!r.ok)throw new Error("HTTP "+r.status);
   return [csvToAoa(await r.text())];
  }
