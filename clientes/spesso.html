@@ -1230,9 +1230,13 @@ function renderInvestimento(){
 /* ============ STATUS DE ALAVANCAS ============ */
 let selectedAlavancasMonth = null; // chave em ALAVANCAS_DATA, ex: "julho"
 
+// Reconstrói os botões de mês a partir de ALAVANCAS_DATA (que o live-sync mantém em dia via
+// mutateObjectInPlace a cada "Atualizar"). Só é chamada de renderAll() — na carga inicial e a
+// cada refresh ao vivo — nunca de dentro de renderAlavancas(), senão clicar num mês reconstruiria
+// os botões de novo e cancelaria a seleção do usuário na hora.
 function populateAlavancasMonthSeg(){
   const seg = document.getElementById("alavancasMonthSeg");
-  if(seg.children.length) return;
+  seg.innerHTML = "";
   const keys = Object.keys(ALAVANCAS_DATA);
   selectedAlavancasMonth = keys[keys.length-1]; // mês mais recente com dados
   keys.forEach(key=>{
@@ -1251,7 +1255,6 @@ function populateAlavancasMonthSeg(){
 }
 
 function renderAlavancas(){
-  populateAlavancasMonthSeg();
   const data = ALAVANCAS_DATA[selectedAlavancasMonth];
   const grid = document.getElementById("alavancasGrid");
   grid.innerHTML = "";
@@ -1308,9 +1311,11 @@ const CANCELAMENTOS_DATA = {
 let selectedCancelamentosMonth = null;
 let origemChartInst;
 
+// Só é chamada de renderAll() (carga inicial + refresh ao vivo) — nunca de dentro de
+// renderCancelamentos(), pelo mesmo motivo de populateAlavancasMonthSeg() acima.
 function populateCancelamentosMonthSeg(){
   const seg = document.getElementById("cancelamentosMonthSeg");
-  if(seg.children.length) return;
+  seg.innerHTML = "";
   const keys = Object.keys(CANCELAMENTOS_DATA);
   selectedCancelamentosMonth = keys[keys.length-1];
   keys.forEach(key=>{
@@ -1329,7 +1334,6 @@ function populateCancelamentosMonthSeg(){
 }
 
 function renderCancelamentos(){
-  populateCancelamentosMonthSeg();
   const data = CANCELAMENTOS_DATA[selectedCancelamentosMonth];
   const grid = document.getElementById("kpiGridCancelamentos");
   const table = document.getElementById("cancelamentosTable");
@@ -1427,9 +1431,11 @@ const AVALIACOES_DATA = {
 
 let selectedAvaliacoesMonth = null;
 
+// Só é chamada de renderAll() (carga inicial + refresh ao vivo) — nunca de dentro de
+// renderAvaliacoes(), pelo mesmo motivo de populateAlavancasMonthSeg() acima.
 function populateAvaliacoesMonthSeg(){
   const seg = document.getElementById("avaliacoesMonthSeg");
-  if(seg.children.length) return;
+  seg.innerHTML = "";
   const keys = Object.keys(AVALIACOES_DATA);
   selectedAvaliacoesMonth = keys[keys.length-1];
   keys.forEach(key=>{
@@ -1448,7 +1454,6 @@ function populateAvaliacoesMonthSeg(){
 }
 
 function renderAvaliacoes(){
-  populateAvaliacoesMonthSeg();
   const data = AVALIACOES_DATA[selectedAvaliacoesMonth];
   const grid = document.getElementById("kpiGridAvaliacoes");
   const table = document.getElementById("avaliacoesTable");
@@ -1490,6 +1495,9 @@ function renderAvaliacoes(){
 function renderAll(){
   syncMonthSeg();
   syncParcialMonthSeg();
+  populateAlavancasMonthSeg();
+  populateCancelamentosMonthSeg();
+  populateAvaliacoesMonthSeg();
   renderMesFechado();
   renderParcial();
   renderInvestimento();
