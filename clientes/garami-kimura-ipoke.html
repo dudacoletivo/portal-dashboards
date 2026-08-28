@@ -246,6 +246,7 @@
     <button class="tab-btn active" data-tab="fechado">Dash · Mês Fechado</button>
     <button class="tab-btn" data-tab="parcial">Dash · Parcial</button>
     <button class="tab-btn" data-tab="invest">Investimento</button>
+    <button class="tab-btn" data-tab="projecao">Projeção</button>
   </nav>
 
   <!-- ================= MÊS FECHADO ================= -->
@@ -383,6 +384,30 @@
       <h2>Investimento — indicadores por loja</h2>
       <p class="sub">Rede Toda é calculada com a soma real de investimento e pedidos, não uma média simples.</p>
       <div style="overflow-x:auto;"><table id="invest-table"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= PROJEÇÃO DE FECHAMENTO ================= -->
+  <section class="panel" id="panel-projecao">
+    <div class="card">
+      <h2>Filtros</h2>
+      <p class="sub">A planilha não traz dado dia a dia — só os cortes parciais de 7, 14, 21 e 28 dias. Esta projeção usa o corte mais recente disponível no mês corrente e assume que o ritmo observado até aqui se mantém pelo resto do mês. É uma estimativa proporcional, não uma garantia de fechamento.</p>
+      <div class="filterbar">
+        <div class="filtergroup">
+          <label class="title">Loja</label>
+          <select id="proj-store-sel"></select>
+        </div>
+      </div>
+      <p class="sub" id="proj-sub"></p>
+    </div>
+
+    <div class="card">
+      <h2>Leitura automática</h2>
+      <div class="insights" id="proj-insights"></div>
+    </div>
+
+    <div class="card">
+      <div class="kpirow" id="proj-kpis"></div>
     </div>
   </section>
 
@@ -558,6 +583,42 @@ function networkDataFechado(month){
 }
 function fechadoScopeData(storeId, month){
   return storeId===NETWORK_ID ? networkDataFechado(month) : getScopeDataFechado(storeId, month);
+}
+
+/* -------- Projeção de fechamento: a planilha não tem dado dia a dia, só os 4 cortes
+   parciais (7d/14d/21d/28d). A projeção assume ritmo constante: valor do corte mais
+   recente ÷ dias já passados × dias do mês. -------- */
+function periodMonthAvailable(period, month){
+  return STORES.every(s=>{
+    const d = DATA[s.id][period] && DATA[s.id][period][month];
+    return !!(d && d.vendas!=null && d.gmv!=null);
+  });
+}
+function latestPeriodWithData(month){
+  const order = [...ALL_PARTIAL_PERIODS].reverse();
+  for(const p of order){ if(periodMonthAvailable(p, month)) return p; }
+  return null;
+}
+function daysInMonthOf(monthKey){
+  const idx = MONTH_ORDER[monthKey];
+  if(!idx) return 30;
+  const year = new Date().getFullYear();
+  return new Date(year, idx, 0).getDate();
+}
+function computeProjection(storeId){
+  if(!PARTIAL_MONTHS.length) return null;
+  const month = PARTIAL_MONTHS[PARTIAL_MONTHS.length-1];
+  const period = latestPeriodWithData(month);
+  if(!period) return null;
+  const diasPassados = parseInt(period, 10);
+  const diasNoMes = daysInMonthOf(month);
+  const fator = diasNoMes/diasPassados;
+  const cur = getScopeData(storeId, period, month) || {vendas:0, gmv:0};
+  const projVendas = (cur.vendas||0)*fator;
+  const projGmv = (cur.gmv||0)*fator;
+  const prevClosedMonth = MONTHS.filter(m=>MONTH_ORDER[m]<MONTH_ORDER[month]).slice(-1)[0] || null;
+  const prevClosedGmv = prevClosedMonth ? fechadoScopeData(storeId, prevClosedMonth).gmv : null;
+  return {month, period, diasPassados, diasNoMes, vendas:cur.vendas||0, gmv:cur.gmv||0, projVendas, projGmv, prevClosedMonth, prevClosedGmv};
 }
 function srcBadge(storeId){
   if(storeId===NETWORK_ID) return '<span class="srcbadge real">misto</span>';
@@ -1031,9 +1092,49 @@ function renderInvest(){
   table.innerHTML = head+body;
 }
 
+/* =================================================================== */
+/* ======================= PROJEÇÃO DE FECHAMENTO ===================== */
+/* =================================================================== */
+let projStore = NETWORK_ID;
+const projStoreSel = document.getElementById('proj-store-sel');
+buildStoreSelect(projStoreSel);
+projStoreSel.value = projStore;
+projStoreSel.addEventListener('change', ()=>{ projStore = projStoreSel.value; renderProjecao(); });
+
+function renderProjecao(){
+  const p = computeProjection(projStore);
+  const kpiEl = document.getElementById('proj-kpis');
+  const subEl = document.getElementById('proj-sub');
+  const insEl = document.getElementById('proj-insights');
+  if(!p){
+    kpiEl.innerHTML = '';
+    subEl.textContent = '';
+    insEl.innerHTML = insightHtml('info', 'Ainda não há corte parcial do mês corrente na planilha para calcular a projeção.');
+    return;
+  }
+  const monthLabel = MONTH_LABEL[p.month];
+  subEl.textContent = `${scopeLabel(projStore)} · com base no corte de ${p.diasPassados} dias de ${monthLabel} · faltam ${p.diasNoMes-p.diasPassados} dias para fechar o mês`;
+
+  kpiEl.innerHTML = `
+    <div class="kpi"><div class="lbl">Pedidos até agora</div><div class="val">${fmt(p.vendas,'int')}</div></div>
+    <div class="kpi"><div class="lbl">GMV até agora</div><div class="val">${fmt(p.gmv,'money')}</div></div>
+    <div class="kpi"><div class="lbl">Pedidos projetados</div><div class="val">${fmt(p.projVendas,'int')}</div></div>
+    <div class="kpi"><div class="lbl">GMV projetado</div><div class="val">${fmt(p.projGmv,'money')}</div></div>
+  `;
+
+  const insights = [insightHtml('info', `Mantendo o ritmo dos primeiros ${p.diasPassados} dias, <b>${scopeLabel(projStore)}</b> fecharia ${monthLabel} com <b>${fmt(p.projVendas,'int')} pedidos</b> e <b>${fmt(p.projGmv,'money')}</b> em GMV.`)];
+  if(p.prevClosedGmv){
+    const delta = p.projGmv/p.prevClosedGmv - 1;
+    insights.push(insightHtml(delta>=0?'positive':'alert', `Isso seria ${delta>=0?'▲':'▼'} ${fmt(Math.abs(delta*100),'pct')} em GMV frente ao fechado de ${MONTH_LABEL[p.prevClosedMonth]} (${fmt(p.prevClosedGmv,'money')}).`));
+  }
+  insights.push(insightHtml('info', 'Projeção proporcional: sem dado diário na planilha, o cálculo assume que o ritmo observado até aqui se mantém pelo resto do mês — trate como estimativa, não como garantia.'));
+  insEl.innerHTML = insights.join('');
+}
+
 renderFechado();
 renderParcial();
 renderInvest();
+renderProjecao();
 
 // Everything above succeeded without throwing, so the dashboard is genuinely working
 // in this browser/viewer: hide the plain-HTML fallback banner now.
