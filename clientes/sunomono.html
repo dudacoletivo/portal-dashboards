@@ -184,6 +184,7 @@ footer.foot{text-align:center;color:var(--ink-soft);font-size:.75rem;margin-top:
   <button class="tab-btn" data-tab="dashparcial">Dash &middot; Parcial</button>
   <button class="tab-btn" data-tab="invest">Investimento</button>
   <button class="tab-btn" data-tab="parcial">Comparativo Parcial</button>
+  <button class="tab-btn" data-tab="projecao">Projeção</button>
   <button class="tab-btn" data-tab="legenda">Legenda</button>
 </nav>
 
@@ -337,6 +338,22 @@ footer.foot{text-align:center;color:var(--ink-soft);font-size:.75rem;margin-top:
     <h2>Loja a loja</h2>
     <p class="sub">Selo: queda de Budget com crescimento de Pedidos e GMV = <b>economizando e crescendo</b>. Aumento de Budget com queda em Pedidos ou GMV = alerta.</p>
     <div class="tblwrap"><table class="datatable" id="parcialTable"></table></div>
+  </div>
+</section>
+
+<!-- ===================== PROJEÇÃO DE FECHAMENTO ===================== -->
+<section id="tab-projecao" class="panel">
+  <div class="card">
+    <p class="sub">A planilha não traz dado dia a dia — só os cortes parciais de 01–07, 01–14, 01–21 e 01–28. Esta projeção usa o corte mais recente disponível no mês corrente e assume que o ritmo observado até aqui se mantém pelo resto do mês. É uma estimativa proporcional, não uma garantia de fechamento.</p>
+    <div class="filterbar">
+      <div class="filtergroup">
+        <label class="title">Loja</label>
+        <select id="projStoreSelect"></select>
+      </div>
+    </div>
+    <p class="sub" id="projSub"></p>
+    <div class="insight"><span class="ico">🔮</span><div class="txt" id="projInsightTxt"></div></div>
+    <div class="kpirow" id="projKpiRow"></div>
   </div>
 </section>
 
@@ -577,6 +594,78 @@ function scopeMonthlyMetric(scope, metric){
 function scopeWeeklyMetric(scope, metric, window){
   if(scope===REDE) return aggregateWeekly(STORE_NAMES, window)[metric];
   return storeWeekly(scope, metric, window) || {maio:null,junho:null,julho:null,agosto:null};
+}
+
+/* ============ PROJEÇÃO DE FECHAMENTO ============ */
+// A planilha não tem dado dia a dia — só os 4 cortes parciais (01-07/14/21/28). A projeção
+// assume ritmo constante: valor do corte mais recente ÷ dias já passados × dias do mês.
+function weeklyWindowAvailable(window, monthKey){
+  return STORE_NAMES.every(s=>{
+    const vendas = storeWeekly(s,'VENDAS',window);
+    const gmv = storeWeekly(s,'GMV',window);
+    return vendas && vendas[monthKey]!=null && gmv && gmv[monthKey]!=null;
+  });
+}
+function latestWeeklyWindowWithData(monthKey){
+  const order = ['01-28','01-21','01-14','01-07'];
+  for(const w of order){ if(weeklyWindowAvailable(w, monthKey)) return w; }
+  return null;
+}
+function daysInMonthOf(monthKey){
+  const idx = MONTH_ORDER[monthKey];
+  if(!idx) return 30;
+  const year = new Date().getFullYear();
+  return new Date(year, idx, 0).getDate();
+}
+function computeProjection(scope){
+  if(!WEEK_MONTHS.length) return null;
+  const monthKey = WEEK_MONTHS[WEEK_MONTHS.length-1];
+  const window = latestWeeklyWindowWithData(monthKey);
+  if(!window) return null;
+  const diasPassados = parseInt(window.split('-')[1],10);
+  const diasNoMes = daysInMonthOf(monthKey);
+  const fator = diasNoMes/diasPassados;
+  const vendas = scopeWeeklyMetric(scope,'VENDAS',window)[monthKey] || 0;
+  const gmv = scopeWeeklyMetric(scope,'GMV',window)[monthKey] || 0;
+  const projVendas = vendas*fator;
+  const projGmv = gmv*fator;
+  const prevClosedMonth = MONTHS.filter(m=>MONTH_ORDER[m]<MONTH_ORDER[monthKey]).slice(-1)[0] || null;
+  const prevClosedGmv = prevClosedMonth ? scopeMonthlyMetric(scope,'GMV')[prevClosedMonth] : null;
+  return {monthKey, window, diasPassados, diasNoMes, vendas, gmv, projVendas, projGmv, prevClosedMonth, prevClosedGmv};
+}
+let projStore = REDE;
+function renderProjecao(){
+  const sel = document.getElementById('projStoreSelect');
+  if(!sel.options.length){ buildStoreSelect(sel, (e)=>{ projStore=e.target.value; renderProjecao(); }); sel.value = projStore; }
+
+  const p = computeProjection(projStore);
+  const kpiRow = document.getElementById('projKpiRow');
+  const sub = document.getElementById('projSub');
+  const txt = document.getElementById('projInsightTxt');
+  if(!p){
+    kpiRow.innerHTML = '';
+    sub.textContent = '';
+    txt.innerHTML = 'Ainda não há corte parcial do mês corrente na planilha para calcular a projeção.';
+    return;
+  }
+  const scopeLabel = projStore===REDE ? 'Rede toda' : projStore;
+  const mesLabel = MONTH_LABEL[p.monthKey];
+  sub.textContent = `${scopeLabel} · com base no corte de ${p.diasPassados} dias de ${mesLabel} (dados até ${p.window}) · faltam ${p.diasNoMes-p.diasPassados} dias para fechar o mês`;
+
+  kpiRow.innerHTML = `
+    <div class="kpi"><div class="lbl">Pedidos até agora</div><div class="val">${fmtNum(p.vendas)}</div></div>
+    <div class="kpi"><div class="lbl">GMV até agora</div><div class="val">${fmtCurrency(p.gmv)}</div></div>
+    <div class="kpi"><div class="lbl">Pedidos projetados</div><div class="val">${fmtNum(p.projVendas)}</div></div>
+    <div class="kpi"><div class="lbl">GMV projetado</div><div class="val">${fmtCurrency(p.projGmv)}</div></div>
+  `;
+
+  let html = `Mantendo o ritmo dos primeiros ${p.diasPassados} dias, <b>${scopeLabel}</b> fecharia ${mesLabel} com <b>${fmtNum(p.projVendas)} pedidos</b> e <b>${fmtCurrency(p.projGmv)}</b> em GMV.`;
+  if(p.prevClosedGmv){
+    const delta = p.projGmv/p.prevClosedGmv - 1;
+    html += ` Isso seria ${delta>=0?'▲':'▼'} ${fmtPct(Math.abs(delta*100))} em GMV frente ao fechado de ${MONTH_LABEL[p.prevClosedMonth]} (${fmtCurrency(p.prevClosedGmv)}).`;
+  }
+  html += ` <span style="opacity:.75">Projeção proporcional — sem dado diário na planilha, trate como estimativa, não garantia.</span>`;
+  txt.innerHTML = html;
 }
 
 /* ============ STORE SELECT BUILDER ============ */
@@ -1225,6 +1314,7 @@ function renderParcial(){
   `;
 }
 TAB_RENDERERS['parcial'] = renderParcial;
+TAB_RENDERERS['projecao'] = renderProjecao;
 
 /* ==========================================================
    SORT HELPER

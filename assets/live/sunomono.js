@@ -99,7 +99,7 @@
     // syncMonthSegs primeiro: redescobre os meses reais em DATA (que acabou de ser atualizado
     // via Object.assign) e reconstrói os 3 filtros de mês + o seletor de comparação antes de
     // qualquer renderXxx() rodar — senão os filtros ficam presos no tamanho antigo.
-    ['syncMonthSegs', 'renderDashFechado', 'renderDashParcial', 'renderInvest', 'renderParcial'].forEach(fn => {
+    ['syncMonthSegs', 'renderDashFechado', 'renderDashParcial', 'renderInvest', 'renderParcial', 'renderProjecao'].forEach(fn => {
       if (typeof window[fn] === 'function') { try { window[fn](); } catch (e) { console.error(fn + ' falhou:', e); } }
     });
   }
