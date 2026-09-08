@@ -49,6 +49,14 @@ const PORTAL_CLIENTS = [
     color: '#7B131F',
     logo: 'assets/logos/tapi.png',
     passwordHash: '5bac5240c27d3b36ca03b18f6876ec72b6d9dc128bf41a8e371c1217d00db9fe'
+  },
+  {
+    slug: 'delli',
+    name: 'Delli Jardim',
+    file: 'clientes/delli.html',
+    color: '#C1503F',
+    logo: 'assets/logos/delli.png',
+    passwordHash: '11ce08b0afaaf3967c3fe3e7563f9cb50856d9002f0178684ea5d4b9238d680b'
   }
 ];
 

@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delli Jardim | Dashboard de Performance</title>
+<link rel="icon" id="faviconLink" type="image/png" href="../assets/logos/delli.png">
+<script src="../assets/portal-config.js"></script>
+<script src="../assets/auth-guard.js" data-client="delli"></script>
+<style>
+  :root{
+    /* Cores da marca Delli Jardim — vermelho terracota da logo. */
+    --brand:#C1503F;
+    --brand-dark:#8A362A;
+    --brand-soft:#FBEAE6;
+    --brand-accent:#2E7D5B;
+
+    --bg:#F7F5F2;
+    --card:#ffffff;
+    --ink:#2B2320;
+    --ink-soft:#6B6560;
+    --border:#E7E1DA;
+    --good:#2E7D5B;
+    --bad:#C0392B;
+    --neutral:#9A8F3F;
+    --radius:18px;
+    --radius-sm:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:Calibri,'Segoe UI',Candara,Optima,Arial,sans-serif;
+    background:var(--bg); color:var(--ink);
+    padding:20px; max-width:1180px; margin:0 auto;
+  }
+  .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px; margin-bottom:18px; box-shadow:0 1px 2px rgba(20,15,10,.04);}
+  header.top{display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:18px;}
+  .logo-box{width:56px; height:56px; border-radius:16px; overflow:hidden; flex-shrink:0; background:var(--brand); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(193,80,63,.35);}
+  .logo-box img{width:100%; height:100%; object-fit:cover; display:block;}
+  .logo-box .fallback{color:#fff; font-weight:800; font-size:22px;}
+  header.top h1{margin:0; font-size:22px; font-weight:800; color:var(--brand-dark);}
+  header.top p{margin:2px 0 0; font-size:13px; color:var(--ink-soft);}
+  .top-actions{margin-left:auto; display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .btn{font-family:inherit; font-size:13px; font-weight:700; border-radius:999px; padding:9px 16px; border:1.5px solid var(--border); background:#fff; color:var(--ink); cursor:pointer;}
+  .btn:hover{border-color:var(--brand);}
+  .btn.primary{background:var(--brand); border-color:var(--brand); color:#fff;}
+  .pill{font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px; background:var(--brand-soft); color:var(--brand-dark);}
+
+  nav.tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;}
+  .tab-btn{font-family:inherit; font-size:13.5px; font-weight:700; padding:10px 18px; border-radius:999px; border:1.5px solid var(--border); background:#fff; color:var(--ink-soft); cursor:pointer;}
+  .tab-btn.active{background:var(--brand); border-color:var(--brand); color:#fff;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .filterbar{display:flex; gap:22px; flex-wrap:wrap; margin-bottom:6px;}
+  .filtergroup .title{display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin-bottom:8px;}
+  .seg{display:inline-flex; gap:6px; flex-wrap:wrap;}
+  .seg button{font-family:inherit; font-size:12.5px; font-weight:700; padding:7px 14px; border-radius:999px; border:1.5px solid var(--border); background:#fff; color:var(--ink-soft); cursor:pointer;}
+  .seg button.on{background:var(--brand); border-color:var(--brand); color:#fff;}
+  select{font-family:inherit; font-size:13px; padding:8px 12px; border-radius:10px; border:1.5px solid var(--border); background:#fff; color:var(--ink);}
+
+  /* filtro de lojas simultâneas: cada loja é um chip com checkbox embutido, várias podem
+     ficar ativas ao mesmo tempo (diferente do resto do portal, que é sempre 1 loja OU rede) */
+  .store-multi{display:flex; gap:8px; flex-wrap:wrap;}
+  .store-chip{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; padding:7px 14px 7px 10px; border-radius:999px; border:1.5px solid var(--border); background:#fff; color:var(--ink-soft); cursor:pointer; user-select:none;}
+  .store-chip .dot{width:9px; height:9px; border-radius:50%; background:var(--border); display:inline-block;}
+  .store-chip.on{border-color:var(--brand); color:var(--brand-dark); background:var(--brand-soft);}
+  .store-chip.on .dot{background:var(--brand);}
+
+  .sub{font-size:13px; color:var(--ink-soft); margin:6px 0 16px;}
+  .section-title{font-size:15px; font-weight:800; margin:22px 0 10px; color:var(--brand-dark);}
+
+  .kpi-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:6px;}
+  .kpi{background:#fdfbf9; border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 14px 12px;}
+  .kpi .lbl{font-size:11.5px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin-bottom:6px;}
+  .kpi .val{font-size:19px; font-weight:800; color:var(--ink);}
+  .kpi .delta{display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:700; padding:3px 8px; border-radius:999px; margin-top:6px;}
+  .delta.up{color:var(--good); background:#e5f3ec;}
+  .delta.down{color:var(--bad); background:#fbeaea;}
+  .delta.flat{color:var(--neutral); background:#f7f3e2;}
+
+  .insight-box .insight{display:flex; align-items:flex-start; gap:10px; padding:11px 14px; border-radius:12px; margin-bottom:8px; font-size:13.5px; line-height:1.5;}
+  .insight .ico{flex-shrink:0;}
+  .insight.good{background:#e5f3ec; color:#1f5c40;}
+  .insight.bad{background:#fbeaea; color:#8f2323;}
+  .insight.info{background:#f0f0ee; color:#4a453f;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+  @media (max-width:820px){ .grid2{grid-template-columns:1fr;} }
+  .chart-holder{width:100%;}
+  .chart-holder svg{width:100%; height:auto; display:block;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap;}
+  th{font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft); font-weight:800;}
+  tr.network-row{background:var(--brand-soft); font-weight:800;}
+  .table-wrap{overflow-x:auto;}
+  .tag{display:inline-block; font-size:11px; font-weight:800; padding:2px 9px; border-radius:999px; background:var(--brand-soft); color:var(--brand-dark);}
+  .stamp{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:800; padding:4px 10px; border-radius:999px;}
+  .stamp.pos{background:#e5f3ec; color:#1f5c40;}
+  .stamp.neg{background:#fbeaea; color:#8f2323;}
+  .stamp.neu{background:#f0f0ee; color:#4a453f;}
+
+  footer.foot{text-align:center; font-size:12px; color:var(--ink-soft); padding:20px 0 6px;}
+
+  /* modal legenda */
+  .modal-overlay{position:fixed; inset:0; background:rgba(30,20,10,.5); display:flex; align-items:center; justify-content:center; z-index:999; padding:20px;}
+  .modal-overlay.hidden{display:none;}
+  .modal-box{background:#fff; border-radius:20px; padding:28px; max-width:520px; width:100%; max-height:82vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.3);}
+  .modal-box h2{margin:0 0 4px; font-size:18px; color:var(--brand-dark);}
+  .modal-box .sub{margin-top:0;}
+  .modal-close{float:right; background:none; border:none; font-size:18px; cursor:pointer; color:var(--ink-soft);}
+  dl{margin:14px 0 0;}
+  dt{font-weight:800; font-size:13.5px; color:var(--brand-dark); margin-top:12px;}
+  dt:first-child{margin-top:0;}
+  dd{margin:2px 0 0; font-size:13px; color:var(--ink-soft); line-height:1.5;}
+
+</style>
+</head>
+<body>
+
+<div id="js-fallback-banner" style="max-width:900px;margin:20px auto;padding:18px 22px;border:1px solid #EAD9A9;background:#FBF0DA;color:#6b4b00;border-radius:14px;font-family:Calibri,Carlito,sans-serif;font-size:.95rem;line-height:1.55;">
+  Carregando o dashboard… se esta mensagem não sumir em alguns segundos, algo no JavaScript da página falhou — chame a Coletivo.
+</div>
+
+<header class="top">
+  <div class="logo-box" id="logoBox">
+    <img src="../assets/logos/delli.png" alt="Delli" onerror="this.remove(); document.getElementById('logoBox').innerHTML='&lt;span class=&quot;fallback&quot;&gt;D&lt;/span&gt;';">
+  </div>
+  <div>
+    <h1>Dashboard de Performance — Delli</h1>
+    <p id="scopeSub">Padaria Delli · Delli Jardim</p>
+  </div>
+  <div class="top-actions">
+    <span class="pill" id="periodPill">Julho → Setembro 2026</span>
+    <button class="btn" id="btn-legend">📖 Legenda dos indicadores</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="dash">📊 Dash</button>
+  <button class="tab-btn" data-tab="invest">💰 Investimento</button>
+  <button class="tab-btn" data-tab="parcial">🔍 Comparativo Parcial</button>
+</nav>
+
+<!-- ================= DASH ================= -->
+<section class="panel active" id="panel-dash">
+  <div class="card">
+    <h2 style="margin-top:0;font-size:16px;">Filtros</h2>
+    <div class="filterbar">
+      <div class="filtergroup">
+        <label class="title">Loja(s) — seleção simultânea</label>
+        <div class="store-multi" id="dashStoreMulti"></div>
+      </div>
+      <div class="filtergroup">
+        <label class="title">Mês</label>
+        <div class="seg" id="dashMonthSeg"></div>
+      </div>
+      <div class="filtergroup">
+        <label class="title">Indicador do gráfico</label>
+        <select id="dashIndicatorSelect"></select>
+      </div>
+    </div>
+    <p class="sub">Os números abaixo são o acumulado dos primeiros 7 dias de cada mês (corte usado pela planilha de origem) — ainda não há fechamento do mês completo para a Delli.</p>
+  </div>
+
+  <div class="card">
+    <div class="insight-box" id="dashInsights"></div>
+  </div>
+
+  <div class="section-title">KPIs — <span id="dashKpiSub"></span></div>
+  <div class="kpi-row" id="dashKpiRow"></div>
+
+  <div class="grid2" style="margin-top:18px;">
+    <div class="card">
+      <h2 style="margin-top:0;font-size:15px;">Evolução — <span id="dashEvoTitle"></span></h2>
+      <p class="sub" style="margin:0 0 10px;">Julho → Agosto → Setembro, 1 linha por loja selecionada</p>
+      <div class="chart-holder" id="dashEvoChart"></div>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0;font-size:15px;">Mês atual × mês anterior</h2>
+      <p class="sub" id="dashCompSub" style="margin:0 0 10px;"></p>
+      <div class="chart-holder" id="dashCompChart"></div>
+    </div>
+  </div>
+
+  <div class="section-title">Resumo por indicador</div>
+  <div class="card">
+    <div class="table-wrap"><table id="dashTable"></table></div>
+  </div>
+</section>
+
+<!-- ================= INVESTIMENTO ================= -->
+<section class="panel" id="panel-invest">
+  <div class="card">
+    <h2 style="margin-top:0;font-size:16px;">Filtros</h2>
+    <div class="filterbar">
+      <div class="filtergroup">
+        <label class="title">Mês</label>
+        <div class="seg" id="investMonthSeg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="insight-box" id="investInsights"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2 style="margin-top:0;font-size:15px;">Budget de investimento</h2>
+      <div class="chart-holder" id="investBudgetChart"></div>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0;font-size:15px;">CPO e ROI</h2>
+      <div class="chart-holder" id="investCpoRoiChart"></div>
+    </div>
+  </div>
+
+  <div class="section-title">Investimento — indicadores por loja</div>
+  <p class="sub" style="margin-top:-6px;">Indicadores nas colunas, lojas nas linhas — como pedido. Com 1 loja hoje, a tabela cresce sozinha quando a Delli abrir novas unidades.</p>
+  <div class="card">
+    <div class="table-wrap"><table id="investTable"></table></div>
+  </div>
+</section>
+
+<!-- ================= COMPARATIVO PARCIAL ================= -->
+<section class="panel" id="panel-parcial">
+  <div class="card">
+    <h2 style="margin-top:0;font-size:16px;">Filtros</h2>
+    <p class="sub">Comparação dos primeiros 7 dias de um mês contra o outro. Quando o <b>% de investimento cai</b> e <b>pedidos e GMV sobem</b>, a loja está <b>economizando e crescendo</b> — destacado em verde.</p>
+    <div class="filterbar">
+      <div class="filtergroup">
+        <label class="title">Comparar</label>
+        <div class="seg" id="parcialCompareSeg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="insight-box" id="parcialInsights"></div>
+  </div>
+
+  <div class="section-title">Loja a loja</div>
+  <div class="card">
+    <div class="table-wrap"><table id="parcialTable"></table></div>
+  </div>
+</section>
+
+<footer class="foot">Delli · Dashboard gerado a partir da planilha [Dashboard] Delli Jardim (iFood)</footer>
+
+<!-- LEGEND MODAL -->
+<div class="modal-overlay hidden" id="legend-modal">
+  <div class="modal-box">
+    <button class="modal-close" id="legend-close">✕</button>
+    <h2>Legenda dos indicadores</h2>
+    <p class="sub">Definições usadas em todo o dashboard</p>
+    <dl>
+      <dt>GMV</dt><dd>Faturamento bruto — valor total dos pedidos antes de descontos e taxas.</dd>
+      <dt>TM</dt><dd>Ticket médio — valor médio gasto por pedido (GMV ÷ número de vendas).</dd>
+      <dt>NOVOS</dt><dd>Clientes novos — quantidade de clientes que compraram pela primeira vez na loja no período.</dd>
+      <dt>CPO</dt><dd>Custo por pedido — investimento total (Promoções + Ads) dividido pelo total de pedidos.</dd>
+      <dt>VISITAS</dt><dd>Visitas no cardápio — número de acessos ao cardápio da loja no iFood.</dd>
+      <dt>CONVERSÃO</dt><dd>Conversão de cardápio — percentual de visitas que resultaram em pedido (vendas ÷ visitas).</dd>
+      <dt>BUDGET DE INVESTIMENTO</dt><dd>Percentual do faturamento reinvestido em promoções e ads no período.</dd>
+      <dt>PROMOÇÕES + ADS</dt><dd>Valor em R$ gasto com ferramentas de desconto e anúncios patrocinados no iFood.</dd>
+      <dt>SUB IFOOD</dt><dd>Valor em R$ referente ao subsídio da plataforma iFood no período.</dd>
+      <dt>ROI</dt><dd>Retorno sobre investimento — quanto a loja fatura em R$ para cada R$ investido em promoções/ads.</dd>
+      <dt>ECONOMIZANDO E CRESCENDO</dt><dd>Quando o % de investimento cai enquanto pedidos e GMV sobem — a loja vende mais gastando menos, o cenário mais saudável.</dd>
+    </dl>
+  </div>
+</div>
+
+<script>
+/* ============ DADOS (snapshot da planilha [Dashboard] Delli Jardim — aba "Semanal",
+   corte 01-07 de cada mês) — substituído por window.__LIVE_RAW quando o live-sync carrega ============ */
+const RAW = window.__LIVE_RAW || {
+  stores: {
+    "delli-jardim": {
+      label: "Delli Jardim",
+      semanal: {
+        julho:    {vendas:231, gmv:14166.03, tm:61.32, novos:45, visitas:1661, conversao:13.91, budget:5.76, promo:815.48, subifood:802.56, cpo:3.53, roi:16.37},
+        agosto:   {vendas:260, gmv:15297.11, tm:58.84, novos:72, visitas:1105, conversao:23.53, budget:9.61, promo:1470.74, subifood:1698.15, cpo:5.66, roi:9.40},
+        setembro: {vendas:333, gmv:18941.92, tm:56.88, novos:102, visitas:1673, conversao:19.90, budget:9.23, promo:1748.74, subifood:1031.88, cpo:5.25, roi:9.83}
+      }
+    }
+  }
+};
+const STORES = RAW.stores;
+const STORE_IDS = Object.keys(STORES);
+const NETWORK_ID = '__rede__';
+
+const MONTH_ORDER = {janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+const MONTH_LABEL = {janeiro:'Janeiro',fevereiro:'Fevereiro',marco:'Março',abril:'Abril',maio:'Maio',junho:'Junho',julho:'Julho',agosto:'Agosto',setembro:'Setembro',outubro:'Outubro',novembro:'Novembro',dezembro:'Dezembro'};
+function sortMonths(list){ return [...new Set(list)].sort((a,b)=>(MONTH_ORDER[a]||99)-(MONTH_ORDER[b]||99)); }
+
+// Meses nunca ficam fixos — descobertos a partir do que a planilha realmente trouxe em cada
+// loja, tanto na carga inicial quanto a cada "Atualizar" ao vivo.
+function discoverMonths(){
+  const set = new Set();
+  STORE_IDS.forEach(id=>{
+    const s = STORES[id];
+    if(s && s.semanal) Object.keys(s.semanal).forEach(m=>set.add(m));
+  });
+  return sortMonths([...set]);
+}
+let MONTHS = discoverMonths();
+
+const METRICS = [
+  {id:'vendas', label:'Pedidos', fmt:'num'},
+  {id:'gmv', label:'GMV', fmt:'money'},
+  {id:'tm', label:'Ticket Médio (TM)', fmt:'money'},
+  {id:'novos', label:'Clientes Novos', fmt:'num'},
+  {id:'visitas', label:'Visitas Cardápio', fmt:'num'},
+  {id:'conversao', label:'Conversão %', fmt:'pct'},
+  {id:'budget', label:'Budget de Investimento', fmt:'pct'},
+  {id:'promo', label:'Promoções + Ads', fmt:'money'},
+  {id:'subifood', label:'Sub iFood', fmt:'money'},
+  {id:'cpo', label:'CPO', fmt:'money'},
+  {id:'roi', label:'ROI', fmt:'money'},
+];
+const METRIC_BY_ID = Object.fromEntries(METRICS.map(m=>[m.id,m]));
+const LEAN_METRICS = ['vendas','gmv','tm','conversao','budget','cpo','roi'];
+
+function fmtNumberPtBR(value, decimals){
+  if(value===undefined||value===null||isNaN(value)) return '—';
+  const neg = value<0; const v = Math.abs(value);
+  const factor = Math.pow(10, decimals);
+  const rounded = Math.round(v*factor)/factor;
+  const fixed = rounded.toFixed(decimals);
+  const parts = fixed.split('.');
+  let intPart = parts[0]; const decPart = parts.length>1?parts[1]:'';
+  const groups = [];
+  while(intPart.length>3){ groups.unshift(intPart.slice(-3)); intPart = intPart.slice(0,-3); }
+  groups.unshift(intPart);
+  return (neg?'-':'') + groups.join('.') + (decimals>0?','+decPart:'');
+}
+function fmt(val, kind){
+  if(val===undefined||val===null||isNaN(val)) return '—';
+  if(kind==='money') return 'R$ '+fmtNumberPtBR(val,2);
+  if(kind==='pct') return fmtNumberPtBR(val,2)+'%';
+  return fmtNumberPtBR(Math.round(val),0);
+}
+function pctChange(a,b){ if(!a) return null; return ((b-a)/Math.abs(a))*100; }
+function deltaBits(d){
+  const cls = d>0.05?'up':(d<-0.05?'down':'flat');
+  const arrow = d>0.05?'▲':(d<-0.05?'▼':'▬');
+  return {cls, arrow};
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+/* -------- agregação: soma absolutos das lojas selecionadas, razões recalculadas por cima
+   (nunca média simples de percentuais entre lojas — mesma regra do resto do portal) -------- */
+function storesWithMonth(ids, month){
+  return ids.filter(id => STORES[id] && STORES[id].semanal && STORES[id].semanal[month]);
+}
+function aggregate(ids, month){
+  const rows = storesWithMonth(ids, month).map(id=>STORES[id].semanal[month]);
+  const sum = k => rows.reduce((a,r)=>a+(r[k]||0),0);
+  const vendas=sum('vendas'), gmv=sum('gmv'), novos=sum('novos'), visitas=sum('visitas'),
+        promo=sum('promo'), subifood=sum('subifood');
+  return {
+    vendas, gmv, novos, visitas, promo, subifood,
+    tm: vendas? gmv/vendas : 0,
+    conversao: visitas? (vendas/visitas*100) : 0,
+    budget: gmv? (promo/gmv*100) : 0,
+    cpo: vendas? (promo/vendas) : 0,
+    roi: promo? (gmv/promo - 1) : 0,
+    storeCount: rows.length,
+  };
+}
+function scopeData(ids, month){
+  if(!ids.length) return null;
+  return aggregate(ids, month);
+}
+
+/* ============ FILTRO DE LOJA(S) SIMULTÂNEO — usado só na aba Dash ============ */
+let selectedStores = [...STORE_IDS]; // todas ligadas por padrão
+function renderDashStoreMulti(){
+  const box = document.getElementById('dashStoreMulti');
+  box.innerHTML = STORE_IDS.map(id=>{
+    const on = selectedStores.includes(id);
+    return `<button type="button" class="store-chip${on?' on':''}" data-store="${id}"><span class="dot"></span>${esc(STORES[id].label)}</button>`;
+  }).join('');
+  box.querySelectorAll('.store-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const id = chip.dataset.store;
+      if(selectedStores.includes(id)){
+        if(selectedStores.length>1) selectedStores = selectedStores.filter(s=>s!==id); // sempre deixa 1 ativa
+      } else {
+        selectedStores = [...selectedStores, id];
+      }
+      renderDashStoreMulti();
+      renderDash();
+    });
+  });
+}
+function scopeLabelFor(ids){
+  if(ids.length===STORE_IDS.length) return 'Rede toda ('+STORE_IDS.length+(STORE_IDS.length===1?' loja)':' lojas)');
+  if(ids.length===1) return STORES[ids[0]].label;
+  return ids.map(id=>STORES[id].label).join(' + ');
+}
+
+/* ============ SVG CHARTS (sem dependência externa) ============ */
+const CHART_FONT = "font-family='Calibri, Carlito, sans-serif'";
+function svgLineChart(el, {labels, series, fmtKind}){
+  const W=560,H=240, padL=54,padR=16,padT=18,padB=32;
+  const innerW=W-padL-padR, innerH=H-padT-padB;
+  let all=[]; series.forEach(s=>{ all = all.concat(s.values.filter(v=>v!=null)); });
+  if(!all.length){ el.innerHTML = '<p class="sub">Sem dados para este filtro.</p>'; return; }
+  const maxV = Math.max(...all)*1.15, minV = Math.min(0, Math.min(...all));
+  const stepX = labels.length>1 ? innerW/(labels.length-1) : 0;
+  const yFor = v => padT + innerH - (innerH*(v-minV)/((maxV-minV)||1));
+  const xFor = i => padL + stepX*i;
+  let grid='', axisLabels='';
+  for(let i=0;i<=4;i++){
+    const val = minV + (maxV-minV)*i/4;
+    const y = yFor(val);
+    grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#EDE6DC" stroke-width="1"/>`;
+    grid += `<text x="${padL-8}" y="${(y+4).toFixed(1)}" font-size="10" fill="#948b81" text-anchor="end" ${CHART_FONT}>${esc(fmt(val,fmtKind).replace('R$ ',''))}</text>`;
+  }
+  labels.forEach((l,i)=>{ axisLabels += `<text x="${xFor(i).toFixed(1)}" y="${H-8}" font-size="11" text-anchor="middle" fill="#5B5652" ${CHART_FONT}>${esc(l)}</text>`; });
+  let lines='', dots='', legend='';
+  series.forEach(s=>{
+    const pts = s.values.map((v,i)=> v==null ? null : `${xFor(i).toFixed(1)},${yFor(v).toFixed(1)}`).filter(Boolean).join(' ');
+    lines += `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s.values.forEach((v,i)=>{
+      if(v==null) return;
+      dots += `<circle cx="${xFor(i).toFixed(1)}" cy="${yFor(v).toFixed(1)}" r="4" fill="${s.color}"/>`;
+      dots += `<text x="${xFor(i).toFixed(1)}" y="${(yFor(v)-10).toFixed(1)}" font-size="10.5" font-weight="700" text-anchor="middle" fill="${s.color}" ${CHART_FONT}>${esc(fmt(v,fmtKind))}</text>`;
+    });
+    if(series.length>1) legend += `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;font-size:11.5px;color:#5B5652"><span style="width:9px;height:9px;border-radius:50%;background:${s.color};display:inline-block"></span>${esc(s.name)}</span>`;
+  });
+  el.innerHTML = `${series.length>1?`<div style="margin-bottom:6px">${legend}</div>`:''}<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${grid}${lines}${dots}${axisLabels}</svg>`;
+}
+function svgBarChart(el, {labels, values, colors, fmtKind}){
+  const W=560,H=240, padL=54,padR=16,padT=18,padB=40;
+  const innerW=W-padL-padR, innerH=H-padT-padB;
+  if(!values.length){ el.innerHTML = '<p class="sub">Sem dados para este filtro.</p>'; return; }
+  const maxV = Math.max(...values,0.0001)*1.15;
+  const barGap = innerW/values.length, barW = Math.min(64, barGap*0.5);
+  let bars='', labelsSvg='', grid='';
+  for(let i=0;i<=4;i++){
+    const y = padT+innerH-(innerH*i/4), val = maxV*i/4;
+    grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#EDE6DC" stroke-width="1"/>`;
+    grid += `<text x="${padL-8}" y="${(y+4).toFixed(1)}" font-size="10" fill="#948b81" text-anchor="end" ${CHART_FONT}>${esc(fmt(val,fmtKind).replace('R$ ',''))}</text>`;
+  }
+  values.forEach((v,i)=>{
+    const x = padL+barGap*i+(barGap-barW)/2, h = innerH*(v/maxV), y = padT+innerH-h;
+    bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="7" fill="${colors?colors[i]:'var(--brand)'}"/>`;
+    bars += `<text x="${(x+barW/2).toFixed(1)}" y="${(y-6).toFixed(1)}" font-size="11" font-weight="700" text-anchor="middle" fill="#2B2320" ${CHART_FONT}>${esc(fmt(v,fmtKind))}</text>`;
+    labelsSvg += `<text x="${(x+barW/2).toFixed(1)}" y="${H-padB+18}" font-size="10.5" text-anchor="middle" fill="#5B5652" ${CHART_FONT}>${esc(labels[i])}</text>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${grid}${bars}${labelsSvg}</svg>`;
+}
+function svgGroupedBarChart(el, {labels, seriesA, seriesB, nameA, nameB, fmtKind}){
+  const W=560,H=240, padL=54,padR=16,padT=18,padB=40;
+  const innerW=W-padL-padR, innerH=H-padT-padB;
+  const all=[...seriesA,...seriesB];
+  if(!all.length){ el.innerHTML = '<p class="sub">Sem dados para este filtro.</p>'; return; }
+  const maxV = Math.max(...all,0.0001)*1.15;
+  const groupGap = innerW/labels.length, barW = Math.min(30, groupGap*0.32);
+  let bars='', labelsSvg='', grid='';
+  for(let i=0;i<=4;i++){
+    const y = padT+innerH-(innerH*i/4), val = maxV*i/4;
+    grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#EDE6DC" stroke-width="1"/>`;
+    grid += `<text x="${padL-8}" y="${(y+4).toFixed(1)}" font-size="10" fill="#948b81" text-anchor="end" ${CHART_FONT}>${esc(fmt(val,fmtKind).replace('R$ ',''))}</text>`;
+  }
+  labels.forEach((l,i)=>{
+    const gx = padL+groupGap*i+groupGap/2;
+    const hA = innerH*((seriesA[i]||0)/maxV), hB = innerH*((seriesB[i]||0)/maxV);
+    const xA = gx-barW-3, xB = gx+3;
+    bars += `<rect x="${xA.toFixed(1)}" y="${(padT+innerH-hA).toFixed(1)}" width="${barW}" height="${hA.toFixed(1)}" rx="6" fill="var(--brand-soft-bar,#C7BCA8)"/>`;
+    bars += `<rect x="${xB.toFixed(1)}" y="${(padT+innerH-hB).toFixed(1)}" width="${barW}" height="${hB.toFixed(1)}" rx="6" fill="var(--brand)"/>`;
+    labelsSvg += `<text x="${gx.toFixed(1)}" y="${H-padB+18}" font-size="10.5" text-anchor="middle" fill="#5B5652" ${CHART_FONT}>${esc(l)}</text>`;
+  });
+  const legend = `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;font-size:11.5px;color:#5B5652"><span style="width:9px;height:9px;border-radius:50%;background:#C7BCA8;display:inline-block"></span>${esc(nameA)}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:#5B5652"><span style="width:9px;height:9px;border-radius:50%;background:var(--brand);display:inline-block"></span>${esc(nameB)}</span>`;
+  el.innerHTML = `<div style="margin-bottom:6px">${legend}</div><svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${grid}${bars}${labelsSvg}</svg>`;
+}
+function insightHtml(type, icon, text){
+  return `<div class="insight ${type}"><span class="ico">${icon}</span><span>${text}</span></div>`;
+}
+
+/* ============ TABS ============ */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+document.getElementById('btn-legend').addEventListener('click', ()=> document.getElementById('legend-modal').classList.remove('hidden'));
+document.getElementById('legend-close').addEventListener('click', ()=> document.getElementById('legend-modal').classList.add('hidden'));
+document.getElementById('legend-modal').addEventListener('click', (e)=>{ if(e.target.id==='legend-modal') e.currentTarget.classList.add('hidden'); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') document.getElementById('legend-modal').classList.add('hidden'); });
+
+/* =================================================================== */
+/* ================================ DASH ============================== */
+/* =================================================================== */
+let dashMonth = null;
+let dashIndicator = 'gmv';
+
+function syncDashMonthSeg(){
+  MONTHS = discoverMonths();
+  if(!dashMonth || !MONTHS.includes(dashMonth)) dashMonth = MONTHS[MONTHS.length-1];
+  const seg = document.getElementById('dashMonthSeg');
+  seg.innerHTML = MONTHS.map(m=>`<button data-m="${m}"${m===dashMonth?' class="on"':''}>${MONTH_LABEL[m]}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); dashMonth = b.dataset.m; renderDash();
+    });
+  });
+}
+function populateDashIndicatorSelect(){
+  const sel = document.getElementById('dashIndicatorSelect');
+  sel.innerHTML = METRICS.map(m=>`<option value="${m.id}">${m.label}</option>`).join('');
+  sel.value = dashIndicator;
+  sel.addEventListener('change', ()=>{ dashIndicator = sel.value; renderDash(); });
+}
+
+function renderDash(){
+  if(!MONTHS.length){
+    document.getElementById('dashInsights').innerHTML = insightHtml('info','ℹ️','Ainda não há dados na planilha para exibir.');
+    return;
+  }
+  const idx = MONTHS.indexOf(dashMonth);
+  const prevMonth = idx>0 ? MONTHS[idx-1] : null;
+  const ids = selectedStores.length ? selectedStores : STORE_IDS;
+  const cur = scopeData(ids, dashMonth);
+  const prev = prevMonth ? scopeData(ids, prevMonth) : null;
+  const label = scopeLabelFor(ids);
+
+  document.getElementById('dashKpiSub').textContent = `${label} · ${MONTH_LABEL[dashMonth]} (01–07)${prev?' vs '+MONTH_LABEL[prevMonth]+' (01–07)':''}`;
+
+  const kpiRow = document.getElementById('dashKpiRow');
+  kpiRow.innerHTML = LEAN_METRICS.map(id=>{
+    const m = METRIC_BY_ID[id];
+    const curVal = cur ? cur[id] : null;
+    const prevVal = prev ? prev[id] : null;
+    let deltaHtml = '';
+    if(prev && curVal!=null && prevVal!=null){
+      const d = pctChange(prevVal, curVal);
+      if(d!=null){ const {cls,arrow} = deltaBits(d); deltaHtml = `<div class="delta ${cls}">${arrow} ${d.toFixed(1)}%</div>`; }
+    }
+    return `<div class="kpi"><div class="lbl">${m.label}</div><div class="val">${fmt(curVal,m.fmt)}</div>${deltaHtml}</div>`;
+  }).join('');
+
+  // insights
+  const insights = [];
+  if(!cur){
+    insights.push(insightHtml('info','ℹ️',`Nenhuma das lojas selecionadas tem dado para ${MONTH_LABEL[dashMonth]}.`));
+  } else if(prev){
+    const dGmv = pctChange(prev.gmv, cur.gmv), dVendas = pctChange(prev.vendas, cur.vendas), dBudget = pctChange(prev.budget, cur.budget);
+    if(dBudget!=null && dBudget<0 && dGmv>0 && dVendas>0){
+      insights.push(insightHtml('good','✅',`<b>${esc(label)}</b> está economizando e crescendo: Budget de investimento caiu ${Math.abs(dBudget).toFixed(1)}%, enquanto Pedidos subiram ${dVendas.toFixed(1)}% e GMV ${dGmv.toFixed(1)}%.`));
+    } else if(dGmv!=null){
+      const good = dGmv>=0;
+      insights.push(insightHtml(good?'good':'bad', good?'📈':'📉', `GMV de <b>${esc(label)}</b> ${good?'subiu':'caiu'} <b>${Math.abs(dGmv).toFixed(1)}%</b> de ${MONTH_LABEL[prevMonth]} para ${MONTH_LABEL[dashMonth]}.`));
+    }
+  } else {
+    insights.push(insightHtml('info','ℹ️', `${MONTH_LABEL[dashMonth]} é o primeiro mês da série — ainda não há mês anterior para comparar.`));
+  }
+  document.getElementById('dashInsights').innerHTML = insights.join('');
+
+  // evolution chart: 1 line per selected store (loja simultânea) using dashIndicator
+  const evoEl = document.getElementById('dashEvoChart');
+  document.getElementById('dashEvoTitle').textContent = METRIC_BY_ID[dashIndicator].label;
+  const palette = ['#C1503F','#2E7D5B','#3E6E8E','#9A4E8E','#B08A2E','#6E4E9A'];
+  const series = ids.map((id,i)=>({
+    name: STORES[id].label,
+    color: palette[i%palette.length],
+    values: MONTHS.map(m => STORES[id].semanal && STORES[id].semanal[m] ? STORES[id].semanal[m][dashIndicator] : null)
+  }));
+  svgLineChart(evoEl, { labels: MONTHS.map(m=>MONTH_LABEL[m]), series, fmtKind: METRIC_BY_ID[dashIndicator].fmt });
+
+  // comparison chart: mês atual x anterior, por loja selecionada
+  const compEl = document.getElementById('dashCompChart');
+  document.getElementById('dashCompSub').textContent = prev ? `${MONTH_LABEL[prevMonth]} × ${MONTH_LABEL[dashMonth]} · ${METRIC_BY_ID[dashIndicator].label}` : 'Sem mês anterior para comparar';
+  if(prev){
+    svgGroupedBarChart(compEl, {
+      labels: ids.map(id=>STORES[id].label),
+      seriesA: ids.map(id=> (STORES[id].semanal[prevMonth]||{})[dashIndicator] ?? 0),
+      seriesB: ids.map(id=> (STORES[id].semanal[dashMonth]||{})[dashIndicator] ?? 0),
+      nameA: MONTH_LABEL[prevMonth], nameB: MONTH_LABEL[dashMonth],
+      fmtKind: METRIC_BY_ID[dashIndicator].fmt
+    });
+  } else { compEl.innerHTML = '<p class="sub">Sem dados suficientes.</p>'; }
+
+  // tabela resumo
+  const table = document.getElementById('dashTable');
+  let head = `<thead><tr><th>Indicador</th><th>${MONTH_LABEL[dashMonth]}</th><th>${prev?MONTH_LABEL[prevMonth]:'—'}</th><th>Variação</th></tr></thead>`;
+  let body = '<tbody>' + METRICS.map(m=>{
+    const curVal = cur?cur[m.id]:null, prevVal = prev?prev[m.id]:null;
+    let deltaTxt = '—', cls='flat';
+    if(curVal!=null && prevVal!=null){ const d=pctChange(prevVal,curVal); if(d!=null){ const b=deltaBits(d); cls=b.cls; deltaTxt=`${b.arrow} ${d.toFixed(1)}%`; } }
+    return `<tr><td>${m.label}</td><td>${fmt(curVal,m.fmt)}</td><td>${fmt(prevVal,m.fmt)}</td><td><span class="delta ${cls}">${deltaTxt}</span></td></tr>`;
+  }).join('') + '</tbody>';
+  table.innerHTML = head+body;
+}
+
+/* =================================================================== */
+/* ============================ INVESTIMENTO =========================== */
+/* =================================================================== */
+let investMonth = null;
+const INVEST_COLS = ['vendas','gmv','budget','promo','subifood','cpo','roi'];
+
+function syncInvestMonthSeg(){
+  if(!investMonth || !MONTHS.includes(investMonth)) investMonth = MONTHS[MONTHS.length-1];
+  const seg = document.getElementById('investMonthSeg');
+  seg.innerHTML = MONTHS.map(m=>`<button data-m="${m}"${m===investMonth?' class="on"':''}>${MONTH_LABEL[m]}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); investMonth = b.dataset.m; renderInvest();
+    });
+  });
+}
+function renderInvest(){
+  if(!MONTHS.length){ document.getElementById('investInsights').innerHTML = insightHtml('info','ℹ️','Sem dados.'); return; }
+  const rows = STORE_IDS.map(id=>({ id, s: STORES[id], d: STORES[id].semanal[investMonth] })).filter(r=>r.d);
+  const net = scopeData(STORE_IDS, investMonth);
+
+  const insights = [];
+  if(rows.length && net){
+    const maxCpo = [...rows].sort((a,b)=>b.d.cpo-a.d.cpo)[0];
+    const maxBudget = [...rows].sort((a,b)=>b.d.budget-a.d.budget)[0];
+    const maxRoi = [...rows].sort((a,b)=>b.d.roi-a.d.roi)[0];
+    insights.push(insightHtml('info','💰', `Rede investiu <b>${fmt(net.budget,'pct')}</b> do GMV em ads, com CPO de <b>${fmt(net.cpo,'money')}</b> em ${MONTH_LABEL[investMonth]}.`));
+    if(rows.length>1){
+      insights.push(insightHtml('bad','⚠️', `Maior CPO: <b>${esc(maxCpo.s.label)}</b> (${fmt(maxCpo.d.cpo,'money')}).`));
+      insights.push(insightHtml('info','📊', `Maior % de investimento: <b>${esc(maxBudget.s.label)}</b> (${fmt(maxBudget.d.budget,'pct')}).`));
+      insights.push(insightHtml('good','✅', `Melhor ROI: <b>${esc(maxRoi.s.label)}</b> (${fmt(maxRoi.d.roi,'money')}).`));
+    }
+  } else {
+    insights.push(insightHtml('info','ℹ️', `Sem dados de investimento para ${MONTH_LABEL[investMonth]}.`));
+  }
+  document.getElementById('investInsights').innerHTML = insights.join('');
+
+  svgBarChart(document.getElementById('investBudgetChart'), {
+    labels: rows.map(r=>r.s.label), values: rows.map(r=>r.d.budget), fmtKind:'pct'
+  });
+  svgGroupedBarChart(document.getElementById('investCpoRoiChart'), {
+    labels: rows.map(r=>r.s.label),
+    seriesA: rows.map(r=>r.d.cpo), seriesB: rows.map(r=>r.d.roi),
+    nameA:'CPO', nameB:'ROI', fmtKind:'money'
+  });
+
+  const table = document.getElementById('investTable');
+  let head = '<thead><tr><th>Loja</th>'+INVEST_COLS.map(id=>'<th>'+METRIC_BY_ID[id].label+'</th>').join('')+'</tr></thead>';
+  let netRow = net ? '<tr class="network-row"><td>🌐 Rede Toda</td>'+INVEST_COLS.map(id=>'<td>'+fmt(net[id],METRIC_BY_ID[id].fmt)+'</td>').join('')+'</tr>' : '';
+  let body = '<tbody>'+netRow+rows.map(r=> '<tr><td>'+esc(r.s.label)+'</td>'+INVEST_COLS.map(id=>'<td>'+fmt(r.d[id],METRIC_BY_ID[id].fmt)+'</td>').join('')+'</tr>').join('')+'</tbody>';
+  table.innerHTML = head+body;
+}
+
+/* =================================================================== */
+/* =========================== COMPARATIVO PARCIAL ======================= */
+/* =================================================================== */
+let parcialCompare = null; // "julho-agosto"
+
+function syncParcialCompareSeg(){
+  const pairs = [];
+  for(let i=1;i<MONTHS.length;i++) pairs.push(MONTHS[i-1]+'-'+MONTHS[i]);
+  if(!parcialCompare || !pairs.includes(parcialCompare)) parcialCompare = pairs[pairs.length-1] || null;
+  const seg = document.getElementById('parcialCompareSeg');
+  seg.innerHTML = pairs.map(p=>{
+    const [a,b] = p.split('-');
+    return `<button data-c="${p}"${p===parcialCompare?' class="on"':''}>${MONTH_LABEL[a]} → ${MONTH_LABEL[b]}</button>`;
+  }).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); parcialCompare = b.dataset.c; renderParcial();
+    });
+  });
+}
+function classify(dBudget, dVendas, dGmv){
+  if(dBudget==null||dVendas==null||dGmv==null) return {label:'Dados insuficientes', cls:'neu'};
+  if(dBudget<0 && dVendas>0 && dGmv>0) return {label:'Economizando e crescendo', cls:'pos'};
+  if(dBudget>0 && (dVendas<0 || dGmv<0)) return {label:'Investindo mais e piorando', cls:'neg'};
+  if(dBudget<=0 && dVendas<=0 && dGmv<=0) return {label:'Reduzindo investimento e vendas', cls:'neg'};
+  if(dBudget>0 && dVendas>0 && dGmv>0) return {label:'Crescendo com mais investimento', cls:'neu'};
+  return {label:'Misto', cls:'neu'};
+}
+function renderParcial(){
+  if(!parcialCompare){ document.getElementById('parcialInsights').innerHTML = insightHtml('info','ℹ️','Ainda não há 2 meses para comparar.'); document.getElementById('parcialTable').innerHTML=''; return; }
+  const [moA, moB] = parcialCompare.split('-');
+  const net = scopeData(STORE_IDS, moB) && scopeData(STORE_IDS, moA) ? {
+    a: scopeData(STORE_IDS, moA), b: scopeData(STORE_IDS, moB)
+  } : null;
+
+  const insights = [];
+  if(net){
+    const dGmv = pctChange(net.a.gmv, net.b.gmv), dVendas = pctChange(net.a.vendas, net.b.vendas), dBudget = pctChange(net.a.budget, net.b.budget);
+    const c = classify(dBudget, dVendas, dGmv);
+    insights.push(insightHtml(c.cls==='pos'?'good':(c.cls==='neg'?'bad':'info'), c.cls==='pos'?'✅':(c.cls==='neg'?'⚠️':'ℹ️'),
+      `Rede toda, corte 01–07: <b>${c.label}</b> — Pedidos ${dVendas>=0?'+':''}${dVendas.toFixed(1)}%, GMV ${dGmv>=0?'+':''}${dGmv.toFixed(1)}%, Budget ${dBudget>=0?'+':''}${dBudget.toFixed(1)}% de ${MONTH_LABEL[moA]} para ${MONTH_LABEL[moB]}.`));
+  } else {
+    insights.push(insightHtml('info','ℹ️', `Sem dado suficiente para comparar ${MONTH_LABEL[moA]} e ${MONTH_LABEL[moB]}.`));
+  }
+  document.getElementById('parcialInsights').innerHTML = insights.join('');
+
+  const rows = STORE_IDS.map(id=>{
+    const a = STORES[id].semanal[moA], b = STORES[id].semanal[moB];
+    if(!a || !b) return {id, s:STORES[id], a:null, b:null};
+    return {id, s:STORES[id], a, b};
+  });
+  const table = document.getElementById('parcialTable');
+  let head = `<thead><tr><th>Loja</th><th>Pedidos</th><th>GMV</th><th>Budget</th><th>Situação</th></tr></thead>`;
+  let body = '<tbody>' + rows.map(r=>{
+    if(!r.a || !r.b) return `<tr><td>${esc(r.s.label)}</td><td colspan="3">Sem dado em um dos meses</td><td>—</td></tr>`;
+    const dGmv=pctChange(r.a.gmv,r.b.gmv), dVendas=pctChange(r.a.vendas,r.b.vendas), dBudget=pctChange(r.a.budget,r.b.budget);
+    const c = classify(dBudget,dVendas,dGmv);
+    return `<tr>
+      <td>${esc(r.s.label)}</td>
+      <td>${fmt(r.b.vendas,'num')} <span class="delta ${deltaBits(dVendas).cls}">${deltaBits(dVendas).arrow} ${dVendas.toFixed(1)}%</span></td>
+      <td>${fmt(r.b.gmv,'money')} <span class="delta ${deltaBits(dGmv).cls}">${deltaBits(dGmv).arrow} ${dGmv.toFixed(1)}%</span></td>
+      <td>${fmt(r.b.budget,'pct')} <span class="delta ${deltaBits(-dBudget).cls}">${deltaBits(dBudget).arrow} ${dBudget.toFixed(1)}%</span></td>
+      <td><span class="stamp ${c.cls}">${c.label}</span></td>
+    </tr>`;
+  }).join('') + '</tbody>';
+  table.innerHTML = head+body;
+}
+
+/* =================================================================== */
+/* ================================ INIT =============================== */
+/* =================================================================== */
+function renderAll(){
+  renderDashStoreMulti();
+  syncDashMonthSeg();
+  populateDashIndicatorSelect();
+  syncInvestMonthSeg();
+  syncParcialCompareSeg();
+  renderDash();
+  renderInvest();
+  renderParcial();
+  const periodPill = document.getElementById('periodPill');
+  if(MONTHS.length) periodPill.textContent = MONTHS.length>1 ? `${MONTH_LABEL[MONTHS[0]]} → ${MONTH_LABEL[MONTHS[MONTHS.length-1]]} 2026` : MONTH_LABEL[MONTHS[0]]+' 2026';
+}
+renderAll();
+
+var fallbackBanner = document.getElementById('js-fallback-banner');
+if (fallbackBanner) fallbackBanner.style.display = 'none';
+</script>
+<script src="../assets/sheets-sync.js"></script>
+<script src="../assets/live-status-ui.js"></script>
+<script src="../assets/live/delli.js"></script>
+</body>
+</html>
