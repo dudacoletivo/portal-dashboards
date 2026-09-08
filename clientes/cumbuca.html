@@ -275,7 +275,6 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
   <button class="tab-btn" data-tab="alavancas">🎛️ Status de Alavancas</button>
   <button class="tab-btn" data-tab="investimento">💰 Investimento</button>
   <button class="tab-btn" data-tab="parcial">⚖️ Diagnóstico Parcial</button>
-  <button class="tab-btn" data-tab="topprodutos">🏆 Top 10 Produtos</button>
   <button class="tab-btn" data-tab="acoes">🗂️ Ações</button>
   <button class="tab-btn" data-tab="projecao">🔮 Projeção</button>
 </nav>
@@ -462,35 +461,6 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
   <div class="section-title">Economizando e crescendo × Investindo mais e piorando</div>
   <div class="table-wrap">
     <table id="parcialTable"></table>
-  </div>
-</div>
-
-<!-- ============ TOP 10 PRODUTOS TAB ============ -->
-<div class="tabcontent" id="tab-topprodutos">
-  <div class="callout info">
-    <strong>Sobre esta aba:</strong> ranking dos 10 produtos mais vendidos por loja, usando janelas parciais (01–07, 01–14, etc.) — igual à aba Dash Parcial. Produtos com a etiqueta <span class="warn-flag" style="background:#fff3d6; color:#a5750a;">🆕 novo</span> são itens recém-lançados no cardápio que já entraram no Top 10.
-  </div>
-  <div class="filterbar">
-    <div class="filter-group">
-      <label>Loja</label>
-      <select id="top_store"></select>
-    </div>
-    <div class="filter-group">
-      <label>Janela parcial</label>
-      <select id="top_window">
-        <option value="w7" selected>7 dias (01–07)</option>
-        <option value="w14">14 dias (01–14)</option>
-        <option value="w21">21 dias (01–21)</option>
-        <option value="w28">28 dias (01–28)</option>
-      </select>
-    </div>
-  </div>
-  <div class="insight-box" id="topInsights"></div>
-  <div class="section-title" id="topPeriodLabel"></div>
-  <div class="card">
-    <div class="table-wrap">
-      <table id="topProductsTable"></table>
-    </div>
   </div>
 </div>
 
@@ -2485,96 +2455,6 @@ const DATA_PARTIAL = {
     }
   }
 };
-// ---------- TOP 10 PRODUTOS (por loja, por janela parcial) ----------
-// Só temos a janela de 7 dias (01-07) de Agosto por enquanto — igual à lógica de DATA_PARTIAL,
-// mais janelas serão adicionadas conforme o mês avança.
-// "novo": true = produto novo no cardápio, já dentro do Top 10 (marcado em amarelo na planilha).
-const DATA_PRODUCTS = {
-  "Cumbuca - Tijuca": {
-    "w7": [
-      {"produto":"Parmegiana Sarado","pedidos":227,"vendas":14236.10,"novo":false},
-      {"produto":"Salmão Hula Hula","pedidos":202,"vendas":14641.80,"novo":false},
-      {"produto":"Estrogonofe Sarado","pedidos":180,"vendas":8753.10,"novo":false},
-      {"produto":"Frango Elegante","pedidos":155,"vendas":7215.80,"novo":false},
-      {"produto":"Wrap Divino","pedidos":141,"vendas":6368.00,"novo":false},
-      {"produto":"Leve 3 Cumbucas e pague 2","pedidos":110,"vendas":11925.20,"novo":true},
-      {"produto":"Frango Divino","pedidos":101,"vendas":5934.50,"novo":false},
-      {"produto":"Leva logo duas - até 30% de desconto na segunda Cumbuca","pedidos":100,"vendas":9142.60,"novo":true},
-      {"produto":"Feijuca","pedidos":97,"vendas":5252.10,"novo":false},
-      {"produto":"Nhoque \"tarja preta\"","pedidos":94,"vendas":5160.30,"novo":false}
-    ]
-  },
-  "Cumbuca - Zona Sul": {
-    "w7": [
-      {"produto":"Salmão Hula Hula","pedidos":220,"vendas":15401.20,"novo":false},
-      {"produto":"Parmegiana Sarado","pedidos":212,"vendas":13124.90,"novo":false},
-      {"produto":"Estrogonofe Sarado","pedidos":182,"vendas":9228.00,"novo":false},
-      {"produto":"Frango Elegante","pedidos":134,"vendas":6228.70,"novo":false},
-      {"produto":"Wrap Divino","pedidos":129,"vendas":6395.90,"novo":false},
-      {"produto":"Feijuca","pedidos":105,"vendas":5789.70,"novo":false},
-      {"produto":"Leva logo duas - até 30% de desconto na segunda Cumbuca","pedidos":92,"vendas":8286.80,"novo":true},
-      {"produto":"Frango Divino","pedidos":75,"vendas":4322.20,"novo":false},
-      {"produto":"Leve 3 Cumbucas e pague 2","pedidos":66,"vendas":7170.00,"novo":true},
-      {"produto":"Nhoque \"tarja preta\"","pedidos":94,"vendas":5160.30,"novo":false}
-    ]
-  },
-  "Cumbuca Brasileira - Tijuca": {
-    "w7": [
-      {"produto":"Parmegiana Sarado","pedidos":210,"vendas":12963.00,"novo":false},
-      {"produto":"Feijuca","pedidos":132,"vendas":7178.80,"novo":false},
-      {"produto":"Estrogonofe Sarado","pedidos":99,"vendas":4675.60,"novo":false},
-      {"produto":"Frango Elegante","pedidos":155,"vendas":7215.80,"novo":false},
-      {"produto":"Leve 3 Cumbucas e pague 2","pedidos":74,"vendas":7900.30,"novo":true},
-      {"produto":"Salmão Hula Hula","pedidos":67,"vendas":4532.90,"novo":false},
-      {"produto":"Frango Elegante","pedidos":155,"vendas":7215.80,"novo":false},
-      {"produto":"Leva logo duas - até 30% de desconto na segunda Cumbuca","pedidos":61,"vendas":2784.90,"novo":true},
-      {"produto":"Nhoque \"tarja preta\"","pedidos":55,"vendas":2756.30,"novo":false},
-      {"produto":"Estrogonofe Sarado","pedidos":48,"vendas":2822.70,"novo":false}
-    ]
-  },
-  "Cumbuca Brasileira - Zona Sul": {
-    "w7": [
-      {"produto":"Parmegiana Sarado","pedidos":188,"vendas":11652.20,"novo":false},
-      {"produto":"Feijuca","pedidos":159,"vendas":8688.10,"novo":false},
-      {"produto":"Estrogonofe Sarado","pedidos":113,"vendas":5229.00,"novo":false},
-      {"produto":"Estrogonofe Sarado","pedidos":87,"vendas":5258.80,"novo":false},
-      {"produto":"Leve 3 Cumbucas e pague 2","pedidos":76,"vendas":6939.60,"novo":true},
-      {"produto":"Carne divina","pedidos":74,"vendas":4561.60,"novo":false},
-      {"produto":"Nhoque \"tarja preta\"","pedidos":71,"vendas":3581.70,"novo":false},
-      {"produto":"Frango Elegante","pedidos":65,"vendas":3065.30,"novo":false},
-      {"produto":"Wrap Divino","pedidos":64,"vendas":3232.00,"novo":false},
-      {"produto":"Leva logo duas - até 30% de desconto na segunda Cumbuca","pedidos":61,"vendas":2784.90,"novo":true}
-    ]
-  },
-  "Wraps - Tijuca": {
-    "w7": [
-      {"produto":"Wrap Divino","pedidos":20,"vendas":977.50,"novo":false},
-      {"produto":"Wrap do seu jeito","pedidos":11,"vendas":652.10,"novo":true},
-      {"produto":"Wrap Elegante","pedidos":8,"vendas":376.00,"novo":false},
-      {"produto":"Wrap Caesar","pedidos":8,"vendas":415.60,"novo":false},
-      {"produto":"Wrap + Acompanhamento + Bebida","pedidos":7,"vendas":368.90,"novo":true},
-      {"produto":"Monte seu combo","pedidos":7,"vendas":377.80,"novo":true},
-      {"produto":"Leva logo dois: 30% de desconto no 2º Wrap","pedidos":6,"vendas":579.80,"novo":true},
-      {"produto":"Salada Macaprese (Lançamento)","pedidos":2,"vendas":111.70,"novo":false},
-      {"produto":"Wrap Supremo!","pedidos":2,"vendas":143.40,"novo":false},
-      {"produto":"Classiquinha de Frango","pedidos":1,"vendas":63.80,"novo":false}
-    ]
-  },
-  "Wraps - Zona Sul": {
-    "w7": [
-      {"produto":"Wrap Divino","pedidos":31,"vendas":1356.00,"novo":false},
-      {"produto":"Wrap do seu jeito","pedidos":10,"vendas":603.00,"novo":true},
-      {"produto":"Wrap Elegante","pedidos":7,"vendas":279.30,"novo":false},
-      {"produto":"Wrap + Acompanhamento + Bebida","pedidos":5,"vendas":358.20,"novo":true},
-      {"produto":"Leva logo dois: 30% de desconto no 2º Wrap","pedidos":5,"vendas":427.50,"novo":true},
-      {"produto":"Pira na batatinha","pedidos":2,"vendas":27.80,"novo":false},
-      {"produto":"Poke Hula Hula","pedidos":2,"vendas":178.40,"novo":false},
-      {"produto":"Wrap Caesar","pedidos":2,"vendas":79.80,"novo":false},
-      {"produto":"Wrap Méxicomigo","pedidos":1,"vendas":39.90,"novo":false},
-      {"produto":"Camarão Pop","pedidos":1,"vendas":59.90,"novo":false}
-    ]
-  }
-};
 // ---------- METADATA ----------
 const STORE_KEYS = Object.keys(DATA_PARTIAL);
 // Filtro consolidado por unidade física, somando as 3 marcas que dividem o mesmo endereço
@@ -3377,71 +3257,6 @@ function renderParcial(){
   ]);
 }
 
-// ---------- TOP 10 PRODUTOS TAB (usa dados parciais por loja/janela) ----------
-function populateTopStoreSelector(){
-  const sel = document.getElementById('top_store');
-  sel.innerHTML = STORE_KEYS.map(s=>`<option value="${s}">${shortStore(s)}</option>`).join('');
-}
-
-// Só sabemos quais janelas existem checando se a loja tem uma lista de produtos para elas —
-// DATA_PRODUCTS ainda só tem "w7" preenchido (Agosto 01-07); outras janelas mostram aviso.
-function topWindowAvailable(store, win){
-  return !!(DATA_PRODUCTS[store] && Array.isArray(DATA_PRODUCTS[store][win]) && DATA_PRODUCTS[store][win].length);
-}
-
-function syncTopWindowOptions(){
-  const store = document.getElementById('top_store').value;
-  const sel = document.getElementById('top_window');
-  [...sel.options].forEach(opt=>{ opt.disabled = !topWindowAvailable(store, opt.value); });
-  const current = sel.options[sel.selectedIndex];
-  if(current && current.disabled){
-    const fallback = [...sel.options].find(o=>!o.disabled);
-    if(fallback) sel.value = fallback.value;
-  }
-}
-
-function renderTopProducts(){
-  const store = document.getElementById('top_store').value;
-  const win = document.getElementById('top_window').value;
-  document.getElementById('topPeriodLabel').textContent = `${shortStore(store)} · Agosto · janela ${WINDOW_LABEL[win]}`;
-
-  const list = topWindowAvailable(store, win) ? DATA_PRODUCTS[store][win] : [];
-
-  if(!list.length){
-    document.getElementById('topProductsTable').innerHTML = '';
-    renderInsightsInto('topInsights', [
-      {type:'info', icon:'ℹ️', text:`Ainda não há dados de Top 10 Produtos para ${shortStore(store)} na janela ${WINDOW_LABEL[win]} — assim que o período fechar, os dados entram aqui.`}
-    ]);
-    return;
-  }
-
-  const totalVendas = list.reduce((sum,p)=> sum + (p.vendas||0), 0);
-  const totalPedidos = list.reduce((sum,p)=> sum + (p.pedidos||0), 0);
-  const novos = list.filter(p=>p.novo);
-
-  let html = `<thead><tr><th>#</th><th>Produto</th><th>Pedidos</th><th>Vendas</th></tr></thead><tbody>`;
-  list.forEach((p, i)=>{
-    html += `<tr class="${p.novo?'pos-highlight':''}">
-      <td>${i+1}º</td>
-      <td class="store-name">${esc(p.produto)}${p.novo?' <span class="warn-flag" style="background:#fff3d6; color:#a5750a;">🆕 novo</span>':''}</td>
-      <td>${fmtInt(p.pedidos)}</td>
-      <td>${fmtCurrency(p.vendas)}</td>
-    </tr>`;
-  });
-  html += '</tbody>';
-  document.getElementById('topProductsTable').innerHTML = html;
-
-  const insights = [
-    {type:'info', icon:'🏆', text:`Produto mais vendido: ${list[0].produto} (${fmtInt(list[0].pedidos)} pedidos, ${fmtCurrency(list[0].vendas)}).`},
-    {type:'info', icon:'📦', text:`Top 10 somam ${fmtInt(totalPedidos)} pedidos e ${fmtCurrency(totalVendas)} em vendas na janela.`},
-  ];
-  if(novos.length){
-    insights.push({type:'good', icon:'🆕', text:`${novos.length} produto(s) novo(s) já no Top 10: ${novos.map(p=>p.produto).join(', ')}.`});
-  }
-  renderInsightsInto('topInsights', insights);
-}
-
-
 // ---------- INIT ----------
 function safe(label, fn){
   try{ fn(); } catch(e){
@@ -3500,11 +3315,6 @@ function init(){
     renderParcial();
   }));
   safe('Diagnóstico Parcial', renderParcial);
-
-  safe('Top 10 Produtos', ()=>{ populateTopStoreSelector(); syncTopWindowOptions(); });
-  on('top_store','change', ()=>safe('Top 10 Produtos', ()=>{ syncTopWindowOptions(); renderTopProducts(); }));
-  on('top_window','change', ()=>safe('Top 10 Produtos', renderTopProducts));
-  safe('Top 10 Produtos', renderTopProducts);
 
   safe('Projeção', populateProjStoreSelect);
   on('proj_store','change', ()=>safe('Projeção', renderProjecao));
