@@ -320,7 +320,7 @@ const METRICS = [
   {id:'roi', label:'ROI', fmt:'money'},
 ];
 const METRIC_BY_ID = Object.fromEntries(METRICS.map(m=>[m.id,m]));
-const LEAN_METRICS = ['vendas','gmv','tm','conversao','budget','cpo','roi'];
+const LEAN_METRICS = ['vendas','gmv','tm','visitas','conversao','budget','cpo','roi'];
 
 function fmtNumberPtBR(value, decimals){
   if(value===undefined||value===null||isNaN(value)) return '—';
