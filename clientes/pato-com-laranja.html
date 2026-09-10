@@ -425,8 +425,12 @@
           <div class="chipset" id="cancLojaChips"></div>
         </div>
         <div class="filtergroup">
-          <label class="title">Período</label>
-          <div class="chipset" id="cancPeriodoChips"></div>
+          <label class="title">Mês</label>
+          <select class="dd" id="cancMesSelect"></select>
+        </div>
+        <div class="filtergroup">
+          <label class="title">Janela parcial</label>
+          <select class="dd" id="cancJanelaSelect"></select>
         </div>
         <div class="filtergroup">
           <label class="title">Origem</label>
@@ -1443,13 +1447,26 @@ try { renderAlavancas(); } catch(e) { console.error('renderAlavancas failed:', e
 // ============================================================
 // CANCELAMENTOS
 // ============================================================
-let cancFilters = { loja: 'TODAS', periodo: 'TODOS', origem: 'TODAS' };
+let cancFilters = { loja: 'TODAS', mes: 'TODOS', janela: 'TODOS', origem: 'TODAS' };
+const JANELA_LABEL = {'01-07':'7 dias (01–07)', '01-14':'14 dias (01–14)', '01-21':'21 dias (01–21)', '01-28':'28 dias (01–28)'};
+const JANELA_ORDER = ['01-07','01-14','01-21','01-28'];
 
 function renderCancelamentos(){
   renderPillGroup('cancLojaChips', [{value:'TODAS',label:'Todas'}, ...STORES.filter(s=>['BARRA DA TIJUCA','LEBLON'].includes(s)).map(s=>({value:s,label:storeLabel(s)}))], cancFilters.loja, (v)=>{ cancFilters.loja=v; renderCancelamentos(); }, true);
 
-  const periodos = ['TODOS', ...new Set(CANCEL.map(r=>`${r._mes} (${r._periodo})`))];
-  renderPillGroup('cancPeriodoChips', periodos.map(p=>({value:p, label: p==='TODOS'?'Todos os períodos':toSentence(p)})), cancFilters.periodo, (v)=>{ cancFilters.periodo=v; renderCancelamentos(); });
+  const mesSel = document.getElementById('cancMesSelect');
+  const meses = ['TODOS', ...MONTH_ORDER.filter(m=>CANCEL.some(r=>r._mes===m))];
+  if(!meses.includes(cancFilters.mes)) cancFilters.mes = 'TODOS';
+  mesSel.innerHTML = meses.map(m=>`<option value="${m}">${m==='TODOS'?'Todos os meses':toSentence(m)}</option>`).join('');
+  mesSel.value = cancFilters.mes;
+  mesSel.onchange = ()=>{ cancFilters.mes = mesSel.value; renderCancelamentos(); };
+
+  const janelaSel = document.getElementById('cancJanelaSelect');
+  const janelas = ['TODOS', ...JANELA_ORDER.filter(j=>CANCEL.some(r=>r._periodo===j))];
+  if(!janelas.includes(cancFilters.janela)) cancFilters.janela = 'TODOS';
+  janelaSel.innerHTML = janelas.map(j=>`<option value="${j}">${j==='TODOS'?'Todos os períodos':JANELA_LABEL[j]}</option>`).join('');
+  janelaSel.value = cancFilters.janela;
+  janelaSel.onchange = ()=>{ cancFilters.janela = janelaSel.value; renderCancelamentos(); };
 
   const origSel = document.getElementById('cancOrigemSelect');
   const origens = ['TODAS', ...new Set(CANCEL.map(r=>r['Origem do cancelamento']).filter(Boolean))];
@@ -1463,7 +1480,8 @@ function renderCancelamentos(){
 
   const rows = CANCEL.filter(r=>{
     if(cancFilters.loja!=='TODAS' && r._loja!==cancFilters.loja) return false;
-    if(cancFilters.periodo!=='TODOS' && `${r._mes} (${r._periodo})`!==cancFilters.periodo) return false;
+    if(cancFilters.mes!=='TODOS' && r._mes!==cancFilters.mes) return false;
+    if(cancFilters.janela!=='TODOS' && r._periodo!==cancFilters.janela) return false;
     if(cancFilters.origem!=='TODAS' && r['Origem do cancelamento']!==cancFilters.origem) return false;
     return true;
   });
