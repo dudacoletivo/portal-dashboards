@@ -138,55 +138,107 @@
 </header>
 
 <nav class="tabs">
-  <button class="tab-btn active" data-tab="dash">📊 Dash</button>
+  <button class="tab-btn active" data-tab="dashF">📊 Dash — Mês Fechado</button>
+  <button class="tab-btn" data-tab="dashP">🌓 Dash — Parcial</button>
   <button class="tab-btn" data-tab="invest">💰 Investimento</button>
   <button class="tab-btn" data-tab="parcial">🔍 Comparativo Parcial</button>
 </nav>
 
-<!-- ================= DASH ================= -->
-<section class="panel active" id="panel-dash">
+<!-- ================= DASH — MÊS FECHADO ================= -->
+<section class="panel active" id="panel-dashF">
   <div class="card">
     <h2 style="margin-top:0;font-size:16px;">Filtros</h2>
     <div class="filterbar">
       <div class="filtergroup">
         <label class="title">Loja(s) — seleção simultânea</label>
-        <div class="store-multi" id="dashStoreMulti"></div>
+        <div class="store-multi" id="dashFStoreMulti"></div>
       </div>
       <div class="filtergroup">
         <label class="title">Mês</label>
-        <div class="seg" id="dashMonthSeg"></div>
+        <div class="seg" id="dashFMonthSeg"></div>
       </div>
       <div class="filtergroup">
         <label class="title">Indicador do gráfico</label>
-        <select id="dashIndicatorSelect"></select>
+        <select id="dashFIndicatorSelect"></select>
       </div>
     </div>
-    <p class="sub">Os números abaixo são referentes ao mês fechado (dados consolidados) — para acompanhar o mês em andamento, use a aba Comparativo Parcial.</p>
+    <p class="sub">Os números abaixo são referentes ao mês fechado (dados consolidados) — para acompanhar o mês em andamento, use a aba Dash — Parcial.</p>
   </div>
 
   <div class="card">
-    <div class="insight-box" id="dashInsights"></div>
+    <div class="insight-box" id="dashFInsights"></div>
   </div>
 
-  <div class="section-title">KPIs — <span id="dashKpiSub"></span></div>
-  <div class="kpi-row" id="dashKpiRow"></div>
+  <div class="section-title">KPIs do período <span class="tag" id="dashFPeriod"></span></div>
+  <div class="kpi-row" id="dashFKpiRow"></div>
 
   <div class="grid2" style="margin-top:18px;">
     <div class="card">
-      <h2 style="margin-top:0;font-size:15px;">Evolução — <span id="dashEvoTitle"></span></h2>
-      <p class="sub" style="margin:0 0 10px;">Meses fechados, 1 linha por loja selecionada</p>
-      <div class="chart-holder" id="dashEvoChart"></div>
+      <h2 style="margin-top:0;font-size:15px;">Evolução — <span id="dashFEvoTitle"></span></h2>
+      <p class="sub" id="dashFEvoSub" style="margin:0 0 10px;">Meses fechados, 1 linha por loja selecionada</p>
+      <div class="chart-holder" id="dashFEvoChart"></div>
     </div>
     <div class="card">
       <h2 style="margin-top:0;font-size:15px;">Mês atual × mês anterior</h2>
-      <p class="sub" id="dashCompSub" style="margin:0 0 10px;"></p>
-      <div class="chart-holder" id="dashCompChart"></div>
+      <p class="sub" id="dashFCompSub" style="margin:0 0 10px;"></p>
+      <div class="chart-holder" id="dashFCompChart"></div>
     </div>
   </div>
 
-  <div class="section-title">Resumo por indicador</div>
+  <div class="section-title">Resumo por indicador <span class="tag" id="dashFTableTag"></span></div>
   <div class="card">
-    <div class="table-wrap"><table id="dashTable"></table></div>
+    <div class="table-wrap"><table id="dashFTable"></table></div>
+  </div>
+</section>
+
+<!-- ================= DASH — PARCIAL ================= -->
+<section class="panel" id="panel-dashP">
+  <div class="card">
+    <h2 style="margin-top:0;font-size:16px;">Filtros</h2>
+    <div class="filterbar">
+      <div class="filtergroup">
+        <label class="title">Loja(s) — seleção simultânea</label>
+        <div class="store-multi" id="dashPStoreMulti"></div>
+      </div>
+      <div class="filtergroup">
+        <label class="title">Mês</label>
+        <div class="seg" id="dashPMonthSeg"></div>
+      </div>
+      <div class="filtergroup">
+        <label class="title">Janela parcial</label>
+        <div class="seg" id="dashPWindowSeg"></div>
+      </div>
+      <div class="filtergroup">
+        <label class="title">Indicador do gráfico</label>
+        <select id="dashPIndicatorSelect"></select>
+      </div>
+    </div>
+    <p class="sub">Os números abaixo são o acumulado do corte parcial escolhido (mês em andamento) — para o mês fechado, use a aba Dash — Mês Fechado.</p>
+  </div>
+
+  <div class="card">
+    <div class="insight-box" id="dashPInsights"></div>
+  </div>
+
+  <div class="section-title">KPIs do período <span class="tag" id="dashPPeriod"></span></div>
+  <div class="kpi-row" id="dashPKpiRow"></div>
+
+  <div class="grid2" style="margin-top:18px;">
+    <div class="card">
+      <h2 style="margin-top:0;font-size:15px;">Evolução — <span id="dashPEvoTitle"></span></h2>
+      <p class="sub" id="dashPEvoSub" style="margin:0 0 10px;">Janela parcial selecionada, 1 linha por loja selecionada</p>
+      <div class="chart-holder" id="dashPEvoChart"></div>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0;font-size:15px;">Mês atual × mês anterior</h2>
+      <p class="sub" id="dashPCompSub" style="margin:0 0 10px;"></p>
+      <div class="chart-holder" id="dashPCompChart"></div>
+    </div>
+  </div>
+
+  <div class="section-title">Resumo por indicador <span class="tag" id="dashPTableTag"></span></div>
+  <div class="card">
+    <div class="table-wrap"><table id="dashPTable"></table></div>
   </div>
 </section>
 
@@ -437,24 +489,30 @@ function scopePartialBest(ids, month){
   return rows.length ? aggregateFrom(rows) : null;
 }
 
-/* ============ FILTRO DE LOJA(S) SIMULTÂNEO — usado só na aba Dash ============ */
+/* ============ FILTRO DE LOJA(S) SIMULTÂNEO — compartilhado pelas 2 abas Dash
+   (Mês Fechado e Parcial usam o mesmo estado de lojas selecionadas) ============ */
 let selectedStores = [...STORE_IDS]; // todas ligadas por padrão
 function renderDashStoreMulti(){
-  const box = document.getElementById('dashStoreMulti');
-  box.innerHTML = STORE_IDS.map(id=>{
-    const on = selectedStores.includes(id);
-    return `<button type="button" class="store-chip${on?' on':''}" data-store="${id}"><span class="dot"></span>${esc(STORES[id].label)}</button>`;
-  }).join('');
-  box.querySelectorAll('.store-chip').forEach(chip=>{
-    chip.addEventListener('click', ()=>{
-      const id = chip.dataset.store;
-      if(selectedStores.includes(id)){
-        if(selectedStores.length>1) selectedStores = selectedStores.filter(s=>s!==id); // sempre deixa 1 ativa
-      } else {
-        selectedStores = [...selectedStores, id];
-      }
-      renderDashStoreMulti();
-      renderDash();
+  const boxIds = ['dashFStoreMulti','dashPStoreMulti'];
+  boxIds.forEach(boxId=>{
+    const box = document.getElementById(boxId);
+    if(!box) return;
+    box.innerHTML = STORE_IDS.map(id=>{
+      const on = selectedStores.includes(id);
+      return `<button type="button" class="store-chip${on?' on':''}" data-store="${id}"><span class="dot"></span>${esc(STORES[id].label)}</button>`;
+    }).join('');
+    box.querySelectorAll('.store-chip').forEach(chip=>{
+      chip.addEventListener('click', ()=>{
+        const id = chip.dataset.store;
+        if(selectedStores.includes(id)){
+          if(selectedStores.length>1) selectedStores = selectedStores.filter(s=>s!==id); // sempre deixa 1 ativa
+        } else {
+          selectedStores = [...selectedStores, id];
+        }
+        renderDashStoreMulti();
+        renderDashF();
+        renderDashP();
+      });
     });
   });
 }
@@ -559,45 +617,46 @@ document.getElementById('legend-modal').addEventListener('click', (e)=>{ if(e.ta
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') document.getElementById('legend-modal').classList.add('hidden'); });
 
 /* =================================================================== */
-/* ================================ DASH ============================== */
+/* ========================= DASH — MÊS FECHADO ======================= */
 /* =================================================================== */
-let dashMonth = null;
-let dashIndicator = 'gmv';
+let dashFMonth = null;
+let dashFIndicator = 'gmv';
 
-function syncDashMonthSeg(){
+function syncDashFMonthSeg(){
   CLOSED_MONTHS = discoverMonths();
-  if(!dashMonth || !CLOSED_MONTHS.includes(dashMonth)) dashMonth = CLOSED_MONTHS[CLOSED_MONTHS.length-1];
-  const seg = document.getElementById('dashMonthSeg');
-  seg.innerHTML = CLOSED_MONTHS.map(m=>`<button data-m="${m}"${m===dashMonth?' class="on"':''}>${MONTH_LABEL[m]}</button>`).join('');
+  if(!dashFMonth || !CLOSED_MONTHS.includes(dashFMonth)) dashFMonth = CLOSED_MONTHS[CLOSED_MONTHS.length-1];
+  const seg = document.getElementById('dashFMonthSeg');
+  seg.innerHTML = CLOSED_MONTHS.map(m=>`<button data-m="${m}"${m===dashFMonth?' class="on"':''}>${MONTH_LABEL[m]}</button>`).join('');
   seg.querySelectorAll('button').forEach(b=>{
     b.addEventListener('click', ()=>{
       seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
-      b.classList.add('on'); dashMonth = b.dataset.m; renderDash();
+      b.classList.add('on'); dashFMonth = b.dataset.m; renderDashF();
     });
   });
 }
-function populateDashIndicatorSelect(){
-  const sel = document.getElementById('dashIndicatorSelect');
+function populateDashFIndicatorSelect(){
+  const sel = document.getElementById('dashFIndicatorSelect');
   sel.innerHTML = METRICS.map(m=>`<option value="${m.id}">${m.label}</option>`).join('');
-  sel.value = dashIndicator;
-  sel.addEventListener('change', ()=>{ dashIndicator = sel.value; renderDash(); });
+  sel.value = dashFIndicator;
+  sel.addEventListener('change', ()=>{ dashFIndicator = sel.value; renderDashF(); });
 }
 
-function renderDash(){
+function renderDashF(){
+  const sub = document.getElementById('dashFEvoSub'); if(sub) sub.textContent = CLOSED_MONTHS.map(m=>MONTH_LABEL[m]).join(' · ') + ' — meses fechados';
   if(!CLOSED_MONTHS.length){
-    document.getElementById('dashInsights').innerHTML = insightHtml('info','ℹ️','Ainda não há mês fechado na planilha para exibir.');
+    document.getElementById('dashFInsights').innerHTML = insightHtml('info','ℹ️','Ainda não há mês fechado na planilha para exibir.');
     return;
   }
-  const idx = CLOSED_MONTHS.indexOf(dashMonth);
+  const idx = CLOSED_MONTHS.indexOf(dashFMonth);
   const prevMonth = idx>0 ? CLOSED_MONTHS[idx-1] : null;
   const ids = selectedStores.length ? selectedStores : STORE_IDS;
-  const cur = scopeClosedData(ids, dashMonth);
+  const cur = scopeClosedData(ids, dashFMonth);
   const prev = prevMonth ? scopeClosedData(ids, prevMonth) : null;
   const label = scopeLabelFor(ids);
 
-  document.getElementById('dashKpiSub').textContent = `${label} · ${MONTH_LABEL[dashMonth]} (fechado)${prev?' vs '+MONTH_LABEL[prevMonth]+' (fechado)':''}`;
+  document.getElementById('dashFPeriod').textContent = `${label} · ${MONTH_LABEL[dashFMonth]} (fechado)`;
 
-  const kpiRow = document.getElementById('dashKpiRow');
+  const kpiRow = document.getElementById('dashFKpiRow');
   kpiRow.innerHTML = LEAN_METRICS.map(id=>{
     const m = METRIC_BY_ID[id];
     const curVal = cur ? cur[id] : null;
@@ -613,47 +672,171 @@ function renderDash(){
   // insights
   const insights = [];
   if(!cur){
-    insights.push(insightHtml('info','ℹ️',`Nenhuma das lojas selecionadas tem dado para ${MONTH_LABEL[dashMonth]}.`));
+    insights.push(insightHtml('info','ℹ️',`Nenhuma das lojas selecionadas tem dado para ${MONTH_LABEL[dashFMonth]}.`));
   } else if(prev){
     const dGmv = pctChange(prev.gmv, cur.gmv), dVendas = pctChange(prev.vendas, cur.vendas), dBudget = pctChange(prev.budget, cur.budget);
     if(dBudget!=null && dBudget<0 && dGmv>0 && dVendas>0){
       insights.push(insightHtml('good','✅',`<b>${esc(label)}</b> está economizando e crescendo: Budget de investimento caiu ${Math.abs(dBudget).toFixed(1)}%, enquanto Pedidos subiram ${dVendas.toFixed(1)}% e GMV ${dGmv.toFixed(1)}%.`));
     } else if(dGmv!=null){
       const good = dGmv>=0;
-      insights.push(insightHtml(good?'good':'bad', good?'📈':'📉', `GMV de <b>${esc(label)}</b> ${good?'subiu':'caiu'} <b>${Math.abs(dGmv).toFixed(1)}%</b> de ${MONTH_LABEL[prevMonth]} para ${MONTH_LABEL[dashMonth]}.`));
+      insights.push(insightHtml(good?'good':'bad', good?'📈':'📉', `GMV de <b>${esc(label)}</b> ${good?'subiu':'caiu'} <b>${Math.abs(dGmv).toFixed(1)}%</b> de ${MONTH_LABEL[prevMonth]} para ${MONTH_LABEL[dashFMonth]}.`));
     }
   } else {
-    insights.push(insightHtml('info','ℹ️', `${MONTH_LABEL[dashMonth]} é o primeiro mês da série — ainda não há mês anterior para comparar.`));
+    insights.push(insightHtml('info','ℹ️', `${MONTH_LABEL[dashFMonth]} é o primeiro mês da série — ainda não há mês anterior para comparar.`));
   }
-  document.getElementById('dashInsights').innerHTML = insights.join('');
+  document.getElementById('dashFInsights').innerHTML = insights.join('');
 
-  // evolution chart: 1 line per selected store (loja simultânea) using dashIndicator
-  const evoEl = document.getElementById('dashEvoChart');
-  document.getElementById('dashEvoTitle').textContent = METRIC_BY_ID[dashIndicator].label;
+  // evolution chart: 1 line per selected store (loja simultânea) usando dashFIndicator
+  const evoEl = document.getElementById('dashFEvoChart');
+  document.getElementById('dashFEvoTitle').textContent = METRIC_BY_ID[dashFIndicator].label;
   const palette = ['#C1503F','#2E7D5B','#3E6E8E','#9A4E8E','#B08A2E','#6E4E9A'];
   const series = ids.map((id,i)=>({
     name: STORES[id].label,
     color: palette[i%palette.length],
-    values: CLOSED_MONTHS.map(m => STORES[id].mensal && STORES[id].mensal[m] ? STORES[id].mensal[m][dashIndicator] : null)
+    values: CLOSED_MONTHS.map(m => STORES[id].mensal && STORES[id].mensal[m] ? STORES[id].mensal[m][dashFIndicator] : null)
   }));
-  svgLineChart(evoEl, { labels: CLOSED_MONTHS.map(m=>MONTH_LABEL[m]), series, fmtKind: METRIC_BY_ID[dashIndicator].fmt });
+  svgLineChart(evoEl, { labels: CLOSED_MONTHS.map(m=>MONTH_LABEL[m]), series, fmtKind: METRIC_BY_ID[dashFIndicator].fmt });
 
   // comparison chart: mês atual x anterior, por loja selecionada
-  const compEl = document.getElementById('dashCompChart');
-  document.getElementById('dashCompSub').textContent = prev ? `${MONTH_LABEL[prevMonth]} × ${MONTH_LABEL[dashMonth]} · ${METRIC_BY_ID[dashIndicator].label}` : 'Sem mês anterior para comparar';
+  const compEl = document.getElementById('dashFCompChart');
+  document.getElementById('dashFCompSub').textContent = prev ? `${MONTH_LABEL[prevMonth]} × ${MONTH_LABEL[dashFMonth]} · ${METRIC_BY_ID[dashFIndicator].label}` : 'Sem mês anterior para comparar';
   if(prev){
     svgGroupedBarChart(compEl, {
       labels: ids.map(id=>STORES[id].label),
-      seriesA: ids.map(id=> (STORES[id].mensal[prevMonth]||{})[dashIndicator] ?? 0),
-      seriesB: ids.map(id=> (STORES[id].mensal[dashMonth]||{})[dashIndicator] ?? 0),
-      nameA: MONTH_LABEL[prevMonth], nameB: MONTH_LABEL[dashMonth],
-      fmtKind: METRIC_BY_ID[dashIndicator].fmt
+      seriesA: ids.map(id=> (STORES[id].mensal[prevMonth]||{})[dashFIndicator] ?? 0),
+      seriesB: ids.map(id=> (STORES[id].mensal[dashFMonth]||{})[dashFIndicator] ?? 0),
+      nameA: MONTH_LABEL[prevMonth], nameB: MONTH_LABEL[dashFMonth],
+      fmtKind: METRIC_BY_ID[dashFIndicator].fmt
     });
   } else { compEl.innerHTML = '<p class="sub">Sem dados suficientes.</p>'; }
 
   // tabela resumo
-  const table = document.getElementById('dashTable');
-  let head = `<thead><tr><th>Indicador</th><th>${MONTH_LABEL[dashMonth]}</th><th>${prev?MONTH_LABEL[prevMonth]:'—'}</th><th>Variação</th></tr></thead>`;
+  document.getElementById('dashFTableTag').textContent = prev ? `vs ${MONTH_LABEL[prevMonth]}` : '';
+  const table = document.getElementById('dashFTable');
+  let head = `<thead><tr><th>Indicador</th><th>${MONTH_LABEL[dashFMonth]}</th><th>${prev?MONTH_LABEL[prevMonth]:'—'}</th><th>Variação</th></tr></thead>`;
+  let body = '<tbody>' + METRICS.map(m=>{
+    const curVal = cur?cur[m.id]:null, prevVal = prev?prev[m.id]:null;
+    let deltaTxt = '—', cls='flat';
+    if(curVal!=null && prevVal!=null){ const d=pctChange(prevVal,curVal); if(d!=null){ const b=deltaBits(d); cls=b.cls; deltaTxt=`${b.arrow} ${d.toFixed(1)}%`; } }
+    return `<tr><td>${m.label}</td><td>${fmt(curVal,m.fmt)}</td><td>${fmt(prevVal,m.fmt)}</td><td><span class="delta ${cls}">${deltaTxt}</span></td></tr>`;
+  }).join('') + '</tbody>';
+  table.innerHTML = head+body;
+}
+
+/* =================================================================== */
+/* ============================ DASH — PARCIAL ========================= */
+/* =================================================================== */
+let dashPMonth = null;
+let dashPWindow = null;
+let dashPIndicator = 'gmv';
+
+function syncDashPWindowSeg(){
+  const windows = discoverWindows();
+  if(!dashPWindow || !windows.includes(dashPWindow)) dashPWindow = windows[windows.length-1] || null;
+  const seg = document.getElementById('dashPWindowSeg');
+  seg.innerHTML = windows.map(w=>`<button data-w="${w}"${w===dashPWindow?' class="on"':''}>${WINDOW_LABEL[w]}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); dashPWindow = b.dataset.w;
+      syncDashPMonthSeg();
+      renderDashP();
+    });
+  });
+}
+function syncDashPMonthSeg(){
+  const months = dashPWindow ? discoverPartialMonths(dashPWindow) : [];
+  if(!dashPMonth || !months.includes(dashPMonth)) dashPMonth = months[months.length-1] || null;
+  const seg = document.getElementById('dashPMonthSeg');
+  seg.innerHTML = months.map(m=>`<button data-m="${m}"${m===dashPMonth?' class="on"':''}>${MONTH_LABEL[m]}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); dashPMonth = b.dataset.m; renderDashP();
+    });
+  });
+}
+function populateDashPIndicatorSelect(){
+  const sel = document.getElementById('dashPIndicatorSelect');
+  sel.innerHTML = METRICS.map(m=>`<option value="${m.id}">${m.label}</option>`).join('');
+  sel.value = dashPIndicator;
+  sel.addEventListener('change', ()=>{ dashPIndicator = sel.value; renderDashP(); });
+}
+
+function renderDashP(){
+  if(!dashPWindow || !dashPMonth){
+    document.getElementById('dashPInsights').innerHTML = insightHtml('info','ℹ️','Ainda não há dado parcial na planilha para exibir.');
+    return;
+  }
+  const months = discoverPartialMonths(dashPWindow);
+  const sub = document.getElementById('dashPEvoSub'); if(sub) sub.textContent = months.map(m=>MONTH_LABEL[m]).join(' · ') + ' — ' + WINDOW_LABEL[dashPWindow];
+  const idx = months.indexOf(dashPMonth);
+  const prevMonth = idx>0 ? months[idx-1] : null;
+  const ids = selectedStores.length ? selectedStores : STORE_IDS;
+  const cur = scopePartialData(ids, dashPMonth, dashPWindow);
+  const prev = prevMonth ? scopePartialData(ids, prevMonth, dashPWindow) : null;
+  const label = scopeLabelFor(ids);
+
+  document.getElementById('dashPPeriod').textContent = `${label} · ${MONTH_LABEL[dashPMonth]} · ${WINDOW_LABEL[dashPWindow]}`;
+
+  const kpiRow = document.getElementById('dashPKpiRow');
+  kpiRow.innerHTML = LEAN_METRICS.map(id=>{
+    const m = METRIC_BY_ID[id];
+    const curVal = cur ? cur[id] : null;
+    const prevVal = prev ? prev[id] : null;
+    let deltaHtml = '';
+    if(prev && curVal!=null && prevVal!=null){
+      const d = pctChange(prevVal, curVal);
+      if(d!=null){ const {cls,arrow} = deltaBits(d); deltaHtml = `<div class="delta ${cls}">${arrow} ${d.toFixed(1)}%</div>`; }
+    }
+    return `<div class="kpi"><div class="lbl">${m.label}</div><div class="val">${fmt(curVal,m.fmt)}</div>${deltaHtml}</div>`;
+  }).join('');
+
+  // insights
+  const insights = [];
+  if(!cur){
+    insights.push(insightHtml('info','ℹ️',`Nenhuma das lojas selecionadas tem dado para ${MONTH_LABEL[dashPMonth]} nesta janela.`));
+  } else if(prev){
+    const dGmv = pctChange(prev.gmv, cur.gmv), dVendas = pctChange(prev.vendas, cur.vendas), dBudget = pctChange(prev.budget, cur.budget);
+    if(dBudget!=null && dBudget<0 && dGmv>0 && dVendas>0){
+      insights.push(insightHtml('good','✅',`<b>${esc(label)}</b> está economizando e crescendo: Budget de investimento caiu ${Math.abs(dBudget).toFixed(1)}%, enquanto Pedidos subiram ${dVendas.toFixed(1)}% e GMV ${dGmv.toFixed(1)}%.`));
+    } else if(dGmv!=null){
+      const good = dGmv>=0;
+      insights.push(insightHtml(good?'good':'bad', good?'📈':'📉', `GMV de <b>${esc(label)}</b> ${good?'subiu':'caiu'} <b>${Math.abs(dGmv).toFixed(1)}%</b> de ${MONTH_LABEL[prevMonth]} para ${MONTH_LABEL[dashPMonth]}.`));
+    }
+  } else {
+    insights.push(insightHtml('info','ℹ️', `${MONTH_LABEL[dashPMonth]} é o primeiro mês com dado nesta janela — ainda não há mês anterior para comparar.`));
+  }
+  document.getElementById('dashPInsights').innerHTML = insights.join('');
+
+  // evolution chart: 1 line por loja selecionada, usando dashPIndicator na janela escolhida
+  const evoEl = document.getElementById('dashPEvoChart');
+  document.getElementById('dashPEvoTitle').textContent = METRIC_BY_ID[dashPIndicator].label;
+  const palette = ['#C1503F','#2E7D5B','#3E6E8E','#9A4E8E','#B08A2E','#6E4E9A'];
+  const series = ids.map((id,i)=>({
+    name: STORES[id].label,
+    color: palette[i%palette.length],
+    values: months.map(m => { const d = STORES[id].semanal[m] && STORES[id].semanal[m][dashPWindow]; return d ? d[dashPIndicator] : null; })
+  }));
+  svgLineChart(evoEl, { labels: months.map(m=>MONTH_LABEL[m]), series, fmtKind: METRIC_BY_ID[dashPIndicator].fmt });
+
+  // comparison chart: mês atual x anterior, por loja selecionada
+  const compEl = document.getElementById('dashPCompChart');
+  document.getElementById('dashPCompSub').textContent = prev ? `${MONTH_LABEL[prevMonth]} × ${MONTH_LABEL[dashPMonth]} · ${METRIC_BY_ID[dashPIndicator].label}` : 'Sem mês anterior para comparar';
+  if(prev){
+    svgGroupedBarChart(compEl, {
+      labels: ids.map(id=>STORES[id].label),
+      seriesA: ids.map(id=> ((STORES[id].semanal[prevMonth]||{})[dashPWindow]||{})[dashPIndicator] ?? 0),
+      seriesB: ids.map(id=> ((STORES[id].semanal[dashPMonth]||{})[dashPWindow]||{})[dashPIndicator] ?? 0),
+      nameA: MONTH_LABEL[prevMonth], nameB: MONTH_LABEL[dashPMonth],
+      fmtKind: METRIC_BY_ID[dashPIndicator].fmt
+    });
+  } else { compEl.innerHTML = '<p class="sub">Sem dados suficientes.</p>'; }
+
+  // tabela resumo
+  document.getElementById('dashPTableTag').textContent = prev ? `vs ${MONTH_LABEL[prevMonth]}` : '';
+  const table = document.getElementById('dashPTable');
+  let head = `<thead><tr><th>Indicador</th><th>${MONTH_LABEL[dashPMonth]}</th><th>${prev?MONTH_LABEL[prevMonth]:'—'}</th><th>Variação</th></tr></thead>`;
   let body = '<tbody>' + METRICS.map(m=>{
     const curVal = cur?cur[m.id]:null, prevVal = prev?prev[m.id]:null;
     let deltaTxt = '—', cls='flat';
@@ -813,12 +996,16 @@ function renderParcial(){
 /* =================================================================== */
 function renderAll(){
   renderDashStoreMulti();
-  syncDashMonthSeg();
-  populateDashIndicatorSelect();
+  syncDashFMonthSeg();
+  populateDashFIndicatorSelect();
+  syncDashPWindowSeg();
+  syncDashPMonthSeg();
+  populateDashPIndicatorSelect();
   syncInvestMonthSeg();
   syncParcialWindowSeg();
   syncParcialCompareSeg();
-  renderDash();
+  renderDashF();
+  renderDashP();
   renderInvest();
   renderParcial();
   const periodPill = document.getElementById('periodPill');
