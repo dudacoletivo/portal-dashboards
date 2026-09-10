@@ -161,7 +161,7 @@
         <select id="dashIndicatorSelect"></select>
       </div>
     </div>
-    <p class="sub">Os números abaixo são o acumulado dos primeiros 7 dias de cada mês (corte usado pela planilha de origem) — ainda não há fechamento do mês completo para a Delli.</p>
+    <p class="sub">Os números abaixo são referentes ao mês fechado (dados consolidados) — para acompanhar o mês em andamento, use a aba Comparativo Parcial.</p>
   </div>
 
   <div class="card">
@@ -174,7 +174,7 @@
   <div class="grid2" style="margin-top:18px;">
     <div class="card">
       <h2 style="margin-top:0;font-size:15px;">Evolução — <span id="dashEvoTitle"></span></h2>
-      <p class="sub" style="margin:0 0 10px;">Julho → Agosto → Setembro, 1 linha por loja selecionada</p>
+      <p class="sub" style="margin:0 0 10px;">Meses fechados, 1 linha por loja selecionada</p>
       <div class="chart-holder" id="dashEvoChart"></div>
     </div>
     <div class="card">
@@ -228,8 +228,12 @@
 <section class="panel" id="panel-parcial">
   <div class="card">
     <h2 style="margin-top:0;font-size:16px;">Filtros</h2>
-    <p class="sub">Comparação dos primeiros 7 dias de um mês contra o outro. Quando o <b>% de investimento cai</b> e <b>pedidos e GMV sobem</b>, a loja está <b>economizando e crescendo</b> — destacado em verde.</p>
+    <p class="sub">Comparação de um mesmo corte de dias entre dois meses (ex.: 01–14 de um mês contra 01–14 do outro). Quando o <b>% de investimento cai</b> e <b>pedidos e GMV sobem</b>, a loja está <b>economizando e crescendo</b> — destacado em verde.</p>
     <div class="filterbar">
+      <div class="filtergroup">
+        <label class="title">Janela parcial</label>
+        <div class="seg" id="parcialWindowSeg"></div>
+      </div>
       <div class="filtergroup">
         <label class="title">Comparar</label>
         <div class="seg" id="parcialCompareSeg"></div>
@@ -272,16 +276,21 @@
 </div>
 
 <script>
-/* ============ DADOS (snapshot da planilha [Dashboard] Delli Jardim — aba "Semanal",
-   corte 01-07 de cada mês) — substituído por window.__LIVE_RAW quando o live-sync carrega ============ */
+/* ============ DADOS (snapshot da planilha [Dashboard] Delli Jardim — abas "Mensal" e
+   "Semanal") — substituído por window.__LIVE_RAW quando o live-sync carrega ============ */
 const RAW = window.__LIVE_RAW || {
   stores: {
     "delli-jardim": {
       label: "Delli Jardim",
+      mensal: {
+        junho:  {vendas:290, gmv:22456.44, tm:77.44, novos:88, visitas:1333, conversao:21.76, budget:10.26, promo:2303.73, subifood:802.56, cpo:7.94, roi:8.75},
+        julho:  {vendas:323, gmv:25035.03, tm:77.51, novos:86, visitas:1225, conversao:26.37, budget:9.68, promo:2424.38, subifood:1698.15, cpo:7.51, roi:9.33},
+        agosto: {vendas:344, gmv:27645.11, tm:80.36, novos:89, visitas:1260, conversao:27.30, budget:6.03, promo:1667.24, subifood:1031.88, cpo:4.85, roi:15.58}
+      },
       semanal: {
-        julho:    {vendas:231, gmv:14166.03, tm:61.32, novos:45, visitas:1661, conversao:13.91, budget:5.76, promo:815.48, subifood:802.56, cpo:3.53, roi:16.37},
-        agosto:   {vendas:260, gmv:15297.11, tm:58.84, novos:72, visitas:1105, conversao:23.53, budget:9.61, promo:1470.74, subifood:1698.15, cpo:5.66, roi:9.40},
-        setembro: {vendas:333, gmv:18941.92, tm:56.88, novos:102, visitas:1673, conversao:19.90, budget:9.23, promo:1748.74, subifood:1031.88, cpo:5.25, roi:9.83}
+        julho:    { w7: {vendas:231, gmv:14166.03, tm:61.32, novos:45, visitas:1661, conversao:13.91, budget:5.76, promo:815.48, subifood:802.56, cpo:3.53, roi:16.37} },
+        agosto:   { w7: {vendas:260, gmv:15297.11, tm:58.84, novos:72, visitas:1105, conversao:23.53, budget:9.61, promo:1470.74, subifood:1698.15, cpo:5.66, roi:9.40} },
+        setembro: { w7: {vendas:333, gmv:18941.92, tm:56.88, novos:102, visitas:1673, conversao:19.90, budget:9.23, promo:1748.74, subifood:1031.88, cpo:5.25, roi:9.83} }
       }
     }
   }
@@ -294,9 +303,43 @@ const MONTH_ORDER = {janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:
 const MONTH_LABEL = {janeiro:'Janeiro',fevereiro:'Fevereiro',marco:'Março',abril:'Abril',maio:'Maio',junho:'Junho',julho:'Julho',agosto:'Agosto',setembro:'Setembro',outubro:'Outubro',novembro:'Novembro',dezembro:'Dezembro'};
 function sortMonths(list){ return [...new Set(list)].sort((a,b)=>(MONTH_ORDER[a]||99)-(MONTH_ORDER[b]||99)); }
 
-// Meses nunca ficam fixos — descobertos a partir do que a planilha realmente trouxe em cada
-// loja, tanto na carga inicial quanto a cada "Atualizar" ao vivo.
+const WINDOW_ORDER = ['w7','w14','w21','w28'];
+const WINDOW_LABEL = {w7:'7 dias (01–07)', w14:'14 dias (01–14)', w21:'21 dias (01–21)', w28:'28 dias (01–28)'};
+
+// Meses e janelas nunca ficam fixos — descobertos a partir do que a planilha realmente trouxe
+// em cada loja, tanto na carga inicial quanto a cada "Atualizar" ao vivo.
 function discoverMonths(){
+  const set = new Set();
+  STORE_IDS.forEach(id=>{
+    const s = STORES[id];
+    if(s && s.mensal) Object.keys(s.mensal).forEach(m=>set.add(m));
+  });
+  return sortMonths([...set]);
+}
+// Janelas parciais que realmente existem em pelo menos 1 mês/loja (ex.: só "w7" até o meio do
+// mês; "w14" aparece assim que a planilha ganhar a coluna "(01-14)").
+function discoverWindows(){
+  const set = new Set();
+  STORE_IDS.forEach(id=>{
+    const s = STORES[id];
+    if(s && s.semanal) Object.values(s.semanal).forEach(byWindow=>{
+      Object.keys(byWindow).forEach(w=>set.add(w));
+    });
+  });
+  return WINDOW_ORDER.filter(w=>set.has(w));
+}
+// Meses que têm dado para uma janela parcial específica.
+function discoverPartialMonths(win){
+  const set = new Set();
+  STORE_IDS.forEach(id=>{
+    const s = STORES[id];
+    if(s && s.semanal) Object.keys(s.semanal).forEach(m=>{ if(s.semanal[m][win]) set.add(m); });
+  });
+  return sortMonths([...set]);
+}
+// Meses que têm dado em qualquer janela parcial (usado pela aba Investimento, que não filtra
+// por janela — pega sempre a mais completa disponível em cada mês, ver bestWindowFor()).
+function discoverPartialMonthsAny(){
   const set = new Set();
   STORE_IDS.forEach(id=>{
     const s = STORES[id];
@@ -304,7 +347,7 @@ function discoverMonths(){
   });
   return sortMonths([...set]);
 }
-let MONTHS = discoverMonths();
+let CLOSED_MONTHS = discoverMonths();
 
 const METRICS = [
   {id:'vendas', label:'Pedidos', fmt:'num'},
@@ -351,11 +394,7 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
 /* -------- agregação: soma absolutos das lojas selecionadas, razões recalculadas por cima
    (nunca média simples de percentuais entre lojas — mesma regra do resto do portal) -------- */
-function storesWithMonth(ids, month){
-  return ids.filter(id => STORES[id] && STORES[id].semanal && STORES[id].semanal[month]);
-}
-function aggregate(ids, month){
-  const rows = storesWithMonth(ids, month).map(id=>STORES[id].semanal[month]);
+function aggregateFrom(rows){
   const sum = k => rows.reduce((a,r)=>a+(r[k]||0),0);
   const vendas=sum('vendas'), gmv=sum('gmv'), novos=sum('novos'), visitas=sum('visitas'),
         promo=sum('promo'), subifood=sum('subifood');
@@ -369,9 +408,33 @@ function aggregate(ids, month){
     storeCount: rows.length,
   };
 }
-function scopeData(ids, month){
-  if(!ids.length) return null;
-  return aggregate(ids, month);
+// Mês fechado (aba "Mensal") — usado só pela aba Dash.
+function scopeClosedData(ids, month){
+  const rows = ids.filter(id=>STORES[id] && STORES[id].mensal && STORES[id].mensal[month]).map(id=>STORES[id].mensal[month]);
+  return rows.length ? aggregateFrom(rows) : null;
+}
+// Corte parcial de uma janela específica (aba "Semanal") — usado pela aba Comparativo Parcial.
+function scopePartialData(ids, month, win){
+  const rows = ids.filter(id=>STORES[id] && STORES[id].semanal && STORES[id].semanal[month] && STORES[id].semanal[month][win])
+    .map(id=>STORES[id].semanal[month][win]);
+  return rows.length ? aggregateFrom(rows) : null;
+}
+// Janela mais completa disponível para uma loja/mês (ex.: usa w14 se já existir, senão w7).
+function bestWindowFor(id, month){
+  const byWindow = STORES[id] && STORES[id].semanal && STORES[id].semanal[month];
+  if(!byWindow) return null;
+  for(let i=WINDOW_ORDER.length-1;i>=0;i--){ if(byWindow[WINDOW_ORDER[i]]) return WINDOW_ORDER[i]; }
+  return null;
+}
+function partialRowFor(id, month){
+  const win = bestWindowFor(id, month);
+  return win ? STORES[id].semanal[month][win] : null;
+}
+// Corte parcial, pegando a janela mais completa disponível em cada loja — usado pela aba
+// Investimento, que não tem filtro de janela próprio.
+function scopePartialBest(ids, month){
+  const rows = ids.map(id=>partialRowFor(id, month)).filter(Boolean);
+  return rows.length ? aggregateFrom(rows) : null;
 }
 
 /* ============ FILTRO DE LOJA(S) SIMULTÂNEO — usado só na aba Dash ============ */
@@ -502,10 +565,10 @@ let dashMonth = null;
 let dashIndicator = 'gmv';
 
 function syncDashMonthSeg(){
-  MONTHS = discoverMonths();
-  if(!dashMonth || !MONTHS.includes(dashMonth)) dashMonth = MONTHS[MONTHS.length-1];
+  CLOSED_MONTHS = discoverMonths();
+  if(!dashMonth || !CLOSED_MONTHS.includes(dashMonth)) dashMonth = CLOSED_MONTHS[CLOSED_MONTHS.length-1];
   const seg = document.getElementById('dashMonthSeg');
-  seg.innerHTML = MONTHS.map(m=>`<button data-m="${m}"${m===dashMonth?' class="on"':''}>${MONTH_LABEL[m]}</button>`).join('');
+  seg.innerHTML = CLOSED_MONTHS.map(m=>`<button data-m="${m}"${m===dashMonth?' class="on"':''}>${MONTH_LABEL[m]}</button>`).join('');
   seg.querySelectorAll('button').forEach(b=>{
     b.addEventListener('click', ()=>{
       seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
@@ -521,18 +584,18 @@ function populateDashIndicatorSelect(){
 }
 
 function renderDash(){
-  if(!MONTHS.length){
-    document.getElementById('dashInsights').innerHTML = insightHtml('info','ℹ️','Ainda não há dados na planilha para exibir.');
+  if(!CLOSED_MONTHS.length){
+    document.getElementById('dashInsights').innerHTML = insightHtml('info','ℹ️','Ainda não há mês fechado na planilha para exibir.');
     return;
   }
-  const idx = MONTHS.indexOf(dashMonth);
-  const prevMonth = idx>0 ? MONTHS[idx-1] : null;
+  const idx = CLOSED_MONTHS.indexOf(dashMonth);
+  const prevMonth = idx>0 ? CLOSED_MONTHS[idx-1] : null;
   const ids = selectedStores.length ? selectedStores : STORE_IDS;
-  const cur = scopeData(ids, dashMonth);
-  const prev = prevMonth ? scopeData(ids, prevMonth) : null;
+  const cur = scopeClosedData(ids, dashMonth);
+  const prev = prevMonth ? scopeClosedData(ids, prevMonth) : null;
   const label = scopeLabelFor(ids);
 
-  document.getElementById('dashKpiSub').textContent = `${label} · ${MONTH_LABEL[dashMonth]} (01–07)${prev?' vs '+MONTH_LABEL[prevMonth]+' (01–07)':''}`;
+  document.getElementById('dashKpiSub').textContent = `${label} · ${MONTH_LABEL[dashMonth]} (fechado)${prev?' vs '+MONTH_LABEL[prevMonth]+' (fechado)':''}`;
 
   const kpiRow = document.getElementById('dashKpiRow');
   kpiRow.innerHTML = LEAN_METRICS.map(id=>{
@@ -571,9 +634,9 @@ function renderDash(){
   const series = ids.map((id,i)=>({
     name: STORES[id].label,
     color: palette[i%palette.length],
-    values: MONTHS.map(m => STORES[id].semanal && STORES[id].semanal[m] ? STORES[id].semanal[m][dashIndicator] : null)
+    values: CLOSED_MONTHS.map(m => STORES[id].mensal && STORES[id].mensal[m] ? STORES[id].mensal[m][dashIndicator] : null)
   }));
-  svgLineChart(evoEl, { labels: MONTHS.map(m=>MONTH_LABEL[m]), series, fmtKind: METRIC_BY_ID[dashIndicator].fmt });
+  svgLineChart(evoEl, { labels: CLOSED_MONTHS.map(m=>MONTH_LABEL[m]), series, fmtKind: METRIC_BY_ID[dashIndicator].fmt });
 
   // comparison chart: mês atual x anterior, por loja selecionada
   const compEl = document.getElementById('dashCompChart');
@@ -581,8 +644,8 @@ function renderDash(){
   if(prev){
     svgGroupedBarChart(compEl, {
       labels: ids.map(id=>STORES[id].label),
-      seriesA: ids.map(id=> (STORES[id].semanal[prevMonth]||{})[dashIndicator] ?? 0),
-      seriesB: ids.map(id=> (STORES[id].semanal[dashMonth]||{})[dashIndicator] ?? 0),
+      seriesA: ids.map(id=> (STORES[id].mensal[prevMonth]||{})[dashIndicator] ?? 0),
+      seriesB: ids.map(id=> (STORES[id].mensal[dashMonth]||{})[dashIndicator] ?? 0),
       nameA: MONTH_LABEL[prevMonth], nameB: MONTH_LABEL[dashMonth],
       fmtKind: METRIC_BY_ID[dashIndicator].fmt
     });
@@ -604,12 +667,14 @@ function renderDash(){
 /* ============================ INVESTIMENTO =========================== */
 /* =================================================================== */
 let investMonth = null;
+let PARTIAL_MONTHS = [];
 const INVEST_COLS = ['vendas','gmv','budget','promo','subifood','cpo','roi'];
 
 function syncInvestMonthSeg(){
-  if(!investMonth || !MONTHS.includes(investMonth)) investMonth = MONTHS[MONTHS.length-1];
+  PARTIAL_MONTHS = discoverPartialMonthsAny();
+  if(!investMonth || !PARTIAL_MONTHS.includes(investMonth)) investMonth = PARTIAL_MONTHS[PARTIAL_MONTHS.length-1];
   const seg = document.getElementById('investMonthSeg');
-  seg.innerHTML = MONTHS.map(m=>`<button data-m="${m}"${m===investMonth?' class="on"':''}>${MONTH_LABEL[m]}</button>`).join('');
+  seg.innerHTML = PARTIAL_MONTHS.map(m=>`<button data-m="${m}"${m===investMonth?' class="on"':''}>${MONTH_LABEL[m]}</button>`).join('');
   seg.querySelectorAll('button').forEach(b=>{
     b.addEventListener('click', ()=>{
       seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
@@ -618,9 +683,9 @@ function syncInvestMonthSeg(){
   });
 }
 function renderInvest(){
-  if(!MONTHS.length){ document.getElementById('investInsights').innerHTML = insightHtml('info','ℹ️','Sem dados.'); return; }
-  const rows = STORE_IDS.map(id=>({ id, s: STORES[id], d: STORES[id].semanal[investMonth] })).filter(r=>r.d);
-  const net = scopeData(STORE_IDS, investMonth);
+  if(!PARTIAL_MONTHS.length){ document.getElementById('investInsights').innerHTML = insightHtml('info','ℹ️','Sem dados.'); return; }
+  const rows = STORE_IDS.map(id=>({ id, s: STORES[id], d: partialRowFor(id, investMonth) })).filter(r=>r.d);
+  const net = scopePartialBest(STORE_IDS, investMonth);
 
   const insights = [];
   if(rows.length && net){
@@ -657,11 +722,31 @@ function renderInvest(){
 /* =================================================================== */
 /* =========================== COMPARATIVO PARCIAL ======================= */
 /* =================================================================== */
+let parcialWindow = null; // "w7"
 let parcialCompare = null; // "julho-agosto"
 
+// Sincroniza as janelas disponíveis (botão "Janela parcial") com o que a planilha realmente
+// trouxe — some 1 loja com "w14" e reaparece quando a coluna "(01-14)" chegar na planilha.
+function syncParcialWindowSeg(){
+  const windows = discoverWindows();
+  if(!parcialWindow || !windows.includes(parcialWindow)) parcialWindow = windows[windows.length-1] || null;
+  const seg = document.getElementById('parcialWindowSeg');
+  seg.innerHTML = windows.map(w=>`<button data-w="${w}"${w===parcialWindow?' class="on"':''}>${WINDOW_LABEL[w]}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); parcialWindow = b.dataset.w;
+      syncParcialCompareSeg();
+      renderParcial();
+    });
+  });
+}
+// Os pares de mês comparáveis dependem da janela escolhida — só entram meses que têm dado
+// naquele corte (ex.: com "w14" selecionado, Setembro ainda pode não aparecer).
 function syncParcialCompareSeg(){
+  const months = parcialWindow ? discoverPartialMonths(parcialWindow) : [];
   const pairs = [];
-  for(let i=1;i<MONTHS.length;i++) pairs.push(MONTHS[i-1]+'-'+MONTHS[i]);
+  for(let i=1;i<months.length;i++) pairs.push(months[i-1]+'-'+months[i]);
   if(!parcialCompare || !pairs.includes(parcialCompare)) parcialCompare = pairs[pairs.length-1] || null;
   const seg = document.getElementById('parcialCompareSeg');
   seg.innerHTML = pairs.map(p=>{
@@ -684,25 +769,25 @@ function classify(dBudget, dVendas, dGmv){
   return {label:'Misto', cls:'neu'};
 }
 function renderParcial(){
-  if(!parcialCompare){ document.getElementById('parcialInsights').innerHTML = insightHtml('info','ℹ️','Ainda não há 2 meses para comparar.'); document.getElementById('parcialTable').innerHTML=''; return; }
+  if(!parcialWindow || !parcialCompare){ document.getElementById('parcialInsights').innerHTML = insightHtml('info','ℹ️','Ainda não há 2 meses para comparar nesta janela.'); document.getElementById('parcialTable').innerHTML=''; return; }
   const [moA, moB] = parcialCompare.split('-');
-  const net = scopeData(STORE_IDS, moB) && scopeData(STORE_IDS, moA) ? {
-    a: scopeData(STORE_IDS, moA), b: scopeData(STORE_IDS, moB)
-  } : null;
+  const scopeA = scopePartialData(STORE_IDS, moA, parcialWindow), scopeB = scopePartialData(STORE_IDS, moB, parcialWindow);
+  const net = scopeA && scopeB ? { a: scopeA, b: scopeB } : null;
 
   const insights = [];
   if(net){
     const dGmv = pctChange(net.a.gmv, net.b.gmv), dVendas = pctChange(net.a.vendas, net.b.vendas), dBudget = pctChange(net.a.budget, net.b.budget);
     const c = classify(dBudget, dVendas, dGmv);
     insights.push(insightHtml(c.cls==='pos'?'good':(c.cls==='neg'?'bad':'info'), c.cls==='pos'?'✅':(c.cls==='neg'?'⚠️':'ℹ️'),
-      `Rede toda, corte 01–07: <b>${c.label}</b> — Pedidos ${dVendas>=0?'+':''}${dVendas.toFixed(1)}%, GMV ${dGmv>=0?'+':''}${dGmv.toFixed(1)}%, Budget ${dBudget>=0?'+':''}${dBudget.toFixed(1)}% de ${MONTH_LABEL[moA]} para ${MONTH_LABEL[moB]}.`));
+      `Rede toda, corte ${WINDOW_LABEL[parcialWindow]}: <b>${c.label}</b> — Pedidos ${dVendas>=0?'+':''}${dVendas.toFixed(1)}%, GMV ${dGmv>=0?'+':''}${dGmv.toFixed(1)}%, Budget ${dBudget>=0?'+':''}${dBudget.toFixed(1)}% de ${MONTH_LABEL[moA]} para ${MONTH_LABEL[moB]}.`));
   } else {
-    insights.push(insightHtml('info','ℹ️', `Sem dado suficiente para comparar ${MONTH_LABEL[moA]} e ${MONTH_LABEL[moB]}.`));
+    insights.push(insightHtml('info','ℹ️', `Sem dado suficiente para comparar ${MONTH_LABEL[moA]} e ${MONTH_LABEL[moB]} nesta janela.`));
   }
   document.getElementById('parcialInsights').innerHTML = insights.join('');
 
   const rows = STORE_IDS.map(id=>{
-    const a = STORES[id].semanal[moA], b = STORES[id].semanal[moB];
+    const byWindow = STORES[id].semanal;
+    const a = byWindow[moA] && byWindow[moA][parcialWindow], b = byWindow[moB] && byWindow[moB][parcialWindow];
     if(!a || !b) return {id, s:STORES[id], a:null, b:null};
     return {id, s:STORES[id], a, b};
   });
@@ -731,12 +816,14 @@ function renderAll(){
   syncDashMonthSeg();
   populateDashIndicatorSelect();
   syncInvestMonthSeg();
+  syncParcialWindowSeg();
   syncParcialCompareSeg();
   renderDash();
   renderInvest();
   renderParcial();
   const periodPill = document.getElementById('periodPill');
-  if(MONTHS.length) periodPill.textContent = MONTHS.length>1 ? `${MONTH_LABEL[MONTHS[0]]} → ${MONTH_LABEL[MONTHS[MONTHS.length-1]]} 2026` : MONTH_LABEL[MONTHS[0]]+' 2026';
+  const allMonths = sortMonths([...CLOSED_MONTHS, ...discoverPartialMonthsAny()]);
+  if(allMonths.length) periodPill.textContent = allMonths.length>1 ? `${MONTH_LABEL[allMonths[0]]} → ${MONTH_LABEL[allMonths[allMonths.length-1]]} 2026` : MONTH_LABEL[allMonths[0]]+' 2026';
 }
 renderAll();
 
