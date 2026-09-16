@@ -64,7 +64,7 @@ const PORTAL_CLIENTS = [
     file: 'clientes/bar-do-ge.html',
     color: '#DD6627',
     logo: 'assets/logos/bar-do-ge.jpg',
-    passwordHash: '491873c55ef61fe37ed9fc3038c66a1fa1f51302b61b3e02a5404ffd03bd75e8'
+    passwordHash: '26c3ae90f32c2b6c99da473c9f26559974a73c697406c3c5e6779e34d9ebd931'
   }
 ];
 
