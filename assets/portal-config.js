@@ -57,6 +57,14 @@ const PORTAL_CLIENTS = [
     color: '#C1503F',
     logo: 'assets/logos/delli.png',
     passwordHash: '11ce08b0afaaf3967c3fe3e7563f9cb50856d9002f0178684ea5d4b9238d680b'
+  },
+  {
+    slug: 'bar-do-ge',
+    name: 'Bar do Ge',
+    file: 'clientes/bar-do-ge.html',
+    color: '#B8742E',
+    logo: 'assets/logos/bar-do-ge.png',
+    passwordHash: '491873c55ef61fe37ed9fc3038c66a1fa1f51302b61b3e02a5404ffd03bd75e8'
   }
 ];
 
