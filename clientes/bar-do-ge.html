@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bar do Ge | Dashboard de Performance</title>
-<link rel="icon" id="faviconLink" type="image/png" href="../assets/logos/bar-do-ge.png">
+<link rel="icon" id="faviconLink" type="image/jpeg" href="../assets/logos/bar-do-ge.jpg">
 <script src="../assets/portal-config.js"></script>
 <script src="../assets/auth-guard.js" data-client="bar-do-ge"></script>
 <style>
   :root{
-    /* Cores provisórias (tom âmbar/bar) — trocar quando a logo do cliente chegar. */
-    --brand:#B8742E;
-    --brand-dark:#7A4A1D;
-    --brand-soft:#FBF1E4;
+    /* Cores da marca Bar do Ge — extraídas da logo (laranja, carvão e areia do brasão). */
+    --brand:#DD6627;
+    --brand-dark:#2E2A25;
+    --brand-soft:#F5E8DA;
     --brand-accent:#2E7D5B;
 
     --bg:#F7F5F2;
@@ -35,7 +35,7 @@
   }
   .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px; margin-bottom:18px; box-shadow:0 1px 2px rgba(20,15,10,.04);}
   header.top{display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:18px;}
-  .logo-box{width:56px; height:56px; border-radius:16px; overflow:hidden; flex-shrink:0; background:var(--brand); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(184,116,46,.35);}
+  .logo-box{width:56px; height:56px; border-radius:16px; overflow:hidden; flex-shrink:0; background:var(--brand); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(221,102,39,.35);}
   .logo-box img{width:100%; height:100%; object-fit:cover; display:block;}
   .logo-box .fallback{color:#fff; font-weight:800; font-size:22px;}
   header.top h1{margin:0; font-size:22px; font-weight:800; color:var(--brand-dark);}
@@ -125,7 +125,7 @@
 
 <header class="top">
   <div class="logo-box" id="logoBox">
-    <img src="../assets/logos/bar-do-ge.png" alt="Bar do Ge" onerror="this.remove(); document.getElementById('logoBox').innerHTML='&lt;span class=&quot;fallback&quot;&gt;G&lt;/span&gt;';">
+    <img src="../assets/logos/bar-do-ge.jpg" alt="Bar do Ge" onerror="this.remove(); document.getElementById('logoBox').innerHTML='&lt;span class=&quot;fallback&quot;&gt;G&lt;/span&gt;';">
   </div>
   <div>
     <h1>Dashboard de Performance — Bar do Ge</h1>
@@ -631,7 +631,7 @@ function renderDash(){
   // evolution chart: 1 line per selected store (loja simultânea) using dashIndicator
   const evoEl = document.getElementById('dashEvoChart');
   document.getElementById('dashEvoTitle').textContent = METRIC_BY_ID[dashIndicator].label;
-  const palette = ['#B8742E','#2E7D5B','#3E6E8E','#9A4E8E','#B08A2E','#6E4E9A'];
+  const palette = ['#DD6627','#2E7D5B','#3E6E8E','#9A4E8E','#B08A2E','#6E4E9A'];
   const series = ids.map((id,i)=>({
     name: STORES[id].label,
     color: palette[i%palette.length],

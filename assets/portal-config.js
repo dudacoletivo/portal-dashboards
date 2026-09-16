@@ -62,8 +62,8 @@ const PORTAL_CLIENTS = [
     slug: 'bar-do-ge',
     name: 'Bar do Ge',
     file: 'clientes/bar-do-ge.html',
-    color: '#B8742E',
-    logo: 'assets/logos/bar-do-ge.png',
+    color: '#DD6627',
+    logo: 'assets/logos/bar-do-ge.jpg',
     passwordHash: '491873c55ef61fe37ed9fc3038c66a1fa1f51302b61b3e02a5404ffd03bd75e8'
   }
 ];
