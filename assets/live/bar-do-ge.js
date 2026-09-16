@@ -1,12 +1,10 @@
 // Sincronização ao vivo do dashboard Bar do Ge com a planilha [Bar do Ge] Comparativo semanal.
 //
-// Diferente de todos os outros clientes do portal: esta planilha é um arquivo .xlsx cru
-// enviado ao Drive (não uma Google Sheets nativa), então o endpoint gviz/tq (CSV por aba) usado
-// em assets/sheets-sync.js não funciona aqui — ele só existe para Sheets nativas. Em vez disso,
-// baixa o arquivo .xlsx bruto direto do Drive (link público, sem autenticação) e lê com a
-// biblioteca SheetJS (carregada no <head> do dashboard), no mesmo espírito do que já é feito em
-// clientes/tapi.html com fetchWorkbookAoas() — só que lá a origem é uma Sheets nativa exportada
-// como xlsx; aqui o arquivo já nasce xlsx.
+// A planilha original era um .xlsx cru enviado ao Drive (não uma Google Sheets nativa) — o
+// fetch cross-origin ao arquivo bruto do Drive falha por CORS em qualquer navegador real (não
+// só na pré-visualização), então o cliente salvou uma cópia como Google Sheets nativa
+// (16/09/2026), que agora é a fonte oficial. Isso permite usar o mesmo endpoint gviz/CSV do
+// resto do portal (assets/sheets-sync.js), sem depender de biblioteca de parsing de xlsx.
 //
 // Duas abas usadas:
 //   - "ifood fechamento mensal": 1 coluna por mês fechado (JULHO, AGOSTO) -> alimenta
@@ -15,24 +13,20 @@
 //     STORES[id].semanal[mes][janela]. Usada pela aba Investimento (janela mais completa
 //     disponível em cada mês) e pela aba Comparativo Parcial (janela escolhida no filtro).
 //
-//   ATENÇÃO — dado incompleto nesta planilha (16/09/2026): as colunas "(01-14)", "(01-21)" e
-//   "(01-28)" da aba "Página1" trazem valores na casa dos milhares (ex.: "VENDAS,MAIO(01-14)"
-//   = 2912), incompatíveis com o volume real do Bar do Ge (~10 pedidos por mês inteiro na aba
-//   mensal). Isso é sobra de um modelo de planilha reaproveitado de outro cliente (o arquivo
-//   antigo "[BAR DO GE] Dashboard IFood" tem um bloco de aba com o cabeçalho "DASHBOARD DE
-//   PERFORMANCE - LA JO" misturado) — não é dado real do bar. Por isso só a janela "(01-15)" é
-//   aceita aqui (TRUSTED_WINDOWS); as demais ficam de fora até a planilha ser corrigida. Depois
-//   de corrigida, é só tirar a restrição abaixo.
+//   ATENÇÃO — dado incompleto nesta planilha (16/09/2026, ainda não corrigido na cópia
+//   convertida): as colunas "(01-14)", "(01-21)" e "(01-28)" da aba "Página1" trazem valores na
+//   casa dos milhares (ex.: "VENDAS,MAIO(01-14)" = 2.912), incompatíveis com o volume real do
+//   Bar do Ge (~10 pedidos por mês inteiro na aba mensal) — sobra de um modelo de planilha
+//   reaproveitado de outro cliente. Por isso só a janela "(01-15)" é aceita aqui
+//   (TRUSTED_WINDOWS); as demais ficam de fora até a planilha ser corrigida. Depois de
+//   corrigida, é só tirar a restrição abaixo.
 //
-// Requer assets/sheets-sync.js (usa só mutateObjectInPlace) e assets/live-status-ui.js já
-// carregados, e a biblioteca SheetJS (window.XLSX) carregada ANTES deste script.
+// Requer assets/sheets-sync.js e assets/live-status-ui.js já carregados, rodando depois do
+// bloco principal do dashboard (STORES/renderAll já definidos).
 (function () {
-  const FILE_ID = '1M-xBeXXN70ZD54i69gjwwsJ2f2p9y0hG'; // [Bar do Ge] Comparativo semanal.xlsx
-  // Usa o host de download direto (drive.usercontent.google.com), não o drive.google.com/uc
-  // clássico — este último faz um redirect 303 sem cabeçalho CORS na resposta inicial, o que o
-  // fetch() do navegador rejeita mesmo o destino final permitindo CORS (Access-Control-Allow-
-  // Origin precisa estar em toda resposta do redirect, não só na última).
-  const DOWNLOAD_URL = 'https://drive.usercontent.google.com/download?id=' + FILE_ID + '&export=download';
+  const SHEET_ID = '1-J2LglJ1bQ9wlhwgJ5WNWc1aAzjEcjjFuL3XGN1vJeM';
+  const GID_SEMANAL = '1967870563'; // aba "Página1"
+  const GID_MENSAL = '318404404'; // aba "ifood fechamento mensal"
 
   const TRUSTED_WINDOWS = ['w15']; // ver nota acima — ampliar quando a planilha for corrigida
 
@@ -67,21 +61,35 @@
   }
 
   // Extrai a janela parcial ("w15"/"w14"/...) do sufixo "(01-XX)" de um cabeçalho. Sem sufixo
-  // (aba mensal), retorna null — quem chama decide o que fazer.
+  // (aba mensal), retorna null.
   function windowKeyFor(header) {
     const m = /\((\d{1,2})-(\d{1,2})\)/.exec(header || '');
     if (!m) return null;
     return 'w' + parseInt(m[2], 10);
   }
 
-  // Acha a linha de cabeçalho ("Métrica" — célula limpa nesta planilha, sem título mesclado
-  // grudado, diferente de outros clientes) e as colunas de mês reconhecidas.
+  function parseNum(v) {
+    if (v === null || v === undefined || v === '') return null;
+    let s = String(v).trim();
+    if (/^[-–—]$/.test(s)) return null;
+    s = s.replace(/R\$\s?/g, '').replace(/%/g, '').trim();
+    // pt-BR: vírgula é decimal, ponto é separador de milhar.
+    if (s.indexOf(',') !== -1) s = s.replace(/\./g, '').replace(',', '.');
+    else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+    const n = parseFloat(s);
+    return isFinite(n) ? n : null;
+  }
+
+  // Acha a linha de cabeçalho ("Métrica") e as colunas de mês reconhecidas. No export CSV da
+  // Sheets nativa, o título mesclado ("DASHBOARD DE PERFORMANCE | BAR DO GE") gruda na célula
+  // "Métrica" ("...BAR DO GE Métrica") — por isso o teste é "termina com métrica", não
+  // igualdade exata (mesmo padrão usado em outros clientes com título mesclado).
   function findHeaderAndMonthCols(rows, opts) {
     opts = opts || {};
     let headerRow = -1;
     for (let r = 0; r < rows.length; r++) {
-      const first = (rows[r] && rows[r][0] || '').toString().trim().toLowerCase();
-      if (first === 'métrica') { headerRow = r; break; }
+      const first = (rows[r][0] || '').trim().toLowerCase();
+      if (/m[eé]trica$/.test(first)) { headerRow = r; break; }
     }
     if (headerRow < 0) throw new Error('Cabeçalho "Métrica" não encontrado na aba');
 
@@ -104,12 +112,12 @@
     const { headerRow, cols } = findHeaderAndMonthCols(rows, { requireWindow: false });
     const mensal = {};
     for (let r = headerRow + 1; r < rows.length; r++) {
-      const metricName = rows[r] && rows[r][0];
+      const metricName = rows[r][0];
       if (!metricName) continue;
       const key = metricKeyFor(metricName);
       if (!key) continue;
       cols.forEach(function (col) {
-        const val = numericCell(rows[r][col.c]);
+        const val = parseNum(rows[r][col.c]);
         mensal[col.month] = mensal[col.month] || {};
         mensal[col.month][key] = val;
       });
@@ -123,12 +131,12 @@
     const { headerRow, cols } = findHeaderAndMonthCols(rows, { requireWindow: true, trustedOnly: true });
     const semanal = {};
     for (let r = headerRow + 1; r < rows.length; r++) {
-      const metricName = rows[r] && rows[r][0];
+      const metricName = rows[r][0];
       if (!metricName) continue;
       const key = metricKeyFor(metricName);
       if (!key) continue;
       cols.forEach(function (col) {
-        const val = numericCell(rows[r][col.c]);
+        const val = parseNum(rows[r][col.c]);
         semanal[col.month] = semanal[col.month] || {};
         semanal[col.month][col.window] = semanal[col.month][col.window] || {};
         semanal[col.month][col.window][key] = val;
@@ -137,40 +145,17 @@
     return semanal;
   }
 
-  // SheetJS já entrega números como number (célula tem <v> cru, sem formatação pt-BR pra
-  // desfazer) — só precisa tratar célula vazia/traço.
-  function numericCell(v) {
-    if (v === null || v === undefined || v === '') return null;
-    if (typeof v === 'number') return isFinite(v) ? v : null;
-    const s = String(v).trim();
-    if (/^[-–—]$/.test(s)) return null;
-    const n = parseFloat(s.replace(',', '.'));
-    return isFinite(n) ? n : null;
-  }
-
-  async function fetchWorkbook() {
-    const res = await fetch(DOWNLOAD_URL, { redirect: 'follow', cache: 'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const buf = await res.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
-    return wb;
-  }
-  function sheetRows(wb, nameMatch) {
-    const name = wb.SheetNames.find(function (n) { return nameMatch.test(n); });
-    if (!name) throw new Error('Aba não encontrada na planilha (procurando: ' + nameMatch + ')');
-    return XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null });
-  }
-
   async function loadLive() {
-    const wb = await fetchWorkbook();
-    const mensalRows = sheetRows(wb, /fechamento mensal/i);
-    const semanalRows = sheetRows(wb, /^p[aá]gina1$/i);
-    const mensal = parseMensal(mensalRows);
+    const [semanalRows, mensalRows] = await Promise.all([
+      SheetsSync.fetchCsvRows(SHEET_ID, GID_SEMANAL),
+      SheetsSync.fetchCsvRows(SHEET_ID, GID_MENSAL)
+    ]);
     const semanal = parseSemanal(semanalRows);
-    if (!Object.keys(mensal).length && !Object.keys(semanal).length) {
+    const mensal = parseMensal(mensalRows);
+    if (!Object.keys(semanal).length && !Object.keys(mensal).length) {
       throw new Error('Nenhum mês encontrado nas abas da planilha');
     }
-    return { 'bar-do-ge': { label: 'Bar do Ge', mensal: mensal, semanal: semanal } };
+    return { 'bar-do-ge': { label: 'Bar do Ge', semanal: semanal, mensal: mensal } };
   }
 
   function init() {
