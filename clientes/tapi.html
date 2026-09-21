@@ -588,8 +588,13 @@ const ALAV = {
  "Leblon":{budget:5142.50,fat:102850.06,tg:null,ci:null,an:"R$ 50/dia",hits:"R$ 100/dia"},
  "Tijuca":{budget:2651.13,fat:53022.52,tg:"Copart até 4km · R$ 5/pedido",ci:null,an:"R$ 55/dia",hits:null},
  "Downtown":{budget:1387.83,fat:27756.62,tg:null,ci:"R$ 100/dia",an:"R$ 75/dia",hits:null},
- "Novo Leblon":{budget:1817.44,fat:36348.88,tg:null,ci:null,an:null,hits:null}
+ "Novo Leblon":{budget:1817.44,fat:36348.88,tg:null,ci:null,an:null,hits:null},
+ // Unidades novas (entrada em 21/09/2026): só aparecem na aba Status de Alavancas — ainda não têm
+ // linha na planilha de vendas/investimento, por isso ficam fora de LOJAS (usada pelas outras abas).
+ "Vogue":{budget:null,fat:null,tg:"Entrega flexível p/ todos os clientes · 4km · R$ 9,99",ci:"R$ 100",an:null,hits:null,nova:"21/09/2026"},
+ "Belvedere":{budget:null,fat:null,tg:"Entrega flexível p/ todos os clientes · 4km · R$ 9,99",ci:"R$ 100",an:null,hits:null,nova:"21/09/2026"}
 };
+const ALAV_LOJAS=[...LOJAS,"Vogue","Belvedere"];
 
 // BP semanal
 const BP = {
@@ -842,7 +847,7 @@ function buildChips(el,selSet,onChange){
 const alavLoja=document.getElementById('alavLoja');
 function bootAlav(){
  const k=alavLoja.value;alavLoja.innerHTML="";alavLoja.add(new Option("Todas as lojas","all"));
- LOJAS.forEach(l=>alavLoja.add(new Option(l,l)));
+ ALAV_LOJAS.forEach(l=>alavLoja.add(new Option(l,l)));
  if(k&&[...alavLoja.options].some(o=>o.value===k))alavLoja.value=k;
  renderAlavInsight();
  renderAlav();
@@ -910,7 +915,11 @@ const ALAV_HIST=[
   out.push(["AN",a.an?("Ativo | "+a.an):"Desativado"]);
   out.push(["HITS",a.hits?("Ativo | "+a.hits):"Desativado"]);
   return out.map(([c,t])=>[l,c,t]);
- })}
+ })},
+ {d:"21/09/2026",ev:[
+  ["Vogue","FLEX","Ativação de entrega flexível para TODOS os clientes | 4km (R$ 9,99)"],["Vogue","CI","Ativação de Campanha Inteligente | Verba: R$ 100"],
+  ["Belvedere","FLEX","Ativação de entrega flexível para TODOS os clientes | 4km (R$ 9,99)"],["Belvedere","CI","Ativação de Campanha Inteligente | Verba: R$ 100"]
+ ]}
 ];
 const ALAV_COL={FLEX:"Taxa/Entrega Flexível",CI:"Campanha Inteligente",AN:"Anúncio",HITS:"Hits",BUD:"Budget"};
 const ALAV_VIG={mes:"Julho",ant:"Junho"}; // vigência do status atual e mês-base do budget
@@ -946,32 +955,44 @@ function renderAlavTimeline(){
 }
 function renderAlavInsight(){
  const n=PARCIAL.labels.length-1,p=n-1,f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
- const nCI=LOJAS.filter(l=>ALAV[l].ci).length,nAn=LOJAS.filter(l=>ALAV[l].an).length,nHits=LOJAS.filter(l=>ALAV[l].hits).length,nTG=LOJAS.filter(l=>ALAV[l].tg).length;
- const semAlav=LOJAS.filter(l=>{const a=ALAV[l];return !a.ci&&!a.an&&!a.hits&&!a.tg;});
+ const nCI=ALAV_LOJAS.filter(l=>ALAV[l].ci).length,nAn=ALAV_LOJAS.filter(l=>ALAV[l].an).length,nHits=ALAV_LOJAS.filter(l=>ALAV[l].hits).length,nTG=ALAV_LOJAS.filter(l=>ALAV[l].tg).length;
+ const semAlav=ALAV_LOJAS.filter(l=>{const a=ALAV[l];return !a.ci&&!a.an&&!a.hits&&!a.tg;});
  const semTxt=semAlav.map(l=>`${l} (GMV ${f1(alavPerf(l).gmv)} no parcial ${PARCIAL.labels[n]} × ${PARCIAL.labels[p]})`);
  document.getElementById('alavInsight').innerHTML=`
   <h2>Status das alavancas de investimento — vigência de ${ALAV_VIG.mes} (budget calculado sobre ${ALAV_VIG.ant})</h2>
   <ul>
    <li>Budget definido como <b>5% do faturamento bruto do mês anterior</b> por loja.</li>
-   <li>Alavancas ativas: <b>Anúncio (CPC)</b> em ${nAn} de ${LOJAS.length} lojas · <b>Campanha Inteligente</b> em ${nCI} · <b>Hits</b> em ${nHits} · <b>Taxa Grátis</b> em ${nTG}.</li>
+   <li>Alavancas ativas: <b>Anúncio (CPC)</b> em ${nAn} de ${ALAV_LOJAS.length} lojas · <b>Campanha Inteligente</b> em ${nCI} · <b>Hits</b> em ${nHits} · <b>Taxa Grátis / Entrega Flexível</b> em ${nTG}.</li>
+   <li>Unidades novas <b>Vogue</b> e <b>Belvedere</b>: <b>Entrega flexível para todos os clientes</b> (4km · R$ 9,99) e <b>Campanha Inteligente</b> (R$ 100) ativadas em 21/09/2026; ainda sem histórico de vendas na planilha.</li>
    <li>${semAlav.length?`Sem nenhuma alavanca ativa: <b>${semTxt.join(" e ")}</b>${semAlav.every(l=>alavPerf(l).gmv>0)?" — crescimento de GMV orgânico, sem investimento":""}.`:"Todas as lojas têm ao menos uma alavanca ativa."}</li>
   </ul>`;
 }
 function renderAlav(){
  const fl=alavLoja.value, ft=document.getElementById('alavTipo').value;
  const grid=document.getElementById('alavGrid');grid.innerHTML="";
- LOJAS.forEach(l=>{
+ ALAV_LOJAS.forEach(l=>{
   if(fl!=='all'&&l!==fl)return;
   const a=ALAV[l];
   const none=!a.ci&&!a.an&&!a.hits&&!a.tg;
   if(ft==='ci'&&!a.ci)return;if(ft==='anuncio'&&!a.an)return;if(ft==='hits'&&!a.hits)return;if(ft==='nenhuma'&&!none)return;
-  const p=alavPerf(l);
   const badge=(v,name)=>v?`<span class="badge b-on">Ativo · ${v}</span>`:`<span class="badge b-off">Desativado</span>`;
+  if(a.nova){ // unidade nova: sem budget/faturamento/parcial na planilha ainda
+   grid.insertAdjacentHTML('beforeend',`<div class="card alav-card">
+   <h3>${l} <span class="badge b-warn">Unidade nova · desde ${a.nova}</span></h3>
+   <div class="alav-row"><span class="k">Taxa Grátis / Entrega Flexível</span>${badge(a.tg)}</div>
+   <div class="alav-row"><span class="k">Campanha Inteligente</span>${badge(a.ci)}</div>
+   <div class="alav-row"><span class="k">Anúncio (CPC)</span>${badge(a.an)}</div>
+   <div class="alav-row"><span class="k">Hits</span>${badge(a.hits)}</div>
+   <div class="alav-row" style="border-top:2px solid var(--borda);margin-top:4px;padding-top:8px"><span class="k">Efeito / budget</span><span>Sem histórico de vendas na planilha ainda</span></div>
+  </div>`);
+   return;
+  }
+  const p=alavPerf(l);
   grid.insertAdjacentHTML('beforeend',`<div class="card alav-card">
    <h3>${l} ${none?'<span class="badge b-warn">Sem alavancas</span>':''}</h3>
    <div class="alav-row"><span class="k">Budget de ${ALAV_VIG.mes} (5% do fat. de ${ALAV_VIG.ant})</span><b>${brl(a.budget)}</b></div>
    <div class="alav-row"><span class="k">Fat. bruto de ${ALAV_VIG.ant} (mês anterior)</span><span>${brl(a.fat)}</span></div>
-   <div class="alav-row"><span class="k">Taxa Grátis</span>${badge(a.tg)}</div>
+   <div class="alav-row"><span class="k">Taxa Grátis / Entrega Flexível</span>${badge(a.tg)}</div>
    <div class="alav-row"><span class="k">Campanha Inteligente</span>${badge(a.ci)}</div>
    <div class="alav-row"><span class="k">Anúncio (CPC)</span>${badge(a.an)}</div>
    <div class="alav-row"><span class="k">Hits</span>${badge(a.hits)}</div>
