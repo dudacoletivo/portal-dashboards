@@ -55,9 +55,6 @@ header p{font-size:12.5px;color:var(--neutro);}
 .tab-btn{border:1.5px solid var(--vinho);background:var(--tapioca);color:var(--vinho);padding:8px 16px;border-radius:22px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;transition:.18s;}
 .tab-btn:hover{background:var(--areia);}
 .tab-btn.active{background:var(--vinho);color:#fff;}
-.mode-btn{border:1.5px solid var(--vinho);background:var(--tapioca);color:var(--vinho);padding:9px 22px;border-radius:22px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;transition:.18s;}
-.mode-btn:hover{background:var(--areia);}
-.mode-btn.active{background:var(--vinho);color:#fff;}
 .tabs-wrap{width:100%;display:flex;flex-direction:column;gap:8px;margin-left:auto;}
 .tabs-mode{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
 .tabs-mode .legenda-btn{margin-left:6px;}
@@ -133,20 +130,17 @@ footer{ text-align:center;color:var(--neutro);font-size:12px;padding:20px;}
   <button id="btnRefresh" class="tab-btn" style="border-style:dashed" title="Recarregar dados da planilha Google">↻ Atualizar dados</button>
   <div class="tabs-wrap">
     <nav class="tabs-mode">
-      <button class="mode-btn" data-mode="parcial">Parcial</button>
-      <button class="mode-btn active" data-mode="consolidado">Consolidado</button>
-      <button class="tab-btn legenda-btn" data-tab="legenda">Legenda</button>
+      <button class="tab-btn legenda-btn" data-tab="legenda">📖 Legenda</button>
     </nav>
     <nav class="tabs sub-tabs" id="subTabs">
-      <button class="tab-btn active" data-tab="dashf" data-group="consolidado">Dash · Mês Fechado</button>
-      <button class="tab-btn" data-tab="alavancas" data-group="consolidado">Status de Alavancas</button>
-      <button class="tab-btn" data-tab="invest" data-group="consolidado">Investimento</button>
-      <button class="tab-btn" data-tab="margem" data-group="consolidado">Margem (DRE)</button>
-      <button class="tab-btn" data-tab="junjul" data-group="consolidado">Junho × Julho</button>
-      <button class="tab-btn" data-tab="bp" data-group="consolidado">Eficiência Operacional</button>
-      <button class="tab-btn" data-tab="cruz" data-group="consolidado">BP × Pedidos</button>
-      <button class="tab-btn" data-tab="ftw" data-group="consolidado">Método FTW</button>
-      <button class="tab-btn" data-tab="dashp" data-group="parcial" style="display:none">Dash · Parcial</button>
+      <button class="tab-btn active" data-tab="dashf">📊 Dash — Mês Fechado</button>
+      <button class="tab-btn" data-tab="dashp">🌓 Dash — Parcial</button>
+      <button class="tab-btn" data-tab="alavancas">🎛️ Status de Alavancas</button>
+      <button class="tab-btn" data-tab="invest">💰 Investimento</button>
+      <button class="tab-btn" data-tab="margem">📉 Margem (DRE)</button>
+      <button class="tab-btn" data-tab="bp">🚚 Eficiência Operacional</button>
+      <button class="tab-btn" data-tab="cruz">🔀 BP × Pedidos</button>
+      <button class="tab-btn" data-tab="ftw">🧭 Método FTW</button>
     </nav>
   </div>
   </div>
@@ -301,27 +295,6 @@ footer{ text-align:center;color:var(--neutro);font-size:12px;padding:20px;}
   <div class="card">
     <h2>Margem de Contribuição iFood % por loja no período selecionado</h2>
     <div class="chart-wrap"><canvas id="mg-rank"></canvas></div>
-  </div>
-</section>
-
-<!-- ============ JUNHO x JULHO ============ -->
-<section id="junjul" class="tab-panel">
-  <div class="insight" id="jjInsight"></div>
-  <div class="card mb">
-    <h2 id="jjTitle"></h2>
-    <div class="table-scroll"><table id="jjTable"></table></div>
-    <p class="note">🏆 Eficiência = loja reduziu % de investimento e mesmo assim cresceu em vendas e GMV (economizando e crescendo). Verde = melhora · Vermelho = piora. Para "Budget %" e "CPO", queda é lida como positiva quando acompanhada de crescimento.</p>
-  </div>
-  <div class="grid two-col">
-    <div class="card">
-      <h2 id="jjT1"></h2>
-      <div class="chart-wrap"><canvas id="jjGmvChart"></canvas></div>
-    </div>
-    <div class="card">
-      <h2 id="jjT2"></h2>
-      <div class="chart-wrap"><canvas id="jjScatter"></canvas></div>
-      <p class="note">Quadrante superior-esquerdo = gastou menos e cresceu (ideal). Superior-direito = cresceu investindo mais. Inferior-direito = investiu mais e caiu (crítico).</p>
-    </div>
   </div>
 </section>
 
@@ -655,19 +628,6 @@ document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>
  document.getElementById(b.dataset.tab).classList.add('active');
 }));
 
-/* ================= MODO (Parcial / Consolidado) ================= */
-function setMode(mode){
- document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
- document.querySelectorAll('#subTabs .tab-btn').forEach(b=>{b.style.display=b.dataset.group===mode?'':'none';});
- const ativo=document.querySelector('#subTabs .tab-btn.active');
- if(!ativo||ativo.dataset.group!==mode){
-  const primeira=document.querySelector(`#subTabs .tab-btn[data-group="${mode}"]`);
-  if(primeira)primeira.click();
- }
-}
-document.querySelectorAll('.mode-btn').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
-setMode('consolidado'); // estado inicial ao abrir o dash
-
 /* ================= MENU MOBILE (accordion + auto-hide no scroll) ================= */
 (function(){
  const toggle=document.getElementById('navToggle'),panel=document.getElementById('navPanel'),header=document.querySelector('header');
@@ -677,7 +637,7 @@ setMode('consolidado'); // estado inicial ao abrir o dash
  toggle.addEventListener('click',()=>panel.classList.contains('open')?closeMenu():openMenu());
  // fecha o menu sozinho ao escolher uma aba ou trocar de modo (mobile)
  panel.addEventListener('click',e=>{
-  if(e.target.closest('.tab-btn,.mode-btn')&&window.innerWidth<=820)closeMenu();
+  if(e.target.closest('.tab-btn')&&window.innerWidth<=820)closeMenu();
  });
  // header some ao rolar pra baixo, reaparece ao rolar pra cima — só no mobile, e nunca com o menu aberto
  let lastY=window.scrollY,ticking=false;
@@ -1247,63 +1207,6 @@ function scanDreFix(aoa){
  });});
  return Object.keys(found).length>=4?found:null;
 }
-function renderJJ(){
- const n=PARCIAL.labels.length-1,p=n-1; // últimos dois parciais disponíveis
- const LP=PARCIAL.labels[p],LN=PARCIAL.labels[n];
- const f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
- const rows=[];
- LOJAS.forEach(l=>{
-  const d=PARCIAL.data[l];
-  const eVendas=evo(d[0][p],d[0][n]),eGmv=evo(d[1][p],d[1][n]),eTm=evo(d[2][p],d[2][n]),eNovos=evo(d[3][p],d[3][n]),
-        eVis=evo(d[4][p],d[4][n]),eConv=evo(d[5][p],d[5][n]),eBud=evo(d[6][p],d[6][n]),eCpo=evo(d[9][p],d[9][n]);
-  const eficiente = (eBud!=null&&eBud<0||d[6][n]===0&&d[6][p]===0) && eVendas>0 && eGmv>0;
-  const critico = eBud!=null&&eBud>0 && eGmv<0;
-  rows.push({l,d,eVendas,eGmv,eTm,eNovos,eVis,eConv,eBud,eCpo,eficiente,critico});
- });
- // insight — todos os números calculados dos dados vigentes, com o indicador sempre nomeado
- const R=PARCIAL.rede;
- const rV=evo(R[0][p],R[0][n]),rG=evo(R[1][p],R[1][n]),rP=evo(R[7][p],R[7][n]),rNov=evo(R[3][p],R[3][n]);
- const efic=rows.filter(r=>r.eficiente).map(r=>`${r.l} (Budget ${f1(r.eBud)}, Pedidos ${f1(r.eVendas)}, GMV ${f1(r.eGmv)})`);
- const cresc=rows.filter(r=>r.eGmv>0).length;
- const queda=rows.filter(r=>r.eGmv<0).sort((a,b)=>a.eGmv-b.eGmv).map(r=>`${r.l} (GMV ${f1(r.eGmv)})`);
- const piorTm=rows.slice().sort((a,b)=>a.eTm-b.eTm)[0];
- const piorNov=rows.slice().sort((a,b)=>a.eNovos-b.eNovos)[0];
- document.getElementById('jjInsight').innerHTML=`<h2>Leitura do parcial · ${LN} × ${LP}</h2><ul>
-  <li><b>${cresc} de ${rows.length} lojas cresceram em GMV</b>. Rede: Pedidos ${f1(rV)}, GMV ${f1(rG)}, Promoções+Ads ${f1(rP)} (CPO: ${brl(R[9][p])} → ${brl(R[9][n])}; ROI: ${brl(R[10][p])} → ${brl(R[10][n])}).</li>
-  <li>🏆 <b>Eficiência (Budget de investimento ↓ com Pedidos ↑ e GMV ↑):</b> ${efic.join(" · ")||"nenhuma loja neste recorte"}.</li>
-  <li>⚠️ <b>Em queda de GMV:</b> ${queda.join(", ")||"nenhuma loja"}.</li>
-  <li>Pontos de atenção — <b>Novos clientes da rede: ${f1(rNov)}</b>${rNov<0?" (crescimento vindo de recorrência, não de aquisição)":""}; maior queda de TM: <b>${piorTm.l} (TM ${f1(piorTm.eTm)})</b>; maior queda de Novos: <b>${piorNov.l} (Novos ${f1(piorNov.eNovos)})</b>.</li></ul>`;
- document.getElementById('jjTitle').textContent=`Parcial · ${LP} × ${LN} — matriz de destaque`;
- document.getElementById('jjT1').textContent=`Variação de GMV % (${LN} × ${LP})`;
- document.getElementById('jjT2').textContent=`Eficiência: Δ Budget de investimento % × Δ GMV %`;
- // tabela
- let html=`<thead><tr><th>Loja</th><th>Pedidos</th><th>GMV</th><th>TM</th><th>Novos</th><th>Visitas</th><th>Conversão %</th><th>Budget %</th><th>CPO</th><th>Status</th></tr></thead><tbody>`;
- rows.forEach(r=>{
-  const c=(a,b,e,f,gu=1)=>`${f(a)} → ${f(b)}<br>${evoTag(e,gu)}`;
-  const d=r.d;
-  const status=r.eficiente?'<span class="badge b-good">🏆 Budget ↓ · Pedidos ↑ · GMV ↑</span>':r.critico?'<span class="badge b-bad">Budget ↑ · GMV ↓ (crítico)</span>':r.eGmv>0?'<span class="badge b-good">GMV em alta</span>':'<span class="badge b-bad">GMV em queda</span>';
-  html+=`<tr><td><b>${r.l}</b></td>
-   <td>${c(d[0][p],d[0][n],r.eVendas,num)}</td>
-   <td>${c(d[1][p],d[1][n],r.eGmv,brl)}</td>
-   <td>${c(d[2][p],d[2][n],r.eTm,brl)}</td>
-   <td>${c(d[3][p],d[3][n],r.eNovos,num)}</td>
-   <td>${c(d[4][p],d[4][n],r.eVis,num)}</td>
-   <td>${c(d[5][p],d[5][n],r.eConv,pct)}</td>
-   <td>${pct(d[6][p])} → ${pct(d[6][n])}<br>${evoTag(r.eBud,-1)}</td>
-   <td>${c(d[9][p],d[9][n],r.eCpo,brl,-1)}</td>
-   <td>${status}</td></tr>`;
- });
- document.getElementById('jjTable').innerHTML=html+"</tbody>";
- // gráfico GMV delta
- const arr=rows.slice().sort((a,b)=>b.eGmv-a.eGmv);
- chart('jjGmvChart',{type:'bar',data:{labels:arr.map(r=>r.l),datasets:[{data:arr.map(r=>r.eGmv),backgroundColor:arr.map(r=>r.eGmv>=0?"#1E7A46CC":"#B3261ECC"),borderRadius:8}]},
- options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(1)+"%"}}},scales:{y:{ticks:{callback:v=>v+"%"}}}}});
- // scatter
- chart('jjScatter',{type:'scatter',data:{datasets:rows.map(r=>({label:r.l,data:[{x:r.eBud==null?0:r.eBud,y:r.eGmv}],backgroundColor:CORES[LOJAS.indexOf(r.l)],pointRadius:7}))},
- options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label+`: Δbudget ${c.parsed.x.toFixed(1)}% · ΔGMV ${c.parsed.y.toFixed(1)}%`}}},
- scales:{x:{title:{display:true,text:"Δ Budget de investimento %"},grid:{color:ctx=>ctx.tick.value===0?"#7B131F":"#E8DDD3"}},y:{title:{display:true,text:"Δ GMV %"},grid:{color:ctx=>ctx.tick.value===0?"#7B131F":"#E8DDD3"}}}}});
-}
-
 /* ================= BP ================= */
 let bpSel=new Set(["Centro","Downtown","Leblon","Flamengo","Ipanema"]);
 function renderBP(){
@@ -1421,7 +1324,7 @@ function renderFTW(){
 function boot(){
  const w=document.getElementById('jsWarn');if(w)w.style.display='none';
  if(!JANELA)setJanela(janelaAtiva());
- bootDash();bootAlav();bootInv();bootMargem();renderJJ();renderBP();renderBPTable();renderCruz();renderFTW();
+ bootDash();bootAlav();bootInv();bootMargem();renderBP();renderBPTable();renderCruz();renderFTW();
 }
 
 const SHEET_ID="1LTirsKT8tnPq6dmlqpvRFvE5bjntqtnXarURdm03-gk"; // [Tapí Tapioca] Dashboard
