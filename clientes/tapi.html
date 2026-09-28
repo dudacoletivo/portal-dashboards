@@ -595,6 +595,10 @@ const ALAV = {
  "Belvedere":{budget:null,fat:null,tg:"Entrega flexível p/ todos os clientes · 4km · R$ 9,99",ci:"R$ 100",an:null,hits:null,nova:"21/09/2026"}
 };
 const ALAV_LOJAS=[...LOJAS,"Vogue","Belvedere"];
+// Vogue/Belvedere ainda não têm linha na aba "Status Alavancas " da planilha (unidades muito
+// novas) — guardamos o snapshot manual delas aqui para não sumirem do dashboard quando o
+// live-sync substituir ALAV pelos dados reais da planilha (ver loadLive()).
+const ALAV_MANUAL_EXTRA={Vogue:ALAV.Vogue,Belvedere:ALAV.Belvedere};
 
 // BP semanal
 const BP = {
@@ -921,8 +925,17 @@ const ALAV_HIST=[
   ["Belvedere","FLEX","Ativação de entrega flexível para TODOS os clientes | 4km (R$ 9,99)"],["Belvedere","CI","Ativação de Campanha Inteligente | Verba: R$ 100"]
  ]}
 ];
+// Último bloco (Vogue/Belvedere) é mantido manualmente — não vem da aba "Status Alavancas " da
+// planilha ainda. Guardado à parte para poder ser reanexado no fim da timeline depois que o
+// live-sync substituir o resto de ALAV_HIST pelos blocos reais da planilha (ver loadLive()).
+const ALAV_MANUAL_HIST_TAIL=ALAV_HIST.slice(-1);
 const ALAV_COL={FLEX:"Taxa/Entrega Flexível",CI:"Campanha Inteligente",AN:"Anúncio",HITS:"Hits",BUD:"Budget"};
-const ALAV_VIG={mes:"Julho",ant:"Junho"}; // vigência do status atual e mês-base do budget
+const ALAV_VIG={mes:"Julho",ant:"Junho"}; // vigência do status atual e mês-base do budget — atualizado por loadLive() a partir do rótulo do último bloco da planilha
+const ALAV_MESES_PT=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+function alavMesFromLabel(label){
+ if(!label)return null;
+ return ALAV_MESES_PT.find(m=>label.includes(m))||null;
+}
 function acaoClasse(txt){
  const s=deacc(txt).toUpperCase();
  if(/SAIDA|RETIRADA|PAUSA|DESATIVAD/.test(s))return "b-bad";
@@ -955,8 +968,8 @@ function renderAlavTimeline(){
 }
 function renderAlavInsight(){
  const n=PARCIAL.labels.length-1,p=n-1,f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
- const nCI=ALAV_LOJAS.filter(l=>ALAV[l].ci).length,nAn=ALAV_LOJAS.filter(l=>ALAV[l].an).length,nHits=ALAV_LOJAS.filter(l=>ALAV[l].hits).length,nTG=ALAV_LOJAS.filter(l=>ALAV[l].tg).length;
- const semAlav=ALAV_LOJAS.filter(l=>{const a=ALAV[l];return !a.ci&&!a.an&&!a.hits&&!a.tg;});
+ const nCI=ALAV_LOJAS.filter(l=>ALAV[l]&&ALAV[l].ci).length,nAn=ALAV_LOJAS.filter(l=>ALAV[l]&&ALAV[l].an).length,nHits=ALAV_LOJAS.filter(l=>ALAV[l]&&ALAV[l].hits).length,nTG=ALAV_LOJAS.filter(l=>ALAV[l]&&ALAV[l].tg).length;
+ const semAlav=ALAV_LOJAS.filter(l=>{const a=ALAV[l];return a&&!a.ci&&!a.an&&!a.hits&&!a.tg;});
  const semTxt=semAlav.map(l=>`${l} (GMV ${f1(alavPerf(l).gmv)} no parcial ${PARCIAL.labels[n]} × ${PARCIAL.labels[p]})`);
  document.getElementById('alavInsight').innerHTML=`
   <h2>Status das alavancas de investimento — vigência de ${ALAV_VIG.mes} (budget calculado sobre ${ALAV_VIG.ant})</h2>
@@ -973,6 +986,7 @@ function renderAlav(){
  ALAV_LOJAS.forEach(l=>{
   if(fl!=='all'&&l!==fl)return;
   const a=ALAV[l];
+  if(!a)return;
   const none=!a.ci&&!a.an&&!a.hits&&!a.tg;
   if(ft==='ci'&&!a.ci)return;if(ft==='anuncio'&&!a.an)return;if(ft==='hits'&&!a.hits)return;if(ft==='nenhuma'&&!none)return;
   const badge=(v,name)=>v?`<span class="badge b-on">Ativo · ${v}</span>`:`<span class="badge b-off">Desativado</span>`;
@@ -1524,6 +1538,54 @@ function csvToAoa(text){ // parser CSV com aspas
  if(cell!==""||row.length){row.push(cell);rows.push(row);}
  return rows.map(r=>r.map(c=>c===""?null:c));
 }
+
+/* ============ STATUS DE ALAVANCAS (aba "Status Alavancas " da planilha) ============
+   Formato real da aba: cabeçalho "Mês","Unidade","Budget","Faturamento bruto mês anterior",
+   "Taxa grátis","Campanha Inteligente (CI)","Anúncio","Hits" repetido a cada bloco (1 bloco por
+   corte de status), com 1 linha por loja logo abaixo. A coluna "Mês" só vem preenchida numa das
+   linhas do bloco (não necessariamente a primeira) — por isso a leitura varre todas as linhas do
+   bloco atrás do rótulo, em vez de assumir que ele está na 1ª linha. */
+const ALAV_LOJA_FIX={"Botafgo":"Botafogo"}; // erro de digitação recorrente na planilha
+function alavMoney(raw){
+ if(raw==null)return null;
+ // Pela exportação xlsx do workbook inteiro (1ª tentativa de fetchWorkbookAoas), célula numérica
+ // já vem como number puro do JS — só o fallback CSV (2ª tentativa) entrega texto "R$ 3.342,81".
+ if(typeof raw==='number')return isFinite(raw)?raw:null;
+ const n=parseFloat(String(raw).replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.').trim());
+ return isFinite(n)?n:null;
+}
+function alavFieldText(raw){
+ const s=(raw==null?'':String(raw)).trim();
+ if(!s)return null;
+ if(/^desativad[oa]/i.test(s))return null;
+ return s.replace(/^ativ(?:o|ad[oa])\s*\|\s*/i,'').trim()||s;
+}
+function parseAlavStatus(aoa){ // -> [{label, rows:[[mes,unidade,budget,fat,tg,ci,an,hits],...]}]
+ const blocks=[];let cur=null;
+ for(let r=0;r<aoa.length;r++){
+  const row=aoa[r]||[];
+  const c0=(row[0]==null?'':String(row[0])).trim(), c1=(row[1]==null?'':String(row[1])).trim(), c4=(row[4]==null?'':String(row[4])).trim();
+  // "Mês"+"Unidade" sozinhos colidem com o cabeçalho de outras abas da planilha (ex.: Investimento
+  // Tapí) — exige também a coluna "Taxa grátis" (índice 4), exclusiva desta aba, pra não misturar
+  // blocos de tabelas diferentes.
+  if(c0==='Mês'&&c1==='Unidade'&&c4==='Taxa grátis'){ if(cur&&cur.rows.length)blocks.push(cur); cur={label:null,rows:[]}; continue; }
+  if(!cur||!c1)continue;
+  if(c0)cur.label=c0;
+  cur.rows.push(row);
+ }
+ if(cur&&cur.rows.length)blocks.push(cur);
+ return blocks;
+}
+function alavBlockToStores(block){
+ const out={};
+ block.rows.forEach(row=>{
+  const nomeRaw=(row[1]==null?'':String(row[1])).trim();
+  const nome=ALAV_LOJA_FIX[nomeRaw]||nomeRaw;
+  out[nome]={budget:alavMoney(row[2]),fat:alavMoney(row[3]),tg:alavFieldText(row[4]),ci:alavFieldText(row[5]),an:alavFieldText(row[6]),hits:alavFieldText(row[7])};
+ });
+ return out;
+}
+
 async function fetchWorkbookAoas(){
  // 1ª tentativa: exportação xlsx (todas as abas)
  try{
@@ -1578,10 +1640,44 @@ async function loadLive(){
   let okD=false;
   for(const aoa of aoas){const fx=scanDreFix(aoa);
    if(fx){DRE_FIX=DRE_FIX.map(([n,p])=>[n,fx[n]!=null?fx[n]:p]);okD=true;break;}}
+  let okAlav=false;
+  try{
+   const alavBlocksAll=[];
+   aoas.forEach(aoa=>{ const bl=parseAlavStatus(aoa); if(bl.length)alavBlocksAll.push(...bl); });
+   if(alavBlocksAll.length){
+    const histFresh=alavBlocksAll.map(bl=>{
+     const stores=alavBlockToStores(bl);
+     const ev=Object.entries(stores).flatMap(([l,a])=>[
+      ["BUD",`Budget ${brl(a.budget)} (5% do faturamento bruto anterior: ${brl(a.fat)})`],
+      ["FLEX",a.tg?("Ativo | "+a.tg):"Desativado"],
+      ["CI",a.ci?("Ativo | "+a.ci):"Desativado"],
+      ["AN",a.an?("Ativo | "+a.an):"Desativado"],
+      ["HITS",a.hits?("Ativo | "+a.hits):"Desativado"]
+     ].map(([c,t])=>[l,c,t]));
+     return {d:bl.label||"Atualização de alavancas",ev};
+    });
+    const lastBlock=alavBlocksAll[alavBlocksAll.length-1];
+    const lastStores=alavBlockToStores(lastBlock);
+    const vigMes=alavMesFromLabel(lastBlock.label);
+    if(vigMes){
+     const vigIdx=ALAV_MESES_PT.indexOf(vigMes);
+     ALAV_VIG.mes=vigMes;
+     ALAV_VIG.ant=vigIdx>0?ALAV_MESES_PT[vigIdx-1]:ALAV_MESES_PT[11];
+    }
+    Object.keys(ALAV).forEach(k=>delete ALAV[k]);
+    Object.assign(ALAV,lastStores,ALAV_MANUAL_EXTRA);
+    ALAV_HIST.length=0;
+    histFresh.forEach(b=>ALAV_HIST.push(b));
+    ALAV_MANUAL_HIST_TAIL.forEach(b=>ALAV_HIST.push(b));
+    ALAV_LOJAS.length=0;
+    [...Object.keys(lastStores),...Object.keys(ALAV_MANUAL_EXTRA)].forEach(l=>ALAV_LOJAS.push(l));
+    okAlav=true;
+   }
+  }catch(eAlav){ console.warn('[live-sync] Falha ao processar a aba Status Alavancas:',eAlav); }
   if(!okP&&!okM)throw new Error("estrutura não reconhecida");
   boot();
   const janelaAvisoRede=okP&&PARCIAL.redeOnly?" — ⚠️ esta janela mostra só o total da rede, sem quebra por loja ainda":"";
-  setStatus(`● Dados ao vivo da planilha [Tapí Tapioca] Dashboard · ${okP?"parciais (janela "+JANELA+")":""}${okP&&okM?" + ":""}${okM?"meses fechados":""}${okD?" + % fixos do DRE":""}${janelaAvisoRede} · ${new Date().toLocaleString('pt-BR')}`,'ok');
+  setStatus(`● Dados ao vivo da planilha [Tapí Tapioca] Dashboard · ${okP?"parciais (janela "+JANELA+")":""}${okP&&okM?" + ":""}${okM?"meses fechados":""}${okD?" + % fixos do DRE":""}${okAlav?" + status de alavancas":""}${janelaAvisoRede} · ${new Date().toLocaleString('pt-BR')}`,'ok');
  }catch(e){
   setStatus("○ Sem conexão com a planilha neste momento — exibindo os últimos dados salvos. Toque em ↻ Atualizar dados para tentar de novo.",'warn');
  }
