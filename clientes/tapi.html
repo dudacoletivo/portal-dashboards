@@ -849,10 +849,14 @@ function buildChips(el,selSet,onChange){
 
 /* ================= ALAVANCAS ================= */
 const alavLoja=document.getElementById('alavLoja');
+const alavTipo=document.getElementById('alavTipo');
 function bootAlav(){
  const k=alavLoja.value;alavLoja.innerHTML="";alavLoja.add(new Option("Todas as lojas","all"));
  ALAV_LOJAS.forEach(l=>alavLoja.add(new Option(l,l)));
  if(k&&[...alavLoja.options].some(o=>o.value===k))alavLoja.value=k;
+ // atribuição direta (não addEventListener) pra não empilhar handlers a cada boot() do live-sync
+ alavLoja.onchange=()=>{renderAlav();renderAlavTimeline();};
+ alavTipo.onchange=()=>{renderAlav();renderAlavTimeline();};
  renderAlavInsight();
  renderAlav();
  renderAlavTimeline();
