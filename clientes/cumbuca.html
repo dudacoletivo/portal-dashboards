@@ -186,6 +186,19 @@ tbody tr:last-child td{border-bottom:none;}
 .badge.cat-ads{color:var(--red); background:#fbeaea;}
 .badge.cat-alavancas{color:#2b5fa3; background:#e6eefb;}
 .badge.cat-contexto{color:var(--ink-soft); background:#f0ede8;}
+
+.acoes-detail{margin-top:10px;}
+.acoes-detail summary{
+  cursor:pointer; font-weight:700; color:var(--purple); font-size:13px;
+  list-style:none; display:inline-flex; align-items:center; gap:6px; user-select:none;
+  padding:6px 10px; border:1.5px solid var(--border); border-radius:999px; background:#fff;
+  transition:.12s;
+}
+.acoes-detail summary:hover{background:#f3e6f0;}
+.acoes-detail summary::-webkit-details-marker{display:none;}
+.acoes-detail summary::marker{content:'';}
+.acoes-detail .chevron{display:inline-block; transition:transform .15s;}
+.acoes-detail[open] .chevron{transform:rotate(180deg);}
 .warn-flag{font-size:11px; color:#a5750a; background:#fff3d6; padding:2px 7px; border-radius:6px; font-weight:700; margin-left:6px;}
 
 .leverage-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(310px,1fr)); gap:14px;}
@@ -3405,12 +3418,16 @@ function acoesLojaLabel(lojas){
 }
 function acoesRenderTabelaExtra(t){
   if(!t) return '';
-  return `<table style="width:100%;margin-top:10px;border-collapse:collapse;font-size:13px;">
-    <thead><tr style="text-align:left;color:var(--ink-soft);border-bottom:1px solid var(--border);">
-      ${t.headers.map(h=>`<th style="padding:5px 10px 5px 0;font-weight:700;">${h}</th>`).join('')}
-    </tr></thead>
-    <tbody>${t.rows.map(r=>`<tr style="border-bottom:1px solid var(--border);">${r.map(c=>`<td style="padding:6px 10px 6px 0;">${c}</td>`).join('')}</tr>`).join('')}</tbody>
-  </table>`;
+  const n = t.rows.length;
+  return `<details class="acoes-detail">
+    <summary>Ver tabela detalhada (${n} ${n===1?'item':'itens'}) <span class="chevron">▾</span></summary>
+    <table style="width:100%;margin-top:10px;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="text-align:left;color:var(--ink-soft);border-bottom:1px solid var(--border);">
+        ${t.headers.map(h=>`<th style="padding:5px 10px 5px 0;font-weight:700;">${h}</th>`).join('')}
+      </tr></thead>
+      <tbody>${t.rows.map(r=>`<tr style="border-bottom:1px solid var(--border);">${r.map(c=>`<td style="padding:6px 10px 6px 0;">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>
+  </details>`;
 }
 function acoesMatch(a, month, cat, loja){
   if(month!=='all'){
