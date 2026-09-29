@@ -176,10 +176,16 @@ tbody tr:last-child td{border-bottom:none;}
 .table-wrap{overflow-x:auto; border-radius:var(--radius-sm); border:1px solid var(--border);}
 .store-name{font-weight:700; color:var(--ink);}
 .store-name .u{font-weight:500; color:var(--ink-soft); font-size:12px; display:block;}
-.badge{display:inline-flex; align-items:center; gap:4px; font-weight:700; font-size:12.5px; padding:3px 9px; border-radius:999px;}
+.badge{display:inline-flex; align-items:center; gap:4px; font-weight:700; font-size:12.5px; padding:3px 9px; border-radius:999px; white-space:nowrap;}
 .badge.up{color:var(--good); background:#e7f5ec;}
 .badge.down{color:var(--bad); background:#fbeaea;}
 .badge.flat{color:var(--neutral); background:#f7f3e2;}
+.badge.cat-cardapio{color:var(--purple); background:#f3e6f0;}
+.badge.cat-promocoes{color:#a5750a; background:#fff3d6;}
+.badge.cat-hits{color:var(--teal); background:#e6f0ee;}
+.badge.cat-ads{color:var(--red); background:#fbeaea;}
+.badge.cat-alavancas{color:#2b5fa3; background:#e6eefb;}
+.badge.cat-contexto{color:var(--ink-soft); background:#f0ede8;}
 .warn-flag{font-size:11px; color:#a5750a; background:#fff3d6; padding:2px 7px; border-radius:6px; font-weight:700; margin-left:6px;}
 
 .leverage-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(310px,1fr)); gap:14px;}
@@ -467,109 +473,26 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
 <!-- ============ AÇÕES TAB ============ -->
 <div class="tabcontent" id="tab-acoes">
   <div class="callout info">
-    <strong>Sobre esta aba:</strong> registro das principais mudanças operacionais e de cardápio feitas na rede ao longo do tempo, para dar contexto às variações vistas nos números do dashboard.
+    <strong>Sobre esta aba:</strong> registro das principais mudanças operacionais, de cardápio e de mídia feitas na rede ao longo do tempo, para dar contexto às variações vistas nos números do dashboard.
   </div>
-  <div class="section-title">Linha do tempo de ações</div>
+  <div class="filterbar">
+    <div class="filter-group">
+      <label>Mês</label>
+      <select id="acoesMonth"><!-- gerado via JS a partir das ações cadastradas --></select>
+    </div>
+    <div class="filter-group">
+      <label>Tipo de ação</label>
+      <select id="acoesCat"><!-- gerado via JS --></select>
+    </div>
+    <div class="filter-group">
+      <label>Loja</label>
+      <select id="acoesLoja"><!-- gerado via JS --></select>
+    </div>
+  </div>
+  <div class="section-title">Linha do tempo de ações <span class="tag" id="acoesCount"></span></div>
   <div class="card">
     <div class="table-wrap">
-      <table>
-        <thead><tr><th>Data</th><th>Ação</th><th>Descrição</th></tr></thead>
-        <tbody>
-          <tr>
-            <td class="store-name">23/07/2026</td>
-            <td>Virada de cardápio — loja Wraps</td>
-            <td>Mudança de cardápio da loja de Wraps: a marca deixou de ser "Cumbuca Poke" e passou a ser "Wraps".</td>
-          </tr>
-          <tr>
-            <td class="store-name">29/07/2026</td>
-            <td>Novas categorias + reordenação de cardápio</td>
-            <td>Criação e adição das categorias novas "No precinho pra você" e "Combucas", além da reordenação geral do cardápio.</td>
-          </tr>
-          <tr>
-            <td class="store-name">14/08/2026</td>
-            <td>Ativação do Hits</td>
-            <td>Ativação da alavanca Hits em todos os IDs (lojas) da Cumbuca.</td>
-          </tr>
-          <tr>
-            <td class="store-name">01/09/2026</td>
-            <td>Cupom de R$ 12 para novos clientes</td>
-            <td>Ativação de cupom de R$ 12 de desconto direcionado a clientes novos — loja Wraps Tijuca.</td>
-          </tr>
-          <tr>
-            <td class="store-name">01/09/2026</td>
-            <td>Desativação do turno da tarde em ADS</td>
-            <td>
-              Desligamento do turno da tarde nos anúncios (ADS) em 4 lojas, reduzindo o budget diário investido em ~5% em cada uma:
-              <table style="width:100%;margin-top:10px;border-collapse:collapse;font-size:13px;">
-                <thead>
-                  <tr style="text-align:left;color:var(--ink-soft);border-bottom:1px solid var(--border);">
-                    <th style="padding:5px 10px 5px 0;font-weight:700;">Loja</th>
-                    <th style="padding:5px 10px;font-weight:700;">ADS antes</th>
-                    <th style="padding:5px 10px;font-weight:700;">ADS depois</th>
-                    <th style="padding:5px 0;font-weight:700;">Variação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:6px 10px 6px 0;">Cumbuca Saudável Tijuca</td>
-                    <td style="padding:6px 10px;">R$ 951,00</td>
-                    <td style="padding:6px 10px;">R$ 903,00</td>
-                    <td style="padding:6px 0;"><span style="color:var(--good);font-weight:700;">▼ 5,0%</span></td>
-                  </tr>
-                  <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:6px 10px 6px 0;">Cumbuca Brasileira Tijuca</td>
-                    <td style="padding:6px 10px;">R$ 1.200,00</td>
-                    <td style="padding:6px 10px;">R$ 1.140,00</td>
-                    <td style="padding:6px 0;"><span style="color:var(--good);font-weight:700;">▼ 5,0%</span></td>
-                  </tr>
-                  <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:6px 10px 6px 0;">Cumbuca Brasileira Zona Sul</td>
-                    <td style="padding:6px 10px;">R$ 1.196,00</td>
-                    <td style="padding:6px 10px;">R$ 1.136,00</td>
-                    <td style="padding:6px 0;"><span style="color:var(--good);font-weight:700;">▼ 5,0%</span></td>
-                  </tr>
-                  <tr>
-                    <td style="padding:6px 10px 6px 0;">Cumbuca Saudável Zona Sul</td>
-                    <td style="padding:6px 10px;">R$ 951,00</td>
-                    <td style="padding:6px 10px;">R$ 903,00</td>
-                    <td style="padding:6px 0;"><span style="color:var(--good);font-weight:700;">▼ 5,0%</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td class="store-name">11/09/2026</td>
-            <td>Desativação do Hits</td>
-            <td>Desativação da alavanca Hits para consertar os pratos que estavam taggeados incorretamente.</td>
-          </tr>
-          <tr>
-            <td class="store-name">14/09/2026</td>
-            <td>Reativação do Hits</td>
-            <td>Ativação do Hits com os pratos indicados pela lista taggeados. Criada a categoria "Cumbuca Hits" no cardápio para facilitar a taggeação no card.</td>
-          </tr>
-          <tr>
-            <td class="store-name">16/09/2026</td>
-            <td>Atualização de cardápio — Wraps e Festival</td>
-            <td>Inclusão de novos sabores de Wrap (Wrap n' Roll: Frango e Carne Desfiada) na categoria de Wraps. Exclusão das categorias Festival de Estrogorock e Festival de Wrap n' Roll.</td>
-          </tr>
-          <tr>
-            <td class="store-name">18/09/2026</td>
-            <td>Ajuste de orçamento diário em ADS</td>
-            <td>Ajuste do orçamento diário de anúncios (ADS) para R$ 1.200,00 nos IDs: Cumbuca Saudável Tijuca, Cumbuca Brasileira Tijuca, Cumbuca Saudável Zona Sul e Cumbuca Brasileira Zona Sul.</td>
-          </tr>
-          <tr>
-            <td class="store-name">18/09/2026</td>
-            <td>Retirada de anúncios — Wraps Zona Sul</td>
-            <td>Desativação dos anúncios (ADS) da loja Wraps Zona Sul.</td>
-          </tr>
-          <tr>
-            <td class="store-name">18/09/2026</td>
-            <td>Entrega grátis para clientes inativos — Cumbuca Saudável Tijuca</td>
-            <td>Inclusão da alavanca de entrega grátis até R$ 4,99, direcionada a clientes inativos da loja Cumbuca Saudável Tijuca.</td>
-          </tr>
-        </tbody>
-      </table>
+      <table id="acoesTable"></table>
     </div>
   </div>
 </div>
@@ -3310,6 +3233,150 @@ function bindDashScreen(prefix, filterIds){
   filterIds.forEach(id=> on(id, 'change', ()=>safe(`Dash ${prefix}`, ()=>renderDashScreen(prefix))));
 }
 
+// ---------- AÇÕES (linha do tempo) ----------
+const ACAO_CATEGORIAS = {
+  cardapio:  {label:'Cardápio',    badge:'cat-cardapio'},
+  promocoes: {label:'Promoções',   badge:'cat-promocoes'},
+  hits:      {label:'Hits',        badge:'cat-hits'},
+  ads:       {label:'Ads',         badge:'cat-ads'},
+  alavancas: {label:'Alavancas',   badge:'cat-alavancas'},
+  contexto:  {label:'Contexto de mercado', badge:'cat-contexto'}
+};
+const MONTH_LABEL_FULL = {'01':'Janeiro','02':'Fevereiro','03':'Março','04':'Abril','05':'Maio','06':'Junho','07':'Julho','08':'Agosto','09':'Setembro','10':'Outubro','11':'Novembro','12':'Dezembro'};
+const ACOES = [
+  {date:'2026-07-23', label:'23/07/2026', categoria:'cardapio', lojas:['Wraps - Tijuca','Wraps - Zona Sul'],
+    titulo:'Virada de cardápio — loja Wraps',
+    desc:'Mudança de cardápio da loja de Wraps: a marca deixou de ser "Cumbuca Poke" e passou a ser "Wraps".'},
+  {date:'2026-07-29', label:'29/07/2026', categoria:'cardapio', lojas:['rede'],
+    titulo:'Novas categorias "Precinho" e "Combucas"',
+    desc:'Criação das categorias novas "No precinho pra você" e "Combucas" no cardápio, com a entrada dos primeiros produtos nelas, além da reordenação geral do cardápio.'},
+  {date:'2026-08-11', label:'11/08/2026', categoria:'cardapio', lojas:['rede'],
+    titulo:'Entrada do PF da Cumbuca',
+    desc:'Entrada do Prato Feito (PF) da Cumbuca no cardápio, a R$ 39,90.'},
+  {date:'2026-08-12', label:'12/08/2026', categoria:'cardapio', lojas:['rede'],
+    titulo:'Ajuste de preços — diversos pratos',
+    desc:'Reajuste de R$ 0,95 em todos os produtos, mais ajustes específicos: Pira na Batatinha de R$13,90 para R$14,90; Salmão Hula Hula de R$59,90 para R$62,90; Parmegiana de R$54,90 para R$55,90; Estrogonofe de R$49,90 para R$52,90; Risoto Coguzen de R$54,90 para R$55,90.'},
+  {date:'2026-08-14', label:'14/08/2026', categoria:'hits', lojas:['rede'],
+    titulo:'Ativação do Hits',
+    desc:'Ativação da alavanca Hits em todos os IDs (lojas) da Cumbuca, com os pratos: Nhoque "tarja preta", Feijuca, Estrogonofe Sarado, Wrap Méxicomigo, Wrap Elegante, Wrap Divino, Bobó do Ge da mamãe Claudia e Wrap Caesar.'},
+  {date:'2026-08-25', label:'25/08/2026', categoria:'promocoes', lojas:['rede'],
+    titulo:'"Leva logo 3" substitui o "Leva logo duas"',
+    desc:'Substituição do "Leva logo duas" pelo "Leva logo 3", com descontos espelhados de 70%, 50% e 25%. Ajustes de preço: Parmegiana individual R$57,95, média R$69,95, dupla R$104,95 e quádrupla R$199,95; Estrogonofe dupla R$99,95 e quádrupla R$192,95; Nhoque Tarja Preta individual R$52,95, dupla R$99,95 e quádrupla R$192,95. Inclusão da Parmegiana na categoria família.'},
+  {date:'2026-08-28', label:'28/08/2026', categoria:'promocoes', lojas:['rede'],
+    titulo:'Festival de Estrogonofe',
+    desc:'Lançamento do Festival de Estrogonofe.'},
+  {date:'2026-09-01', label:'01/09/2026', categoria:'cardapio', lojas:['rede'],
+    titulo:'Ajuste de preços por inflação/CMV',
+    desc:'Salmão Alto Astral médio R$62,95 e grande R$74,95; Salmão Hula Hula R$64,95 e grande R$76,95; Salmão Divino R$62,95 e grande R$74,95; Nhoque Tarja Preta R$49,95 e grande R$62,95; Churrasco Árabe R$57,95 e grande R$69,95. Brasileira à noite: Frango Elegante R$39,90, Feijuca R$39,90 e Frango Divino R$44,90 no topo do Precinho. Saudável manhã/noite: Salpicão Amor R$42,90. Todas as lojas manhã: Frango Divino R$44,90. Também: Pira na Batatinha R$15,95, Pira na Batatinha Roxa R$17,95, Aipim de Respeito R$17,95 (entrada do item no cardápio), Pira na Batatinha Baroa R$19,95, Camarão Pop R$49,90, Ilha-lá Muito Falafel R$29,90, Frango Pop R$34,90, El Guaca R$34,90.'},
+  {date:'2026-09-01', label:'01/09/2026', categoria:'promocoes', lojas:['Wraps - Tijuca'],
+    titulo:'Cupom de R$ 12 para novos clientes',
+    desc:'Ativação de cupom de R$ 12 de desconto direcionado a clientes novos — loja Wraps Tijuca.'},
+  {date:'2026-09-01', label:'01/09/2026', categoria:'ads',
+    lojas:['Cumbuca - Tijuca','Cumbuca Brasileira - Tijuca','Cumbuca Brasileira - Zona Sul','Cumbuca - Zona Sul'],
+    titulo:'Desativação do turno da tarde em ADS',
+    desc:'Desligamento do turno da tarde nos anúncios (ADS) em 4 lojas, reduzindo o budget diário investido em ~5% em cada uma:',
+    tabela:{
+      headers:['Loja','ADS antes','ADS depois','Variação'],
+      rows:[
+        ['Cumbuca Saudável Tijuca','R$ 951,00','R$ 903,00','<span style="color:var(--good);font-weight:700;">▼ 5,0%</span>'],
+        ['Cumbuca Brasileira Tijuca','R$ 1.200,00','R$ 1.140,00','<span style="color:var(--good);font-weight:700;">▼ 5,0%</span>'],
+        ['Cumbuca Brasileira Zona Sul','R$ 1.196,00','R$ 1.136,00','<span style="color:var(--good);font-weight:700;">▼ 5,0%</span>'],
+        ['Cumbuca Saudável Zona Sul','R$ 951,00','R$ 903,00','<span style="color:var(--good);font-weight:700;">▼ 5,0%</span>']
+      ]
+    }},
+  {date:'2026-09-02', label:'02/09/2026', categoria:'cardapio', lojas:['Wraps - Zona Sul'],
+    titulo:'Item "Mimo" adicionado ao cardápio de Wraps',
+    desc:'Item "Mimo" adicionado apenas no cardápio de Wraps da unidade da Zona Sul.'},
+  {date:'2026-09-04', dateEnd:'2026-09-10', label:'04/09/2026 – 10/09/2026', categoria:'contexto', lojas:['rede'],
+    titulo:'1ª Semana do Rock in Rio',
+    desc:'Primeira semana do Rock in Rio no Rio de Janeiro — evento de grande porte na cidade, considerado como contexto de mercado para eventuais variações de demanda no período.'},
+  {date:'2026-09-08', label:'08/09/2026', categoria:'cardapio', lojas:['rede'],
+    titulo:'Ajustes de cardápio — categorias, Precinho e proteínas',
+    desc:'Categoria Entradas passa a ficar acima das bebidas. Preços: PF Cumbuca Precinho R$45,95 e NJC R$49,95; Estrogonofe Precinho R$45,95; Bobó R$42,95; Nhoque Tarja Preta R$45,95. Wrap Méxicomigo sai do Precinho e passa para a categoria Wraps por R$49,90. Pokes: Pode e Surreal R$54,95, e Perfeito entra no Precinho a partir de R$42,90. Sobremesas R$14,95, refrigerantes R$9,90, sucos R$10,90. Proteínas padrão: Frango grátis, Carne/Cogumelos +R$9,95, Camarão +R$12,95 e Salmão +R$19,95. No Poke com 2 proteínas: Frango grátis, Carne/Cogumelos +R$4,95, Camarão +R$6,95 e Salmão +R$9,95. Proteína extra no Poke: Frango R$7,40, Carne/Cogumelos +R$14,95, Camarão +R$17,95 e Salmão +R$22,00.'},
+  {date:'2026-09-11', label:'11/09/2026', categoria:'hits', lojas:['rede'],
+    titulo:'Hits operando em patamar abaixo, seguido de desativação',
+    desc:'Durante a semana do Rock in Rio, o Hits passou a operar num patamar de resultado abaixo do normal. Desativação da alavanca Hits no mesmo dia, para consertar os pratos que estavam taggeados incorretamente.'},
+  {date:'2026-09-11', dateEnd:'2026-09-14', label:'11/09/2026 – 14/09/2026', categoria:'contexto', lojas:['rede'],
+    titulo:'2ª Semana do Rock in Rio',
+    desc:'Segunda semana do Rock in Rio no Rio de Janeiro — mesmo contexto de evento de grande porte na cidade.'},
+  {date:'2026-09-14', label:'14/09/2026', categoria:'hits', lojas:['rede'],
+    titulo:'Reativação do Hits',
+    desc:'Ativação do Hits com os pratos indicados pela lista taggeados. Criada a categoria "Cumbuca Hits" no cardápio para facilitar a taggeação no card.'},
+  {date:'2026-09-16', label:'16/09/2026', categoria:'cardapio', lojas:['rede'],
+    titulo:'Atualização de cardápio — Wraps e Festival',
+    desc:'Inclusão de novos sabores de Wrap (Wrap n\' Roll: Frango e Carne Desfiada) na categoria de Wraps. Exclusão das categorias Festival de Estrogorock e Festival de Wrap n\' Roll.'},
+  {date:'2026-09-18', label:'18/09/2026', categoria:'ads',
+    lojas:['Cumbuca - Tijuca','Cumbuca Brasileira - Tijuca','Cumbuca - Zona Sul','Cumbuca Brasileira - Zona Sul'],
+    titulo:'Ajuste de orçamento diário em ADS',
+    desc:'Ajuste do orçamento diário de anúncios (ADS) para R$ 1.200,00 nos IDs: Cumbuca Saudável Tijuca, Cumbuca Brasileira Tijuca, Cumbuca Saudável Zona Sul e Cumbuca Brasileira Zona Sul.'},
+  {date:'2026-09-18', label:'18/09/2026', categoria:'ads', lojas:['Wraps - Zona Sul'],
+    titulo:'Retirada de anúncios — Wraps Zona Sul',
+    desc:'Desativação dos anúncios (ADS) da loja Wraps Zona Sul.'},
+  {date:'2026-09-18', label:'18/09/2026', categoria:'alavancas', lojas:['Cumbuca - Tijuca'],
+    titulo:'Entrega grátis para clientes inativos — Cumbuca Saudável Tijuca',
+    desc:'Inclusão da alavanca de entrega grátis até R$ 4,99, direcionada a clientes inativos da loja Cumbuca Saudável Tijuca.'}
+];
+ACOES.sort((a,b)=> a.date===b.date ? 0 : (a.date<b.date?-1:1));
+
+function acoesLojaLabel(lojas){
+  if(lojas.includes('rede')) return 'Rede toda';
+  return lojas.map(l=>l.replace(' - ',' ')).join(', ');
+}
+function acoesRenderTabelaExtra(t){
+  if(!t) return '';
+  return `<table style="width:100%;margin-top:10px;border-collapse:collapse;font-size:13px;">
+    <thead><tr style="text-align:left;color:var(--ink-soft);border-bottom:1px solid var(--border);">
+      ${t.headers.map(h=>`<th style="padding:5px 10px 5px 0;font-weight:700;">${h}</th>`).join('')}
+    </tr></thead>
+    <tbody>${t.rows.map(r=>`<tr style="border-bottom:1px solid var(--border);">${r.map(c=>`<td style="padding:6px 10px 6px 0;">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table>`;
+}
+function acoesMatch(a, month, cat, loja){
+  if(month!=='all'){
+    const inMonth = a.date.slice(0,7)===month || (a.dateEnd && a.dateEnd.slice(0,7)===month);
+    if(!inMonth) return false;
+  }
+  if(cat!=='all' && a.categoria!==cat) return false;
+  if(loja!=='all' && !(a.lojas.includes('rede') || a.lojas.includes(loja))) return false;
+  return true;
+}
+function populateAcoesFiltros(){
+  const monthSel = qs('acoesMonth');
+  const months = [...new Set(ACOES.flatMap(a=> a.dateEnd ? [a.date.slice(0,7), a.dateEnd.slice(0,7)] : [a.date.slice(0,7)]))].sort();
+  monthSel.innerHTML = '<option value="all">Todos os meses</option>' + months.map(m=>{
+    const [y,mm] = m.split('-');
+    return `<option value="${m}">${MONTH_LABEL_FULL[mm]}/${y}</option>`;
+  }).join('');
+
+  const catSel = qs('acoesCat');
+  catSel.innerHTML = '<option value="all">Todas as ações</option>' + Object.entries(ACAO_CATEGORIAS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+
+  const lojaSel = qs('acoesLoja');
+  lojaSel.innerHTML = '<option value="all">Todas as lojas</option>' + STORE_KEYS.map(s=>`<option value="${s}">${s}</option>`).join('');
+}
+function renderAcoesTable(){
+  const month = qs('acoesMonth').value;
+  const cat = qs('acoesCat').value;
+  const loja = qs('acoesLoja').value;
+  const filtered = ACOES.filter(a=>acoesMatch(a, month, cat, loja));
+  const rows = filtered.map(a=>{
+    const catInfo = ACAO_CATEGORIAS[a.categoria];
+    return `<tr>
+      <td class="store-name">${a.label}</td>
+      <td><span class="badge ${catInfo.badge}">${catInfo.label}</span></td>
+      <td>${acoesLojaLabel(a.lojas)}</td>
+      <td><strong>${a.titulo}</strong><br><span style="color:var(--ink-soft);font-size:13px;">${a.desc}</span>${acoesRenderTabelaExtra(a.tabela)}</td>
+    </tr>`;
+  }).join('');
+  qs('acoesTable').innerHTML = `<thead><tr><th>Data</th><th>Tipo</th><th>Loja</th><th>Descrição</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);padding:20px;">Nenhuma ação encontrada para esse filtro.</td></tr>'}</tbody>`;
+  qs('acoesCount').textContent = `${filtered.length} de ${ACOES.length}`;
+}
+function bootAcoes(){
+  populateAcoesFiltros();
+  renderAcoesTable();
+}
+
 function init(){
   safe('seletores', ()=>{ populateSelectors('F'); populateSelectors('P'); populateMonthSelects(); });
 
@@ -3349,6 +3416,11 @@ function init(){
   safe('Projeção', populateProjStoreSelect);
   on('proj_store','change', ()=>safe('Projeção', renderProjecao));
   safe('Projeção', renderProjecao);
+
+  safe('Ações', bootAcoes);
+  on('acoesMonth','change', ()=>safe('Ações', renderAcoesTable));
+  on('acoesCat','change', ()=>safe('Ações', renderAcoesTable));
+  on('acoesLoja','change', ()=>safe('Ações', renderAcoesTable));
 
   // Recalcula gráficos (SVG responsivo) após rotação de tela ou redimensionamento
   let resizeTimer=null;
