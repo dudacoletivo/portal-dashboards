@@ -3408,7 +3408,17 @@ const ACOES = [
     desc:'Desativação dos anúncios (ADS) da loja Wraps Zona Sul.'},
   {date:'2026-09-18', label:'18/09/2026', categoria:'alavancas', lojas:['Cumbuca - Tijuca'],
     titulo:'Entrega grátis para clientes inativos — Cumbuca Saudável Tijuca',
-    desc:'Inclusão da alavanca de entrega grátis até R$ 4,99, direcionada a clientes inativos da loja Cumbuca Saudável Tijuca.'}
+    desc:'Inclusão da alavanca de entrega grátis até R$ 4,99, direcionada a clientes inativos da loja Cumbuca Saudável Tijuca.'},
+  {date:'2026-09-30', label:'30/09/2026', categoria:'hits', lojas:['Wraps - Tijuca','Wraps - Zona Sul'],
+    titulo:'Aumento do orçamento do Hits — lojas Wraps',
+    desc:'Aumento do orçamento diário do Hits nas lojas de Wraps da Tijuca e da Zona Sul, de R$ 300 para R$ 500:',
+    tabela:{
+      headers:['Loja','Orçamento antes','Orçamento depois','Variação'],
+      rows:[
+        ['Wraps - Tijuca','R$ 300,00','R$ 500,00','<span style="font-weight:700;">▲ 66,7%</span>'],
+        ['Wraps - Zona Sul','R$ 300,00','R$ 500,00','<span style="font-weight:700;">▲ 66,7%</span>']
+      ]
+    }}
 ];
 ACOES.sort((a,b)=> a.date===b.date ? 0 : (a.date<b.date?-1:1));
 
