@@ -129,7 +129,7 @@
   </div>
   <div>
     <h1>Dashboard de Performance — Delli</h1>
-    <p id="scopeSub">Padaria Delli · Delli Jardim</p>
+    <p id="scopeSub">Padaria Delli · Pizzaria Delli — unidade Delli Jardim</p>
   </div>
   <div class="top-actions">
     <span class="pill" id="periodPill">Julho → Setembro 2026</span>
@@ -328,22 +328,41 @@
 </div>
 
 <script>
-/* ============ DADOS (snapshot da planilha [Dashboard] Delli Jardim — abas "Mensal" e
-   "Semanal") — substituído por window.__LIVE_RAW quando o live-sync carrega ============ */
+/* ============ DADOS (snapshot da planilha [Dashboard] Delli Jardim — abas "Padaria Delli |
+   Mensal", "Pizzaria Delli | Mensal" e "Delli | Semanal") — substituído por window.__LIVE_RAW
+   quando o live-sync carrega. A Pizzaria Delli ainda não tem aba "Semanal" própria na
+   planilha, por isso entra só com "mensal" (semanal:{}) até o cliente criar essa aba. ============ */
 const RAW = window.__LIVE_RAW || {
   stores: {
-    "delli-jardim": {
-      label: "Delli Jardim",
+    "padaria-delli": {
+      label: "Padaria Delli",
       mensal: {
-        junho:  {vendas:290, gmv:22456.44, tm:77.44, novos:88, visitas:1333, conversao:21.76, budget:10.26, promo:2303.73, subifood:802.56, cpo:7.94, roi:8.75},
-        julho:  {vendas:323, gmv:25035.03, tm:77.51, novos:86, visitas:1225, conversao:26.37, budget:9.68, promo:2424.38, subifood:1698.15, cpo:7.51, roi:9.33},
-        agosto: {vendas:344, gmv:27645.11, tm:80.36, novos:89, visitas:1260, conversao:27.30, budget:6.03, promo:1667.24, subifood:1031.88, cpo:4.85, roi:15.58}
+        junho:    {vendas:1247, gmv:64852.53, tm:52.01, novos:292, visitas:7408, conversao:16.83, budget:15.24, promo:9883.23, subifood:802.56, cpo:7.93, roi:5.56},
+        julho:    {vendas:997,  gmv:52163.62, tm:52.32, novos:175, visitas:5574, conversao:17.89, budget:11.57, promo:6035.20, subifood:1698.15, cpo:6.05, roi:7.64},
+        agosto:   {vendas:1210, gmv:64123.87, tm:52.99, novos:269, visitas:5721, conversao:21.15, budget:11.98, promo:7682.29, subifood:1031.88, cpo:6.35, roi:7.35},
+        setembro: {vendas:1140, gmv:64047.33, tm:56.18, novos:261, visitas:6189, conversao:18.42, budget:10.68, promo:6837.30, subifood:4741.46, cpo:6.00, roi:8.37}
       },
       semanal: {
-        julho:    { w7: {vendas:231, gmv:14166.03, tm:61.32, novos:45, visitas:1661, conversao:13.91, budget:5.76, promo:815.48, subifood:802.56, cpo:3.53, roi:16.37} },
-        agosto:   { w7: {vendas:260, gmv:15297.11, tm:58.84, novos:72, visitas:1105, conversao:23.53, budget:9.61, promo:1470.74, subifood:1698.15, cpo:5.66, roi:9.40} },
-        setembro: { w7: {vendas:333, gmv:18941.92, tm:56.88, novos:102, visitas:1673, conversao:19.90, budget:9.23, promo:1748.74, subifood:1031.88, cpo:5.25, roi:9.83} }
+        julho:    { w7: {vendas:231, gmv:14166.03, tm:61.32, novos:45,  visitas:1661, conversao:13.91, budget:5.76, promo:815.48,  subifood:802.56,  cpo:3.53, roi:16.37},
+                    w14:{vendas:456, gmv:28535.24, tm:62.58, novos:88,  visitas:2929, conversao:15.57, budget:11.09, promo:3163.25, subifood:1645.28, cpo:6.94, roi:8.02},
+                    w21:{vendas:647, gmv:40428.68, tm:62.49, novos:117, visitas:4019, conversao:16.10, budget:10.38, promo:4197.34, subifood:2563.15, cpo:6.49, roi:8.63} },
+        agosto:   { w7: {vendas:260, gmv:15297.11, tm:58.84, novos:72,  visitas:1105, conversao:23.53, budget:9.61, promo:1470.74, subifood:1698.15, cpo:5.66, roi:9.40},
+                    w14:{vendas:540, gmv:32405.23, tm:60.01, novos:123, visitas:2418, conversao:22.33, budget:10.41, promo:3372.05, subifood:2752.72, cpo:6.24, roi:8.61},
+                    w21:{vendas:818, gmv:48634.77, tm:59.46, novos:173, visitas:3714, conversao:22.02, budget:10.32, promo:5020.70, subifood:3856.24, cpo:6.14, roi:8.69} },
+        setembro: { w7: {vendas:333, gmv:18941.92, tm:56.88, novos:102, visitas:1673, conversao:19.90, budget:9.23, promo:1748.74, subifood:1031.88, cpo:5.25, roi:9.83},
+                    w14:{vendas:628, gmv:36667.76, tm:58.39, novos:163, visitas:3265, conversao:19.23, budget:6.96, promo:2553.38, subifood:1325.23, cpo:4.07, roi:13.36},
+                    w21:{vendas:851, gmv:51304.56, tm:60.29, novos:205, visitas:4638, conversao:18.35, budget:5.32, promo:2728.38, subifood:1325.22, cpo:3.21, roi:17.80} }
       }
+    },
+    "pizzaria-delli": {
+      label: "Pizzaria Delli",
+      mensal: {
+        junho:    {vendas:290, gmv:23276.83, tm:80.26, novos:88, visitas:1332, conversao:21.77, budget:42.46, promo:9883.23, subifood:802.56,  cpo:34.08, roi:1.36},
+        julho:    {vendas:323, gmv:22456.44, tm:69.52, novos:86, visitas:1125, conversao:28.71, budget:10.26, promo:2303.73, subifood:1513.34, cpo:7.13, roi:8.75},
+        agosto:   {vendas:344, gmv:26553.77, tm:77.19, novos:89, visitas:1260, conversao:27.30, budget:10.39, promo:2758.58, subifood:1878.56, cpo:8.02, roi:8.63},
+        setembro: {vendas:341, gmv:27457.30, tm:80.52, novos:73, visitas:1282, conversao:26.60, budget:9.20, promo:2526.98, subifood:1577.86, cpo:7.41, roi:9.87}
+      },
+      semanal: {}
     }
   }
 };

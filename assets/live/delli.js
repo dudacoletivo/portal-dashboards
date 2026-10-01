@@ -1,16 +1,19 @@
 // Sincronização ao vivo do dashboard Delli com a planilha [Dashboard] Delli Jardim.
-// Cliente novo, sincronização própria e simples (mesmo espírito da do Tapí): a planilha tem
-// duas abas de dados hoje, ambas com um único bloco de métricas (1 loja, "Padaria Delli"),
-// sem "UNIDADE:" por loja — por isso não reaproveita o parser genérico de assets/sheets-sync.js
-// (parseMonthlyLikeSheet espera o formato com "UNIDADE:"/várias lojas por aba); em vez disso,
-// lê a linha "Métrica" e as colunas de cada aba diretamente.
-//   - "Delli | Mensal": 1 coluna por mês FECHADO (ex: "JUNHO", "JULHO", "AGOSTO") -> alimenta
-//     STORES[id].mensal[mes] = {métricas}. Usada só pela aba Dash.
+// Cliente novo, sincronização própria e simples (mesmo espírito da do Tapí): cada aba de dados
+// tem um único bloco de métricas (1 marca/loja), sem "UNIDADE:" por loja — por isso não
+// reaproveita o parser genérico de assets/sheets-sync.js (parseMonthlyLikeSheet espera o
+// formato com "UNIDADE:"/várias lojas por aba); em vez disso, lê a linha "Métrica" e as
+// colunas de cada aba diretamente.
+//   - "Padaria Delli | Mensal" e "Pizzaria Delli | Mensal": 1 coluna por mês FECHADO (ex:
+//     "JUNHO", "JULHO", "AGOSTO") -> alimenta STORES[id].mensal[mes] = {métricas}. Usada só
+//     pela aba Dash.
 //   - "Delli | Semanal": 1 coluna por corte parcial dentro de um mês (ex: "SETEMBRO (01-07)",
 //     e futuramente "SETEMBRO (01-14)", "SETEMBRO (01-21)" conforme o mês avança) -> alimenta
 //     STORES[id].semanal[mes][janela] = {métricas}, janela em 'w7'/'w14'/'w21'/'w28'. Usada
 //     pela aba Investimento (pega a janela mais completa disponível em cada mês) e pela aba
-//     Comparativo Parcial (janela escolhida no filtro).
+//     Comparativo Parcial (janela escolhida no filtro). Hoje só existe para a Padaria Delli —
+//     a Pizzaria Delli ainda não tem aba "Semanal" própria na planilha, então fica com
+//     semanal:{} até o cliente criar essa aba (ver pizzariaSemanalFromSheet abaixo, hoje null).
 //
 // A aba "Delli | Acompanhamento Cardápio" (datas soltas, não meses) não é usada por este
 // dashboard — fica de fora por ora.
@@ -19,8 +22,9 @@
 // do bloco principal do dashboard (STORES/renderAll já definidos).
 (function () {
   const SHEET_ID = '1qw8inqRLODVKKnjRMpleFspLIv75zZxALNIGmCVQnM4';
-  const GID_SEMANAL = '2125793866'; // aba "Delli | Semanal"
-  const GID_MENSAL = '1167192831'; // aba "Delli | Mensal"
+  const GID_SEMANAL = '2125793866'; // aba "Delli | Semanal" (só Padaria Delli, por ora)
+  const GID_MENSAL_PADARIA = '1167192831'; // aba "Padaria Delli | Mensal"
+  const GID_MENSAL_PIZZARIA = '1559849814'; // aba "Pizzaria Delli | Mensal"
 
   const MONTH_NAMES_PT = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
   const MONTH_KEY_PT = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -135,16 +139,21 @@
   }
 
   async function loadLive() {
-    const [semanalRows, mensalRows] = await Promise.all([
+    const [semanalRows, mensalPadariaRows, mensalPizzariaRows] = await Promise.all([
       SheetsSync.fetchCsvRows(SHEET_ID, GID_SEMANAL),
-      SheetsSync.fetchCsvRows(SHEET_ID, GID_MENSAL)
+      SheetsSync.fetchCsvRows(SHEET_ID, GID_MENSAL_PADARIA),
+      SheetsSync.fetchCsvRows(SHEET_ID, GID_MENSAL_PIZZARIA)
     ]);
-    const semanal = parseSemanal(semanalRows);
-    const mensal = parseMensal(mensalRows);
-    if (!Object.keys(semanal).length && !Object.keys(mensal).length) {
+    const semanalPadaria = parseSemanal(semanalRows);
+    const mensalPadaria = parseMensal(mensalPadariaRows);
+    const mensalPizzaria = parseMensal(mensalPizzariaRows);
+    if (!Object.keys(semanalPadaria).length && !Object.keys(mensalPadaria).length && !Object.keys(mensalPizzaria).length) {
       throw new Error('Nenhum mês encontrado nas abas Semanal/Mensal');
     }
-    return { 'delli-jardim': { label: 'Delli Jardim', semanal: semanal, mensal: mensal } };
+    return {
+      'padaria-delli': { label: 'Padaria Delli', semanal: semanalPadaria, mensal: mensalPadaria },
+      'pizzaria-delli': { label: 'Pizzaria Delli', semanal: {}, mensal: mensalPizzaria }
+    };
   }
 
   function init() {
