@@ -101,6 +101,27 @@
   .stamp.neg{background:#fbeaea; color:#8f2323;}
   .stamp.neu{background:#f0f0ee; color:#4a453f;}
 
+  .badge{display:inline-flex; align-items:center; gap:4px; font-weight:700; font-size:12px; padding:3px 9px; border-radius:999px; white-space:nowrap;}
+  .badge.cat-cardapio{color:var(--brand-dark); background:var(--brand-soft);}
+  .badge.cat-promocoes{color:#8a6500; background:#FBF0DA;}
+  .badge.cat-hits{color:var(--brand-accent); background:#E5F3EC;}
+  .badge.cat-ads{color:var(--bad); background:#FBEAEA;}
+  .badge.cat-alavancas{color:#2B5FA3; background:#E6EEFB;}
+  .badge.cat-contexto{color:var(--ink-soft); background:#F0EDE8;}
+
+  .acoes-detail{margin-top:8px;}
+  .acoes-detail summary{
+    cursor:pointer; font-weight:700; color:var(--brand-dark); font-size:12.5px;
+    list-style:none; display:inline-flex; align-items:center; gap:6px; user-select:none;
+    padding:6px 10px; border:1.5px solid var(--border); border-radius:999px; background:#fff;
+    transition:.12s;
+  }
+  .acoes-detail summary:hover{background:var(--brand-soft);}
+  .acoes-detail summary::-webkit-details-marker{display:none;}
+  .acoes-detail summary::marker{content:'';}
+  .acoes-detail .chevron{display:inline-block; transition:transform .15s;}
+  .acoes-detail[open] .chevron{transform:rotate(180deg);}
+
   footer.foot{text-align:center; font-size:12px; color:var(--ink-soft); padding:20px 0 6px;}
 
   /* modal legenda */
@@ -142,6 +163,7 @@
   <button class="tab-btn" data-tab="dashP">🌓 Dash — Parcial</button>
   <button class="tab-btn" data-tab="invest">💰 Investimento</button>
   <button class="tab-btn" data-tab="parcial">🔍 Comparativo Parcial</button>
+  <button class="tab-btn" data-tab="acoes">🗂️ Ações</button>
 </nav>
 
 <!-- ================= DASH — MÊS FECHADO ================= -->
@@ -300,6 +322,33 @@
   <div class="section-title">Loja a loja</div>
   <div class="card">
     <div class="table-wrap"><table id="parcialTable"></table></div>
+  </div>
+</section>
+
+<!-- ================= AÇÕES ================= -->
+<section class="panel" id="panel-acoes">
+  <div class="card">
+    <h2 style="margin-top:0;font-size:16px;">Filtros</h2>
+    <p class="sub">Registro das principais mudanças operacionais e de cardápio feitas na rede ao longo do tempo, para dar contexto às variações vistas nos números do dashboard.</p>
+    <div class="filterbar">
+      <div class="filtergroup">
+        <label class="title">Mês</label>
+        <select id="acoesMonth"></select>
+      </div>
+      <div class="filtergroup">
+        <label class="title">Tipo de ação</label>
+        <select id="acoesCat"></select>
+      </div>
+      <div class="filtergroup">
+        <label class="title">Loja</label>
+        <select id="acoesLoja"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Linha do tempo de ações <span class="tag" id="acoesCount"></span></div>
+  <div class="card">
+    <div class="table-wrap"><table id="acoesTable"></table></div>
   </div>
 </section>
 
@@ -1011,6 +1060,104 @@ function renderParcial(){
 }
 
 /* =================================================================== */
+/* ================================ AÇÕES =============================== */
+/* =================================================================== */
+const ACAO_CATEGORIAS = {
+  cardapio:  {label:'Cardápio',    badge:'cat-cardapio'},
+  promocoes: {label:'Promoções',   badge:'cat-promocoes'},
+  hits:      {label:'Hits',        badge:'cat-hits'},
+  ads:       {label:'Ads',         badge:'cat-ads'},
+  alavancas: {label:'Alavancas',   badge:'cat-alavancas'},
+  contexto:  {label:'Contexto de mercado', badge:'cat-contexto'}
+};
+const MONTH_LABEL_FULL_NUM = {'01':'Janeiro','02':'Fevereiro','03':'Março','04':'Abril','05':'Maio','06':'Junho','07':'Julho','08':'Agosto','09':'Setembro','10':'Outubro','11':'Novembro','12':'Dezembro'};
+const ACOES = [
+  {date:'2026-08-27', label:'27/08/2026', categoria:'cardapio', lojas:['padaria-delli'],
+    titulo:'Virada do cardápio da Padaria Delli',
+    desc:'Mudança de cardápio da unidade Padaria Delli.'},
+  {date:'2026-09-10', label:'10/09/2026', categoria:'cardapio', lojas:['pizzaria-delli'],
+    titulo:'Virada do cardápio da Pizzaria Delli',
+    desc:'Mudança de cardápio da unidade Pizzaria Delli.'}
+];
+ACOES.sort((a,b)=> a.date===b.date ? 0 : (a.date<b.date?-1:1));
+
+function acoesLojaLabel(lojas){
+  if(lojas.includes('rede')) return 'Rede toda';
+  return lojas.map(id=> STORES[id] ? STORES[id].label : id).join(', ');
+}
+function acoesRenderTabelaExtra(t){
+  if(!t) return '';
+  const n = t.rows.length;
+  return `<details class="acoes-detail">
+    <summary>Ver tabela detalhada (${n} ${n===1?'item':'itens'}) <span class="chevron">▾</span></summary>
+    <table style="width:100%;margin-top:10px;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="text-align:left;color:var(--ink-soft);border-bottom:1px solid var(--border);">
+        ${t.headers.map(h=>`<th style="padding:5px 10px 5px 0;font-weight:700;">${h}</th>`).join('')}
+      </tr></thead>
+      <tbody>${t.rows.map(r=>`<tr style="border-bottom:1px solid var(--border);">${r.map(c=>`<td style="padding:6px 10px 6px 0;">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>
+  </details>`;
+}
+function acoesMatch(a, month, cat, loja){
+  if(month!=='all'){
+    const inMonth = a.date.slice(0,7)===month || (a.dateEnd && a.dateEnd.slice(0,7)===month);
+    if(!inMonth) return false;
+  }
+  if(cat!=='all' && a.categoria!==cat) return false;
+  if(loja!=='all' && !(a.lojas.includes('rede') || a.lojas.includes(loja))) return false;
+  return true;
+}
+function populateAcoesFiltros(){
+  const monthSel = document.getElementById('acoesMonth');
+  const prevMonth = monthSel.value;
+  const months = [...new Set(ACOES.flatMap(a=> a.dateEnd ? [a.date.slice(0,7), a.dateEnd.slice(0,7)] : [a.date.slice(0,7)]))].sort();
+  monthSel.innerHTML = '<option value="all">Todos os meses</option>' + months.map(m=>{
+    const [y,mm] = m.split('-');
+    return `<option value="${m}">${MONTH_LABEL_FULL_NUM[mm]}/${y}</option>`;
+  }).join('');
+  if(prevMonth && [...monthSel.options].some(o=>o.value===prevMonth)) monthSel.value = prevMonth;
+
+  const catSel = document.getElementById('acoesCat');
+  const prevCat = catSel.value;
+  catSel.innerHTML = '<option value="all">Todas as ações</option>' + Object.entries(ACAO_CATEGORIAS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+  if(prevCat && [...catSel.options].some(o=>o.value===prevCat)) catSel.value = prevCat;
+
+  const lojaSel = document.getElementById('acoesLoja');
+  const prevLoja = lojaSel.value;
+  lojaSel.innerHTML = '<option value="all">Todas as lojas</option>' + STORE_IDS.map(id=>`<option value="${id}">${esc(STORES[id].label)}</option>`).join('');
+  if(prevLoja && [...lojaSel.options].some(o=>o.value===prevLoja)) lojaSel.value = prevLoja;
+}
+function renderAcoesTable(){
+  const month = document.getElementById('acoesMonth').value;
+  const cat = document.getElementById('acoesCat').value;
+  const loja = document.getElementById('acoesLoja').value;
+  const filtered = ACOES.filter(a=>acoesMatch(a, month, cat, loja));
+  const rows = filtered.map(a=>{
+    const catInfo = ACAO_CATEGORIAS[a.categoria];
+    return `<tr>
+      <td>${a.label}</td>
+      <td><span class="badge ${catInfo.badge}">${catInfo.label}</span></td>
+      <td>${esc(acoesLojaLabel(a.lojas))}</td>
+      <td><strong>${esc(a.titulo)}</strong><br><span style="color:var(--ink-soft);font-size:13px;">${esc(a.desc)}</span>${acoesRenderTabelaExtra(a.tabela)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('acoesTable').innerHTML = `<thead><tr><th>Data</th><th>Tipo</th><th>Loja</th><th>Descrição</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);padding:20px;">Nenhuma ação encontrada para esse filtro.</td></tr>'}</tbody>`;
+  document.getElementById('acoesCount').textContent = `${filtered.length} de ${ACOES.length}`;
+}
+function bootAcoes(){
+  populateAcoesFiltros();
+  renderAcoesTable();
+  const monthSel = document.getElementById('acoesMonth'), catSel = document.getElementById('acoesCat'), lojaSel = document.getElementById('acoesLoja');
+  if(!monthSel.dataset.wired){
+    monthSel.addEventListener('change', renderAcoesTable);
+    catSel.addEventListener('change', renderAcoesTable);
+    lojaSel.addEventListener('change', renderAcoesTable);
+    monthSel.dataset.wired = '1';
+  }
+}
+
+/* =================================================================== */
 /* ================================ INIT =============================== */
 /* =================================================================== */
 function renderAll(){
@@ -1027,6 +1174,7 @@ function renderAll(){
   renderDashP();
   renderInvest();
   renderParcial();
+  bootAcoes();
   const periodPill = document.getElementById('periodPill');
   const allMonths = sortMonths([...CLOSED_MONTHS, ...discoverPartialMonthsAny()]);
   if(allMonths.length) periodPill.textContent = allMonths.length>1 ? `${MONTH_LABEL[allMonths[0]]} → ${MONTH_LABEL[allMonths[allMonths.length-1]]} 2026` : MONTH_LABEL[allMonths[0]]+' 2026';
