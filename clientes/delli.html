@@ -1077,7 +1077,19 @@ const ACOES = [
     desc:'Mudança de cardápio da unidade Padaria Delli.'},
   {date:'2026-09-10', label:'10/09/2026', categoria:'cardapio', lojas:['pizzaria-delli'],
     titulo:'Virada do cardápio da Pizzaria Delli',
-    desc:'Mudança de cardápio da unidade Pizzaria Delli.'}
+    desc:'Mudança de cardápio da unidade Pizzaria Delli.'},
+  {date:'2026-10-01', label:'01/10/2026', categoria:'ads', lojas:['padaria-delli'],
+    titulo:'Aumento de Ads — Padaria Delli',
+    desc:'Aumento do investimento em Ads (anúncios) na Padaria Delli.'},
+  {date:'2026-10-01', label:'01/10/2026', categoria:'promocoes', lojas:['padaria-delli'],
+    titulo:'Desconto em item — Padaria Delli',
+    desc:'Inclusão de desconto em item do cardápio da Padaria Delli.'},
+  {date:'2026-10-01', label:'01/10/2026', categoria:'alavancas', lojas:['padaria-delli'],
+    titulo:'Alavanca de Consumidor — Padaria Delli',
+    desc:'Ativação de alavanca de consumidor na Padaria Delli.'},
+  {date:'2026-10-01', label:'01/10/2026', categoria:'ads', lojas:['pizzaria-delli'],
+    titulo:'Aumento de Ads — Pizzaria Delli',
+    desc:'Aumento do investimento em Ads (anúncios) na Pizzaria Delli.'}
 ];
 ACOES.sort((a,b)=> a.date===b.date ? 0 : (a.date<b.date?-1:1));
 
