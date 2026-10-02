@@ -430,8 +430,13 @@ footer{ text-align:center;color:var(--neutro);font-size:12px;padding:20px;}
 
 <script>
 /* ================= DADOS ================= */
-const LOJAS=["Arpoador","Botafogo","Centro","Flamengo","Icaraí","Ipanema","Itaim","Leblon","Pinheiros","Tijuca","Downtown","Novo Leblon"];
-const CORES=["#7B131F","#C0392B","#E67E22","#B8860B","#6B8E23","#1E7A46","#16808A","#2C5F8A","#5B4E9E","#8E4B8E","#B25078","#8A7F78"];
+// LOJAS_BASE: lojas com histórico completo (Investimento Jan–Jun, BP semanal e Cruzamento só existem para elas).
+// LOJAS_NOVAS: lojas abertas depois — valor = nº do mês de abertura. Antes dele a planilha traz cópia de
+// outras lojas (template), então qualquer coluna anterior é descartada na leitura (ver scanSheet()).
+const LOJAS_BASE=["Arpoador","Botafogo","Centro","Flamengo","Icaraí","Ipanema","Itaim","Leblon","Pinheiros","Tijuca","Downtown","Novo Leblon"];
+const LOJAS_NOVAS={"Belvedere":9,"Vogue Square":9}; // abriram em setembro/2026 — sem base de comparação
+const LOJAS=[...LOJAS_BASE,...Object.keys(LOJAS_NOVAS)];
+const CORES=["#7B131F","#C0392B","#E67E22","#B8860B","#6B8E23","#1E7A46","#16808A","#2C5F8A","#5B4E9E","#8E4B8E","#B25078","#8A7F78","#3D7A6B","#A0522D"];
 
 // meses fechados: [Abr, Mai, Jun]
 const MENSAL={metrics:["Pedidos","GMV / Fat. líquido","TM","Novos","Visitas","Conversão %","Budget %","Promoções + Ads","Sub iFood","CPO","ROI"],labels:["Abril", "Maio", "Junho", "Julho"],data:{
@@ -508,6 +513,15 @@ const PARCIAIS={
  "Novo Leblon":[[587,592,552,441],[49044.52,45028.53,39149.94,38230.56],[83.5511,76.0617,70.9238,86.6906],[158,162,135,100],[2483,1904,2021,1658],[23.6408,31.0924,27.3132,26.5983],[2.8862,5.8797,5.6787,0],[1415.52,2647.52,2223.2,0],[2846.48,3331.79,1972.51,1189.08],[1.06,5.46,4.0275,0],[66.63,11.58,16.6097,0]]
 },rede:null}
 };
+// Lojas novas não existem no snapshot embutido (abriram depois dele): entram só com nulls para não quebrar
+// a leitura offline; os valores reais vêm do live-sync.
+(function(){
+ const nulls=n=>Array.from({length:11},()=>Array(n).fill(null));
+ Object.keys(LOJAS_NOVAS).forEach(l=>{
+  if(!MENSAL.data[l])MENSAL.data[l]=nulls(MENSAL.labels.length);
+  Object.values(PARCIAIS).forEach(p=>{if(!p.data[l])p.data[l]=nulls(p.labels.length);});
+ });
+})();
 const PARCIAL={labels:[],data:{},rede:null};
 let JANELA="";
 function setJanela(w){
@@ -562,16 +576,16 @@ const ALAV = {
  "Tijuca":{budget:2651.13,fat:53022.52,tg:"Copart até 4km · R$ 5/pedido",ci:null,an:"R$ 55/dia",hits:null},
  "Downtown":{budget:1387.83,fat:27756.62,tg:null,ci:"R$ 100/dia",an:"R$ 75/dia",hits:null},
  "Novo Leblon":{budget:1817.44,fat:36348.88,tg:null,ci:null,an:null,hits:null},
- // Unidades novas (entrada em 21/09/2026): só aparecem na aba Status de Alavancas — ainda não têm
- // linha na planilha de vendas/investimento, por isso ficam fora de LOJAS (usada pelas outras abas).
- "Vogue":{budget:null,fat:null,tg:"Entrega flexível p/ todos os clientes · 4km · R$ 9,99",ci:"R$ 100",an:null,hits:null,nova:"21/09/2026"},
+ // Unidades novas (entrada em 21/09/2026), listadas em LOJAS_NOVAS.
+ "Vogue Square":{budget:null,fat:null,tg:"Entrega flexível p/ todos os clientes · 4km · R$ 9,99",ci:"R$ 100",an:null,hits:null,nova:"21/09/2026"},
  "Belvedere":{budget:null,fat:null,tg:"Entrega flexível p/ todos os clientes · 4km · R$ 9,99",ci:"R$ 100",an:null,hits:null,nova:"21/09/2026"}
 };
-const ALAV_LOJAS=[...LOJAS,"Vogue","Belvedere"];
-// Vogue/Belvedere ainda não têm linha na aba "Status Alavancas " da planilha (unidades muito
+const ALAV_LOJAS=[...LOJAS];
+// Vogue Square/Belvedere ainda não têm linha na aba "Status Alavancas " da planilha (unidades muito
 // novas) — guardamos o snapshot manual delas aqui para não sumirem do dashboard quando o
-// live-sync substituir ALAV pelos dados reais da planilha (ver loadLive()).
-const ALAV_MANUAL_EXTRA={Vogue:ALAV.Vogue,Belvedere:ALAV.Belvedere};
+// live-sync substituir ALAV pelos dados reais da planilha (ver loadLive()). Quando a planilha
+// passar a trazer essas lojas, os dados reais têm prioridade sobre este snapshot.
+const ALAV_MANUAL_EXTRA={"Vogue Square":ALAV["Vogue Square"],Belvedere:ALAV.Belvedere};
 
 // BP semanal
 const BP = {
@@ -680,7 +694,7 @@ function makeDash(cfg){
  mesSel.innerHTML="";lojaSel.innerHTML="";metSel.innerHTML="";
  cfg.labels.forEach((m,i)=>mesSel.add(new Option(m,i)));
  mesSel.value=cfg.labels.length-1;
- lojaSel.add(new Option("Rede toda (12 lojas)","__rede"));
+ lojaSel.add(new Option(`Rede toda (${LOJAS.length} lojas)`,"__rede"));
  LOJAS.forEach(l=>lojaSel.add(new Option(l,l)));
  METRICS.forEach(m=>metSel.add(new Option(m,m)));
  metSel.value="GMV / Fat. líquido";
@@ -694,7 +708,10 @@ function makeDash(cfg){
   const up=evos.filter(e=>e.g>0),down=evos.filter(e=>e.g<0);
   const r=cfg.rede,eG=evo(r[1][t-1],r[1][t]),eV=evo(r[0][t-1],r[0][t]),eN=evo(r[3][t-1],r[3][t]),eB=evo(r[6][t-1],r[6][t]);
   const f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
-  return `<h2>Rede toda · ${cfg.labels[t]} vs ${cfg.labels[t-1]}</h2><ul>
+  // lojas que só passaram a ter dado agora (abertura recente): entram no total da rede, mas sem base de comparação
+  const novas=LOJAS.filter(l=>cfg.src[l][1][t]!=null&&cfg.src[l][1][t-1]==null);
+  const avisoNovas=novas.length?`<li>🆕 <b>${novas.join(" e ")}</b> ${novas.length>1?"são lojas novas":"é loja nova"} (sem dado no período anterior): ${novas.length>1?"entram":"entra"} no total da rede, mas não ${novas.length>1?"têm":"tem"} comparativo — parte da variação da rede vem dessa abertura.</li>`:"";
+  return `<h2>Rede toda · ${cfg.labels[t]} vs ${cfg.labels[t-1]}</h2><ul>${avisoNovas}
    <li>Rede: <b>GMV ${f1(eG)}</b> · <b>Pedidos ${f1(eV)}</b> · <b>Novos clientes ${f1(eN)}</b> · <b>Budget de investimento ${f1(eB)}</b>${eB<0&&eG>0?" → <b>GMV crescendo com % de investimento menor (eficiência)</b>":eB>0&&eG<0?" → <b>% de investimento subiu e o GMV caiu (revisar alavancas)</b>":""}</li>
    <li>🔺 Maiores altas de GMV: <b>${up.slice(0,3).map(e=>`${e.l} (GMV ${f1(e.g)})`).join(", ")||"nenhuma loja cresceu em GMV"}</b>.</li>
    <li>🔻 Maiores quedas de GMV: <b>${down.slice(-3).reverse().map(e=>`${e.l} (GMV ${f1(e.g)})`).join(", ")||"nenhuma loja caiu em GMV"}</b> — priorize o diagnóstico nelas (alavancas, cardápio, operação/BP).</li>
@@ -703,6 +720,10 @@ function makeDash(cfg){
  function insightLoja(loja,t){
   const s=series(loja);
   if(t===0)return `<h2>${loja} · ${cfg.labels[t]}</h2><ul><li>Primeiro período da série — sem comparativo anterior.</li></ul>`;
+  if(s[1][t-1]==null){
+   if(s[1][t]==null)return `<h2>${loja} · ${cfg.labels[t]}</h2><ul><li>${LOJAS_NOVAS[loja]?"🆕 <b>Loja nova</b> (abriu em setembro/2026) — ":""}a planilha ainda não traz dado de ${cfg.labels[t]} para esta loja. Escolha outro período para ver os números disponíveis.</li></ul>`;
+   return `<h2>${loja} · ${cfg.labels[t]}</h2><ul><li>${LOJAS_NOVAS[loja]?"🆕 <b>Loja nova</b> (abriu em setembro/2026)":"Sem dado no período anterior"} — ainda não há base de comparação com ${cfg.labels[t-1]}. Os indicadores abaixo valem como ponto de partida.</li></ul>`;
+  }
   const goods=[],bads=[];
   METRICS.forEach((m,mi)=>{
    const e=evo(s[mi][t-1],s[mi][t]);if(e==null||!isFinite(e)||Math.abs(e)<1)return;
@@ -875,7 +896,7 @@ const ALAV_HIST=[
   ["Ipanema","CI","Retirada da CI"],
   ["Leblon","AN","ADS Bonificado: R$ 50 | Lance: R$ 0,92"]
  ]},
- {d:"Início de Julho",ev:LOJAS.flatMap(l=>{
+ {d:"Início de Julho",ev:LOJAS_BASE.flatMap(l=>{
   const a=ALAV[l];if(!a)return[];
   const _x=a,out=[["BUD",`Budget ${brl(a.budget)} (5% do faturamento bruto anterior: ${brl(a.fat)})`]];
   out.push(["FLEX",a.tg?("Taxa grátis ativa · "+a.tg):"Taxa grátis desativada"]);
@@ -885,11 +906,11 @@ const ALAV_HIST=[
   return out.map(([c,t])=>[l,c,t]);
  })},
  {d:"21/09/2026",ev:[
-  ["Vogue","FLEX","Ativação de entrega flexível para TODOS os clientes | 4km (R$ 9,99)"],["Vogue","CI","Ativação de Campanha Inteligente | Verba: R$ 100"],
+  ["Vogue Square","FLEX","Ativação de entrega flexível para TODOS os clientes | 4km (R$ 9,99)"],["Vogue Square","CI","Ativação de Campanha Inteligente | Verba: R$ 100"],
   ["Belvedere","FLEX","Ativação de entrega flexível para TODOS os clientes | 4km (R$ 9,99)"],["Belvedere","CI","Ativação de Campanha Inteligente | Verba: R$ 100"]
  ]}
 ];
-// Último bloco (Vogue/Belvedere) é mantido manualmente — não vem da aba "Status Alavancas " da
+// Último bloco (Vogue Square/Belvedere) é mantido manualmente — não vem da aba "Status Alavancas " da
 // planilha ainda. Guardado à parte para poder ser reanexado no fim da timeline depois que o
 // live-sync substituir o resto de ALAV_HIST pelos blocos reais da planilha (ver loadLive()).
 const ALAV_MANUAL_HIST_TAIL=ALAV_HIST.slice(-1);
@@ -940,7 +961,7 @@ function renderAlavInsight(){
   <ul>
    <li>Budget definido como <b>5% do faturamento bruto do mês anterior</b> por loja.</li>
    <li>Alavancas ativas: <b>Anúncio (CPC)</b> em ${nAn} de ${ALAV_LOJAS.length} lojas · <b>Campanha Inteligente</b> em ${nCI} · <b>Hits</b> em ${nHits} · <b>Taxa Grátis / Entrega Flexível</b> em ${nTG}.</li>
-   <li>Unidades novas <b>Vogue</b> e <b>Belvedere</b>: <b>Entrega flexível para todos os clientes</b> (4km · R$ 9,99) e <b>Campanha Inteligente</b> (R$ 100) ativadas em 21/09/2026; ainda sem histórico de vendas na planilha.</li>
+   <li>Unidades novas <b>Vogue Square</b> e <b>Belvedere</b>: <b>Entrega flexível para todos os clientes</b> (4km · R$ 9,99) e <b>Campanha Inteligente</b> (R$ 100) ativadas em 21/09/2026; ainda sem histórico de vendas na planilha.</li>
    <li>${semAlav.length?`Sem nenhuma alavanca ativa: <b>${semTxt.join(" e ")}</b>${semAlav.every(l=>alavPerf(l).gmv>0)?" — crescimento de GMV orgânico, sem investimento":""}.`:"Todas as lojas têm ao menos uma alavanca ativa."}</li>
   </ul>`;
 }
@@ -993,7 +1014,7 @@ MENSAL.labels.forEach((m,i)=>INV_PEDIDOS_MES[m]=i);
 function invRedeMes(mi){ // mi = índice do mês em INV.meses
  const mesNome=INV.meses[mi];
  let promo=0,anun=0,tot=0,fat=0,pedidos=0,temPedidos=false;
- LOJAS.forEach(l=>{
+ LOJAS_BASE.forEach(l=>{
   const d=INV.data[l][mi];promo+=d[0];anun+=d[1];tot+=d[2];fat+=d[3];
   const pi=INV_PEDIDOS_MES[mesNome];
   if(pi!=null&&MENSAL.data[l][0][pi]!=null){pedidos+=MENSAL.data[l][0][pi];temPedidos=true;}
@@ -1052,12 +1073,12 @@ function bootInv(){
 const invFmt=(ci,v)=>ci===4?pct(v):(ci===6||ci===7)?num(v):brl(v);
 function renderInv(){
  const mi=+invMes.value,ci=+invMetric.value;
- const arr=LOJAS.map(l=>({l,v:INV.data[l][mi][ci]})).sort((a,b)=>b.v-a.v);
+ const arr=LOJAS_BASE.map(l=>({l,v:INV.data[l][mi][ci]})).sort((a,b)=>b.v-a.v);
  chart('invChart',{type:'bar',data:{labels:arr.map(a=>a.l),datasets:[{data:arr.map(a=>a.v),backgroundColor:"#7B131FCC",borderRadius:8}]},
  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:INV.cols[ci]+" · "+INV.meses[mi],color:"#7B131F",font:{size:15,weight:'bold'}},tooltip:{callbacks:{label:c=>invFmt(ci,c.parsed.y)}}}}});
  // matriz
  let html=`<thead><tr><th>Loja</th>${INV.cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
- LOJAS.forEach(l=>{
+ LOJAS_BASE.forEach(l=>{
   const d=INV.data[l][mi];
   html+=`<tr><td><b>${l}</b></td>`+d.map((v,i)=>{
    if(i===4){const cls=v<5?'b-good':v<9?'b-warn':'b-bad';return `<td><span class="badge ${cls}">${pct(v)}</span></td>`;}
@@ -1073,7 +1094,7 @@ function buildChipsHi(el,hiSet,onChange){
  all.className='chip'+(hiSet.size===0?' on':'');all.textContent='Todas';
  all.onclick=()=>{hiSet.clear();buildChipsHi(el,hiSet,onChange);onChange();};
  el.appendChild(all);
- LOJAS.forEach(l=>{
+ LOJAS_BASE.forEach(l=>{
   const c=document.createElement('button');c.className='chip'+(hiSet.has(l)?' on':'');c.textContent=l;
   c.onclick=()=>{hiSet.has(l)?hiSet.delete(l):hiSet.add(l);buildChipsHi(el,hiSet,onChange);onChange();};
   el.appendChild(c);
@@ -1081,7 +1102,7 @@ function buildChipsHi(el,hiSet,onChange){
 }
 function renderInvEvo(){
  const temHi=invHi.size>0;
- const ds=LOJAS.map(l=>{
+ const ds=LOJAS_BASE.map(l=>{
   const hi=!temHi||invHi.has(l),i=LOJAS.indexOf(l);
   return {label:l,data:INV.data[l].map(m=>m[2]),
    borderColor:hi?CORES[i]:"#DCD2C8",backgroundColor:hi?CORES[i]:"#DCD2C8",
@@ -1118,7 +1139,7 @@ function bootMargem(){
  const lojaSel=document.getElementById('mg-loja'),perSel=document.getElementById('mg-per');
  const keep={l:lojaSel.value,p:perSel.value};
  lojaSel.innerHTML="";perSel.innerHTML="";
- lojaSel.add(new Option("Rede toda (12 lojas)","__rede"));
+ lojaSel.add(new Option(`Rede toda (${LOJAS.length} lojas)`,"__rede"));
  LOJAS.forEach(l=>lojaSel.add(new Option(l,l)));
  MENSAL.labels.forEach((m,i)=>perSel.add(new Option(m+" · mês fechado","M:"+i)));
  PARCIAL.labels.forEach((m,i)=>perSel.add(new Option(m+" · parcial","P:"+i)));
@@ -1131,8 +1152,13 @@ function bootMargem(){
 function renderMargem(){
  const loja=document.getElementById('mg-loja').value;
  const [tipo,ti]=document.getElementById('mg-per').value.split(":");const t=+ti;
- const d=dreCalc(loja,tipo,t);if(!d)return;
  const nomeLoja=loja==="__rede"?"Rede toda":loja;
+ const d=dreCalc(loja,tipo,t);
+ if(!d){ // loja sem dado nesse período (ex.: loja nova em mês anterior à abertura ou parcial ainda não lançado)
+  const lb=(tipo==="M"?MENSAL.labels:PARCIAL.labels)[t];
+  document.getElementById('mg-insight').innerHTML=`<h2>Leitura do DRE · ${nomeLoja} · ${lb}</h2><ul><li>Sem dado de faturamento deste período para ${nomeLoja}${LOJAS_NOVAS[loja]?" (loja nova — abriu em setembro/2026, ainda sem histórico anterior)":""}. Escolha um período em que a loja já operava.</li></ul>`;
+  return;
+ }
  const f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
  // projeção mensal quando parcial (proporcional aos dias)
  const dias=DIAS_MES[mesDoLabel(d.label)]||30;
@@ -1272,7 +1298,7 @@ function ftwValores(loja){ // valores no período mais recente (loja ou "__rede"
  return {
   conv:s[5][n], tm:s[2][n], roi:s[10][n], budget:s[6][n],
   margem:dre?dre.margemPct:null,
-  atraso:loja==="__rede"?(LOJAS.reduce((a,l)=>a+BP.resumo[l][4]*BP.resumo[l][0],0)/LOJAS.reduce((a,l)=>a+BP.resumo[l][0],0)):BP.resumo[loja][4],
+  atraso:loja==="__rede"?(LOJAS_BASE.reduce((a,l)=>a+BP.resumo[l][4]*BP.resumo[l][0],0)/LOJAS_BASE.reduce((a,l)=>a+BP.resumo[l][0],0)):(BP.resumo[loja]?BP.resumo[loja][4]:null),
   cmv:(DRE_FIX.find(x=>x[0]==="CMV")||[,30])[1]
  };
 }
@@ -1293,7 +1319,7 @@ function renderFTW(){
  document.getElementById('ftw-rede').innerHTML=html+"</tbody>";
  document.getElementById('ftw-nota-rede').textContent=`Conversão, TM, ROI, Budget e Margem calculados no parcial ${LN}; atraso crítico = média ponderada por pedidos do resumo BP; CMV = parâmetro vigente do DRE (${pct(vr.cmv)}).`;
  // Farol por loja + Score
- const linhas=LOJAS.map(l=>{
+ const linhas=LOJAS_BASE.map(l=>{
   const v=ftwValores(l);
   const fs=FTW_ACTIVE.map(r=>({r,f:ftwFarol(r.regra,v[r.id]),v:v[r.id]}));
   const valid=fs.filter(x=>x.f!=null);
@@ -1333,6 +1359,7 @@ const REDE_ALIASES=["REDE"]; // adicionar aqui o nome da marca se a aba de totai
 const cap=s=>s.charAt(0)+s.slice(1).toLowerCase();
 const deacc=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const LOJA_KEY={};LOJAS.forEach(l=>LOJA_KEY[deacc(l).toUpperCase()]=l);
+LOJA_KEY["VOGUE"]="Vogue Square"; // a planilha chama a unidade só de "VOGUE"
 
 function parseCell(v){ // → [num|null, jaEmPercent]
  if(v==null||v==="")return [null,false];
@@ -1381,7 +1408,13 @@ function scanSheet(aoa){
    const cols=[];
    for(let cc=c+1;cc<c+30;cc++){
     const h=(aoa[hr]||[])[cc];
-    if(h==null||h==="")break;
+    if(h==null||h===""){
+     // coluna em branco: pode ser o separador entre blocos (próximo texto é "Métrica" → fim) ou um buraco
+     // dentro do bloco (loja nova sem os meses anteriores preenchidos → o próximo texto é mês/"Evolução" → segue)
+     let nx=null;for(let k=1;k<=3&&nx==null;k++){const x=(aoa[hr]||[])[cc+k];if(x!=null&&x!=="")nx=String(x);}
+     if(nx!=null&&(MESES_ORD[deacc(nx).toUpperCase().trim()]||/^[A-ZÇ]+\s*\(01-\d{2}\)$/i.test(deacc(nx).trim())||/^evolu/i.test(deacc(nx).trim())))continue;
+     break;
+    }
     const hs=deacc(String(h)).toUpperCase().trim();
     let mm=/^([A-Z]+)\s*\((01-\d{2})\)$/.exec(hs);
     if(mm&&MESES_ORD[mm[1]]&&["01-07","01-14","01-21","01-28"].includes(mm[2])){cols.push({cc,mes:mm[1],tipo:"P",win:mm[2]});continue;}
@@ -1393,6 +1426,8 @@ function scanSheet(aoa){
     const mname=(aoa[rr]||[])[c];if(mname==null||mname==="")break;
     const mi=metricIdx(mname);if(mi<0)continue;
     cols.forEach(({cc,mes,tipo,win})=>{
+     // loja aberta recentemente: colunas de meses anteriores à abertura são cópia de template, não dado real
+     if(LOJAS_NOVAS[name]&&MESES_ORD[mes]<LOJAS_NOVAS[name])return;
      let [val,jaPct]=parseCell((aoa[rr]||[])[cc]);
      if(val!=null&&!jaPct&&(mi===5||mi===6)&&Math.abs(val)<=1.5)val*=100; // fração de % do Sheets
      let bag,ms;
@@ -1412,8 +1447,8 @@ function applyBag(bag,mesesSet,target,tipo,win){
  const meses=[...mesesSet].sort((a,b)=>MESES_ORD[a]-MESES_ORD[b]);
  // aceita se houver cobertura mínima por loja OU se existir um bloco de rede real cobrindo todos os meses
  // (algumas planilhas atualizam o total da rede mais rápido que a quebra por loja — não pode travar nesse caso)
- const lojasOk=LOJAS.filter(l=>bag[l]&&meses.every(m=>bag[l][m]&&bag[l][m][0]!=null));
- const minLojas=Math.max(2,Math.ceil(LOJAS.length*0.7)); // escala com o tamanho da rede (não trava redes pequenas como Spesso/Pato)
+ const lojasOk=LOJAS_BASE.filter(l=>bag[l]&&meses.every(m=>bag[l][m]&&bag[l][m][0]!=null)); // só lojas com histórico entram na cobertura mínima
+ const minLojas=Math.max(2,Math.ceil(LOJAS_BASE.length*0.7)); // escala com o tamanho da rede (não trava redes pequenas como Spesso/Pato)
  const temRede=bag.__REDE&&meses.every(m=>bag.__REDE[m]);
  if(meses.length<2||(lojasOk.length<minLojas&&!temRede))return false;
  target.labels=meses.map(m=>tipo==="P"?cap(m)+" (01–"+win.split("-")[1]+")":cap(m));
@@ -1452,7 +1487,7 @@ function csvToAoa(text){ // parser CSV com aspas
    corte de status), com 1 linha por loja logo abaixo. A coluna "Mês" só vem preenchida numa das
    linhas do bloco (não necessariamente a primeira) — por isso a leitura varre todas as linhas do
    bloco atrás do rótulo, em vez de assumir que ele está na 1ª linha. */
-const ALAV_LOJA_FIX={"Botafgo":"Botafogo"}; // erro de digitação recorrente na planilha
+const ALAV_LOJA_FIX={"Botafgo":"Botafogo","Vogue":"Vogue Square"}; // erro de digitação recorrente / nome curto na planilha
 function alavMoney(raw){
  if(raw==null)return null;
  // Pela exportação xlsx do workbook inteiro (1ª tentativa de fetchWorkbookAoas), célula numérica
@@ -1572,12 +1607,12 @@ async function loadLive(){
      ALAV_VIG.ant=vigIdx>0?ALAV_MESES_PT[vigIdx-1]:ALAV_MESES_PT[11];
     }
     Object.keys(ALAV).forEach(k=>delete ALAV[k]);
-    Object.assign(ALAV,lastStores,ALAV_MANUAL_EXTRA);
+    Object.assign(ALAV,ALAV_MANUAL_EXTRA,lastStores); // se a planilha já trouxer a loja, ela vale mais que o snapshot manual
     ALAV_HIST.length=0;
     histFresh.forEach(b=>ALAV_HIST.push(b));
     ALAV_MANUAL_HIST_TAIL.forEach(b=>ALAV_HIST.push(b));
     ALAV_LOJAS.length=0;
-    [...Object.keys(lastStores),...Object.keys(ALAV_MANUAL_EXTRA)].forEach(l=>ALAV_LOJAS.push(l));
+    [...new Set([...Object.keys(lastStores),...Object.keys(ALAV_MANUAL_EXTRA)])].forEach(l=>ALAV_LOJAS.push(l));
     okAlav=true;
    }
   }catch(eAlav){ console.warn('[live-sync] Falha ao processar a aba Status Alavancas:',eAlav); }
@@ -1596,7 +1631,7 @@ function renderCruz(){
  const n=PARCIAL.labels.length-1,p=n-1,mM=MENSAL.labels.length-1;
  const LP=PARCIAL.labels[p],LN=PARCIAL.labels[n],LM=MENSAL.labels[mM];
  const f1=x=>x==null||!isFinite(x)?"—":(x>0?"+":"")+x.toLocaleString("pt-BR",{maximumFractionDigits:1})+"%";
- const rows=LOJAS.map(l=>{
+ const rows=LOJAS_BASE.map(l=>{
   const bp=BP.resumo[l][1];
   const conv=MENSAL.data[l][5][mM];
   const eGmv=evo(PARCIAL.data[l][1][p],PARCIAL.data[l][1][n]);
