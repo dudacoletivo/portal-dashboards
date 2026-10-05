@@ -3420,6 +3420,95 @@ const ACOES = [
       ]
     }}
 ];
+
+// ---- 05/10/2026: Hits turbinado/diferenciado, ajustes de preço e melhorias de venda ----
+(function(){
+  const dn = p => `<span style="font-weight:700;">▼ ${p}</span>`;
+  const novo = '<span style="font-weight:700;">Novo no Hits</span>';
+  const sai = '<span style="font-weight:700;">Sai do Hits</span>';
+  const HITS_HEAD = ['Item','Situação','Preço cheio','Hits hoje','Hits novo','Variação','Valor (R$)','% s/ Hits novo'];
+  const SEM_BT = ['Cumbuca - Tijuca','Cumbuca - Zona Sul','Cumbuca Brasileira - Zona Sul','Wraps - Tijuca','Wraps - Zona Sul'];
+  const BT = 'Cumbuca Brasileira - Tijuca';
+  const D = '2026-10-05', L = '05/10/2026';
+
+  ACOES.push(
+    {date:D, label:L, categoria:'hits', lojas:SEM_BT,
+      titulo:'Hits "turbinado" — todas as lojas, exceto Cumbuca Brasileira Tijuca',
+      desc:'Hits turbinado com budget máximo de R$ 4.000 em todas as lojas, menos a unidade Cumbuca Brasileira Tijuca. Junto vem o reajuste de preço dos itens do Hits: Bobogodó sai; entram Parmegiana Sarado, Estrogonofe, Nhoque Tarja Preta e PF da Cumbuca; Wrap Caesar passa de R$ 39,95 para R$ 34,95.',
+      tabela:{headers:HITS_HEAD, rows:[
+        ['Salpí, amor','Mantém','R$ 49,95','R$ 39,95','R$ 39,95','—','R$ 10,85','27,2%'],
+        ['Frango Elegante','Mantém','R$ 49,95','R$ 39,95','R$ 39,95','—','R$ 9,42','23,6%'],
+        ['Feijuca','Mantém','R$ 49,95','R$ 39,95','R$ 39,95','—','R$ 9,46','23,7%'],
+        ['Wrap Elegante','Mantém','R$ 49,95','R$ 39,95','R$ 39,95','—','R$ 9,37','23,5%'],
+        ['Wrap Caesar','Preço ajustado','R$ 49,95','R$ 39,95','R$ 34,95',dn('12,5%'),'R$ 8,29','23,7%'],
+        ['Wrap Divino','Mantém','R$ 49,95','R$ 39,95','R$ 39,95','—','R$ 9,37','23,5%'],
+        ['Bobogodó','Sai do Hits','R$ 52,95','R$ 42,95','—',sai,'R$ 14,03 (hoje)','32,7% (hoje)'],
+        ['Frango Divino','Mantém','R$ 52,95','R$ 42,95','R$ 42,95','—','R$ 10,90','25,4%'],
+        ['Frango Perfeito','Mantém','R$ 52,95','R$ 42,95','R$ 42,95','—','R$ 9,94','23,1%'],
+        ['Parmegiana Sarado','Entra','R$ 59,95','—','R$ 49,95',novo,'R$ 13,72','27,5%'],
+        ['Estrogonofe','Entra','R$ 54,95','—','R$ 44,95',novo,'R$ 12,28','27,3%'],
+        ['Nhoque Tarja Preta','Entra','R$ 59,95','—','R$ 49,95',novo,'R$ 12,56','25,1%'],
+        ['PF da Cumbuca','Entra','R$ 55,95','—','R$ 45,95',novo,'R$ 12,13','26,4%']
+      ]}},
+
+    {date:D, label:L, categoria:'hits', lojas:[BT],
+      titulo:'Hits "diferenciado" + preços para baixo — Cumbuca Brasileira Tijuca',
+      desc:'Na Brasileira Tijuca o Hits segue com reajuste de preço, mas "diferenciado": preços reduzidos em relação ao Hits atual, com a contrapartida de corte de anúncios (ação seguinte). Bobogodó sai; entram Parmegiana Sarado, Estrogonofe, Nhoque Tarja Preta e PF da Cumbuca.',
+      tabela:{headers:HITS_HEAD, rows:[
+        ['Salpí, amor','Preço ajustado','R$ 49,90','R$ 39,95','R$ 37,95',dn('5,0%'),'R$ 10,85','28,6%'],
+        ['Frango Elegante','Preço ajustado','R$ 49,95','R$ 39,95','R$ 37,95',dn('5,0%'),'R$ 9,42','24,8%'],
+        ['Feijuca','Preço ajustado','R$ 49,95','R$ 39,95','R$ 37,95',dn('5,0%'),'R$ 9,46','24,9%'],
+        ['Wrap Elegante','Preço ajustado','R$ 49,95','R$ 39,95','R$ 37,95',dn('5,0%'),'R$ 9,37','24,7%'],
+        ['Wrap Caesar','Preço ajustado','R$ 49,95','R$ 39,95','R$ 32,95',dn('17,5%'),'R$ 8,29','25,2%'],
+        ['Wrap Divino','Preço ajustado','R$ 49,95','R$ 39,95','R$ 37,95',dn('5,0%'),'R$ 9,37','24,7%'],
+        ['Bobogodó','Sai do Hits','R$ 52,95','R$ 42,95','—',sai,'R$ 14,03 (hoje)','32,7% (hoje)'],
+        ['Frango Divino','Preço ajustado','R$ 52,95','R$ 42,95','R$ 39,95',dn('7,0%'),'R$ 10,90','27,3%'],
+        ['Frango Perfeito','Preço ajustado','R$ 52,95','R$ 42,95','R$ 39,95',dn('7,0%'),'R$ 9,94','24,9%'],
+        ['Parmegiana Sarado','Entra','R$ 59,95','—','R$ 46,95',novo,'R$ 13,72','29,2%'],
+        ['Estrogonofe','Entra','R$ 54,95','—','R$ 42,95',novo,'R$ 12,28','28,6%'],
+        ['Nhoque Tarja Preta','Entra','R$ 59,95','—','R$ 46,95',novo,'R$ 12,56','26,8%'],
+        ['PF da Cumbuca','Entra','R$ 55,95','—','R$ 42,90',novo,'R$ 12,13','28,3%']
+      ]}},
+
+    {date:D, label:L, categoria:'ads', lojas:[BT],
+      titulo:'Corte de anúncios — Cumbuca Brasileira Tijuca (contrapartida do Hits diferenciado)',
+      desc:'Verba de anúncio reduzida de R$ 1.200 para R$ 400, apenas na unidade Cumbuca Brasileira Tijuca, com lance mínimo de R$ 0,55:',
+      tabela:{headers:['Loja','Verba antes','Verba depois','Variação','Lance mínimo'], rows:[
+        ['Cumbuca Brasileira Tijuca','R$ 1.200,00','R$ 400,00','<span style="color:var(--good);font-weight:700;">▼ 66,7%</span>','R$ 0,55']
+      ]}},
+
+    {date:D, label:L, categoria:'cardapio', lojas:['rede'],
+      titulo:'Mexicomigo, Bobogodó e Nhoque Tarja Preta fora do Precinho e do Hits',
+      desc:'Wrap Mexicomigo, Bobogodó e Nhoque Tarja Preta não podem estar no Precinho nem no Hits — vale para todas as lojas.'},
+
+    {date:D, label:L, categoria:'cardapio', lojas:['rede'],
+      titulo:'Bobogodó — preço correto',
+      desc:'Correção de preço do Bobogodó em todas as lojas. Na Cumbuca Brasileira Tijuca o médio fica em R$ 52,95 (demais tamanhos não informados para essa loja):',
+      tabela:{headers:['Tamanho','Todas as lojas (exceto Brasileira Tijuca)','Cumbuca Brasileira Tijuca'], rows:[
+        ['Médio','R$ 54,95','R$ 52,95'],
+        ['Grande','R$ 66,95','—'],
+        ['Família — 2 pessoas','R$ 99,95','—'],
+        ['Família — 4 pessoas','R$ 179,85','—']
+      ]}},
+
+    {date:D, label:L, categoria:'cardapio', lojas:SEM_BT,
+      titulo:'PF da Cumbuca — preço correto',
+      desc:'Preço correto do PF da Cumbuca: R$ 49,95, nas categorias "Não julgue minha Cumbuca" e "Originais do BR". Todas as lojas, menos a Cumbuca Brasileira Tijuca.'},
+
+    {date:D, label:L, categoria:'cardapio', lojas:SEM_BT,
+      titulo:'Nhoque Tarja Preta — preço correto',
+      desc:'Todas as lojas, menos a Cumbuca Brasileira Tijuca. A verificar: se o prato está presente na categoria "Não julgue minha Cumbuca" nas lojas Saudável.',
+      tabela:{headers:['Tamanho','Valor correto'], rows:[
+        ['Médio','R$ 49,95'],
+        ['Grande','R$ 61,95']
+      ]}},
+
+    {date:D, label:L, categoria:'cardapio', lojas:[BT],
+      titulo:'Pratos família no Precinho — todos os horários (melhoria de venda)',
+      desc:'Ação visando melhoria de venda: pratos família adicionados ao Precinho em todos os horários, somente na Cumbuca Brasileira Tijuca.'}
+  );
+})();
+
 ACOES.sort((a,b)=> a.date===b.date ? 0 : (a.date<b.date?-1:1));
 
 function acoesLojaLabel(lojas){
