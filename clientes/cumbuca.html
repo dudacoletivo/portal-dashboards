@@ -187,6 +187,14 @@ tbody tr:last-child td{border-bottom:none;}
 .badge.cat-alavancas{color:#2b5fa3; background:#e6eefb;}
 .badge.cat-contexto{color:var(--ink-soft); background:#f0ede8;}
 
+.reg-table td, .reg-table th{vertical-align:middle;}
+.reg-table .reg-cell{text-align:center; white-space:nowrap; min-width:92px;}
+.reg-table .reg-cell small{display:block; font-size:10.5px; letter-spacing:1px; opacity:.75;}
+.reg-table .reg-good{background:#e7f5ec; color:var(--good);}
+.reg-table .reg-bad{background:#fbeaea; color:var(--bad);}
+.reg-table .reg-low{color:#9a948d;}
+.reg-table .reg-wait{color:var(--ink-soft); font-size:12.5px; font-style:italic;}
+.reg-n{display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:var(--purple); color:#fff; font-weight:700; font-size:12px;}
 .acoes-detail{margin-top:10px;}
 .acoes-detail summary{
   cursor:pointer; font-weight:700; color:var(--purple); font-size:13px;
@@ -296,6 +304,7 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
   <button class="tab-btn" data-tab="parcial">⚖️ Diagnóstico Parcial</button>
   <button class="tab-btn" data-tab="acoes">🗂️ Ações</button>
   <button class="tab-btn" data-tab="projecao">🔮 Projeção</button>
+  <button class="tab-btn" data-tab="regressao">📈 Análise de regressão</button>
 </nav>
 
 <!-- ============ DASH — MÊS FECHADO ============ -->
@@ -508,6 +517,39 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
       <table id="acoesTable"></table>
     </div>
   </div>
+</div>
+
+<!-- ============ ANÁLISE DE REGRESSÃO ============ -->
+<div class="tabcontent" id="tab-regressao">
+  <div class="callout info">
+    <strong>Como ler esta análise (exemplo):</strong> a planilha não tem dado dia a dia, só cortes acumulados (01–07, 01–14, 01–21, 01–28 e mês fechado). Subtraindo um corte do anterior, a análise obtém o ritmo de cada intervalo. Sobre essa série roda uma <b>regressão múltipla</b>: tendência + efeito de início de mês + uma variável para cada <b>ação relevante</b> (mudança de nível que permanece, ou "pulso" para eventos temporários como o Rock in Rio). O número mostrado é a <b>variação estimada frente ao nível esperado sem a ação</b>.
+    São poucos cortes e várias ações próximas entre si, então leia como <b>indício para orientar testes</b>, não como prova de causa. Ficam de fora ajustes pequenos (ordem de categorias, item Mimo, novos sabores, alavancas de uma loja só).
+  </div>
+  <div class="filterbar">
+    <div class="filter-group">
+      <label>Loja / marca</label>
+      <select id="regLoja"></select>
+    </div>
+    <div class="filter-group">
+      <label>Indicador do gráfico</label>
+      <select id="regIndic"></select>
+    </div>
+  </div>
+  <div class="kpi-row" id="regKpis"></div>
+  <div class="insight-box" id="regInsights"></div>
+  <div class="section-title">Série, ações e modelo <span class="tag">numeradas = ações relevantes</span></div>
+  <div class="card">
+    <h3 id="regChartTitle"></h3>
+    <p style="margin:-4px 0 8px;font-size:12.5px;color:var(--ink-soft);"><span style="color:#5e1255;font-weight:700;">━ observado</span> &nbsp; <span style="color:#50887a;font-weight:700;">╌ modelo ajustado</span> &nbsp; <span style="color:#c32525;font-weight:700;">▮ evento temporário</span> &nbsp; ⚪ cinza = ação ainda sem dados suficientes</p>
+    <div id="regChart" class="chart-holder"></div>
+  </div>
+  <div class="section-title">Efeito de cada ação nos indicadores <span class="tag">regressão múltipla</span></div>
+  <div class="card">
+    <div class="table-wrap"><table id="regMatriz" class="reg-table"></table></div>
+    <p style="margin:10px 2px 0;font-size:12.5px;color:var(--ink-soft);">●● confiança ≥ 95% · ●○ confiança ≥ 90% · ○○ inconclusivo (em cinza). Verde = efeito favorável ao indicador, vermelho = desfavorável (Budget e CPO: cair é favorável). <b>n/d</b> = indicadores em R$ (GMV, ticket, budget, CPO) só usam os cortes 01–07, 01–14 e 01–21, e nem toda ação é separável das vizinhas só com eles.</p>
+  </div>
+  <div class="section-title">Leitura por ação: hipóteses e o que mais aconteceu no período</div>
+  <div class="card" id="regDetalhes"></div>
 </div>
 
 <!-- ============ PROJEÇÃO DE FECHAMENTO ============ -->
@@ -3574,6 +3616,409 @@ function bootAcoes(){
   renderAcoesTable();
 }
 
+// ---------- ANÁLISE DE REGRESSÃO ----------
+const REG_ANO = 2026;
+const REG_ADD = {VENDAS:'VENDAS', GMV:'GMV', NOVOS:'NOVOS', VISITAS:'VISITAS', PROMO:'PROMOÇÕES + ADS', SUB:'SUB IFOOD'};
+const REG_WINS = [['w7',7],['w14',14],['w21',21],['w28',28]];
+const REG_DAY = 86400000;
+function regDate(monthKey, day){ return Date.UTC(REG_ANO, MONTH_ORDER[monthKey]-1, day); }
+function regDaysIn(monthKey){ return new Date(REG_ANO, MONTH_ORDER[monthKey], 0).getDate(); }
+function regIso(ms){ return new Date(ms).toISOString().slice(0,10); }
+function regFmtDate(ms){ const d=new Date(ms); return String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0'); }
+
+// valor acumulado (soma das lojas) de cada métrica aditiva num corte; null se alguma loja não tiver o dado
+function regCum(stores, month, kind){
+  const out = {};
+  for(const [k,col] of Object.entries(REG_ADD)){
+    let tot = 0, ok = true;
+    for(const s of stores){
+      const src = kind==='closed' ? DATA_CLOSED[s] : (DATA_PARTIAL[s] && DATA_PARTIAL[s][kind]);
+      const v = src && src[col] ? src[col][month] : null;
+      if(v==null || isNaN(v)){ ok = false; break; }
+      tot += v;
+    }
+    out[k] = ok ? tot : null;
+  }
+  return out;
+}
+
+// séries por intervalo entre cortes consecutivos (01-07, 08-14, ... e o resto do mês quando o mês fechou)
+function regBuildIntervals(stores){
+  const months = [...new Set([...discoverPartialMonths(), ...discoverClosedMonths()])]
+    .sort((a,b)=>MONTH_ORDER[a]-MONTH_ORDER[b]);
+  const out = [];
+  months.forEach(m=>{
+    const cuts = [];
+    REG_WINS.forEach(([w,d])=>{ const c = regCum(stores,m,w); if(c.VENDAS!=null && c.GMV!=null) cuts.push({day:d, cum:c, kind:w}); });
+    const dim = regDaysIn(m), cc = regCum(stores,m,'closed');
+    if(cc.VENDAS!=null && cc.GMV!=null && !cuts.some(x=>x.day===dim)) cuts.push({day:dim, cum:cc, kind:'closed'});
+    cuts.sort((a,b)=>a.day-b.day);
+    let prev = {day:0, cum:{VENDAS:0,GMV:0,NOVOS:0,VISITAS:0,PROMO:0,SUB:0}};
+    cuts.forEach(c=>{
+      const inc = {};
+      for(const k of Object.keys(REG_ADD)){
+        inc[k] = (c.cum[k]!=null && prev.cum[k]!=null) ? c.cum[k]-prev.cum[k] : null;
+      }
+      // dado inconsistente (acumulado que diminui) → descarta o intervalo
+      if(inc.VENDAS>0 && inc.GMV>0){
+        const d0 = prev.day+1, d1 = c.day;
+        out.push({month:m, d0, d1, days:d1-d0+1, start:regDate(m,d0), end:regDate(m,d1)+REG_DAY-1, inc, endKind:c.kind});
+      }
+      prev = c;
+    });
+  });
+  // sanidade: intervalo cujo ritmo de pedidos destoa demais da mediana vem de acumulado incoerente na planilha
+  // (ex.: corte 01–21 de maio menor do que deveria) e distorceria o modelo — fica de fora e é informado na tela.
+  // A comparação é com os cortes vizinhos (2 antes e 2 depois), não com a mediana geral, para não punir lojas em crescimento.
+  const taxa = out.map(iv=>iv.inc.VENDAS/iv.days);
+  const ok = out.filter((iv,i)=>{
+    const viz = [taxa[i-2],taxa[i-1],taxa[i+1],taxa[i+2]].filter(v=>v!=null).sort((a,b)=>a-b);
+    if(viz.length<2) return true;
+    const med = viz.length%2 ? viz[(viz.length-1)/2] : (viz[viz.length/2-1]+viz[viz.length/2])/2;
+    return med>0 && taxa[i]>=med*0.5 && taxa[i]<=med*1.7;
+  });
+  ok.removidos = out.filter(iv=>!ok.includes(iv));
+  return ok;
+}
+
+// valor:true → indicador em R$ (GMV/investimento): usa só os cortes 01–07, 08–14 e 15–21. No 01–28 e no fechamento
+// do mês o acumulado em R$ da planilha não é comparável com os cortes anteriores (o fechamento fica abaixo do que
+// os cortes sugerem e o investimento 01–28 passa do fechamento); as contagens (pedidos, visitas, novos) batem.
+const REG_INDICADORES = [
+  {id:'pedidos', label:'Pedidos por dia',   fmt:v=>fmtRatio(v),                      good:'up',   f:(i,d)=>i.VENDAS/d},
+  {id:'gmv',     label:'GMV por dia',       fmt:v=>fmtCurrency(v),                   good:'up',   valor:true, f:(i,d)=>i.GMV/d},
+  {id:'tm',      label:'Ticket médio',      fmt:v=>fmtCurrency(v),                   good:'up',   valor:true, f:(i,d)=>i.GMV/i.VENDAS},
+  {id:'visitas', label:'Visitas por dia',   fmt:v=>fmtInt(v),                        good:'up',   f:(i,d)=>i.VISITAS!=null?i.VISITAS/d:null},
+  {id:'conv',    label:'Conversão',         fmt:v=>fmtPercent(v),                    good:'up',   f:(i,d)=>i.VISITAS>0?i.VENDAS/i.VISITAS:null},
+  {id:'novos',   label:'Clientes novos por dia', fmt:v=>fmtRatio(v),                 good:'up',   f:(i,d)=>i.NOVOS!=null?i.NOVOS/d:null},
+  {id:'budget',  label:'Budget de investimento', fmt:v=>fmtPercent(v),               good:'down', valor:true, f:(i,d)=>i.PROMO!=null?i.PROMO/i.GMV:null},
+  {id:'cpo',     label:'CPO',               fmt:v=>fmtCurrency(v),                   good:'down', valor:true, f:(i,d)=>i.PROMO!=null?i.PROMO/i.VENDAS:null},
+  {id:'roi',     label:'ROI',               fmt:v=>fmtRatio(v),                      good:'up',   valor:true, f:(i,d)=>i.PROMO>0?i.GMV/i.PROMO-1:null}
+];
+const REG_MATRIZ = ['pedidos','gmv','tm','conv','budget','cpo'];
+
+// ---------- álgebra mínima (OLS ponderado) ----------
+function regSolve(A, B){ // resolve A·X = B por Gauss-Jordan; devolve {X, inv}
+  const n = A.length;
+  const M = A.map((r,i)=>[...r, ...Array.from({length:n},(_,j)=>i===j?1:0)]);
+  for(let c=0;c<n;c++){
+    let p = c;
+    for(let r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c])) p = r;
+    if(Math.abs(M[p][c])<1e-10) return null; // singular (colunas colineares)
+    [M[c],M[p]] = [M[p],M[c]];
+    const div = M[c][c];
+    for(let j=0;j<2*n;j++) M[c][j]/=div;
+    for(let r=0;r<n;r++){ if(r===c) continue; const f=M[r][c]; if(!f) continue; for(let j=0;j<2*n;j++) M[r][j]-=f*M[c][j]; }
+  }
+  const inv = M.map(r=>r.slice(n));
+  const X = inv.map(row=>row.reduce((s,v,j)=>s+v*B[j],0));
+  return {X, inv};
+}
+const REG_T90 = [0,6.314,2.920,2.353,2.132,2.015,1.943,1.895,1.860,1.833,1.812,1.796,1.782,1.771,1.761,1.753,1.746,1.740,1.734,1.729,1.725];
+const REG_T95 = [0,12.706,4.303,3.182,2.776,2.571,2.447,2.365,2.306,2.262,2.228,2.201,2.179,2.160,2.145,2.131,2.120,2.110,2.101,2.093,2.086];
+function regCrit(df, tab, inf){ return df<=0 ? Infinity : (df<tab.length ? tab[df] : (df<=30 ? inf+0.04 : inf)); }
+
+// fração dos dias do intervalo que cai dentro de [ini, fim] (ms)
+function regExposicao(iv, ini, fim){
+  const a = Math.max(iv.start, ini), b = Math.min(iv.end, fim);
+  if(b<a) return 0;
+  return Math.min(1, (b-a+1)/(iv.end-iv.start+1));
+}
+
+// eventos: {id, ini, fim?}  → fim ausente = mudança de nível que permanece; com fim = pulso temporário
+function regFit(ivs, indic, eventos){
+  const pts = ivs.map(iv=>({iv, y:indic.f(iv.inc, iv.days)})).filter(p=>p.y!=null && isFinite(p.y));
+  if(pts.length < 8) return null;
+  const t0 = pts.reduce((s,p)=>s+(p.iv.start+p.iv.end)/2,0)/pts.length;
+  const colunas = [{k:'const'},{k:'trend'},{k:'semana1'}];
+  eventos.forEach(e=>colunas.push({k:'ev', e}));
+  const rowFor = (iv, t)=>{
+    return colunas.map(c=>{
+      if(c.k==='const') return 1;
+      if(c.k==='trend') return (t-t0)/(7*REG_DAY);
+      if(c.k==='semana1') return Math.min(iv.d1,7)>=iv.d0 ? (Math.min(iv.d1,7)-iv.d0+1)/iv.days : 0;
+      return regExposicao(iv, c.e.ini, c.e.fim!=null ? c.e.fim : Infinity);
+    });
+  };
+  const X = pts.map(p=>rowFor(p.iv,(p.iv.start+p.iv.end)/2));
+  const w = pts.map(p=>p.iv.days), y = pts.map(p=>p.y);
+  const k = colunas.length;
+  const XtWX = Array.from({length:k},()=>Array(k).fill(0)), XtWy = Array(k).fill(0);
+  X.forEach((r,i)=>{ for(let a=0;a<k;a++){ XtWy[a]+=w[i]*r[a]*y[i]; for(let b=0;b<k;b++) XtWX[a][b]+=w[i]*r[a]*r[b]; } });
+  const sol = regSolve(XtWX, XtWy);
+  if(!sol) return {erro:'colinear'};
+  const beta = sol.X;
+  const fitted = X.map(r=>r.reduce((s,v,j)=>s+v*beta[j],0));
+  const n = pts.length, df = n-k;
+  const sse = pts.reduce((s,p,i)=>s+w[i]*(y[i]-fitted[i])**2,0);
+  const sigma2 = df>0 ? sse/df : NaN;
+  const se = beta.map((_,j)=>Math.sqrt(Math.max(0,sol.inv[j][j]*sigma2)));
+  const ybar = y.reduce((s,v,i)=>s+w[i]*v,0)/w.reduce((s,v)=>s+v,0);
+  const sst = y.reduce((s,v,i)=>s+w[i]*(v-ybar)**2,0);
+  return {pts, colunas, beta, se, df, n, fitted, t0, r2: sst>0?1-sse/sst:null, rowFor};
+}
+
+// Eventos RELEVANTES (mexem em preço, Hits/ads/promoção estrutural, cardápio-base ou contexto externo).
+// Ficam de fora, de propósito, ajustes pequenos: ordem de categorias, item "Mimo", novos sabores de Wrap e
+// alavancas de 1 loja só (não dá para separá-las de outras ações do mesmo dia com dados semanais).
+// ini/fim: data de início (e fim, se for temporário → entra como "pulso" no modelo).
+const REG_EVENTOS = [
+  {id:'E1', ini:'2026-07-23', cat:'cardapio', lojas:['Wraps - Tijuca','Wraps - Zona Sul'],
+    titulo:'Virada de cardápio da Wraps ("Cumbuca Poke" → "Wraps")',
+    hip:['Troca de nome/marca pode ter reduzido o reconhecimento de clientes recorrentes e a posição na busca nas primeiras semanas.',
+         'Cardápio novo muda mix e ticket: o efeito costuma aparecer primeiro em Ticket médio e Conversão, antes do volume.']},
+  {id:'E2', ini:'2026-07-29', cat:'cardapio', lojas:['rede'],
+    titulo:'Novas categorias "Precinho" e "Combucas" + reordenação do cardápio',
+    hip:['As categorias ganham destaque no topo e podem ter puxado conversão e pedidos de entrada de preço menor.',
+         'Se o mix migrou para itens mais baratos, o ticket médio cai mesmo com mais pedidos (canibalização).']},
+  {id:'E3', ini:'2026-08-12', cat:'hits', lojas:['rede'],
+    titulo:'Pacote 11–14/08: PF da Cumbuca a R$ 39,90 + reajuste de preços + ativação do Hits',
+    hip:['O Hits dá exposição extra a pratos selecionados: tende a elevar visitas e conversão, com o investimento (Budget/CPO) subindo junto.',
+         'O PF a R$ 39,90 amplia o público de entrada e pode reduzir o ticket médio.',
+         'O reajuste de R$ 0,95 é pequeno, mas pode ter pesado na conversão de itens mais sensíveis a preço.']},
+  {id:'E4', ini:'2026-08-25', cat:'promocoes', lojas:['rede'],
+    titulo:'Pacote 25–28/08: "Leva logo 3" no lugar do "Leva logo duas" + Festival de Estrogonofe',
+    hip:['Descontos de 70/50/25% incentivam levar mais de uma unidade: esperado subir GMV por pedido, com o Budget (desconto) subindo junto.',
+         'O Festival de Estrogonofe, 3 dias depois, soma um segundo estímulo na mesma semana — não dá para separar os dois com dado semanal.']},
+  {id:'E5', ini:'2026-09-01', cat:'cardapio', lojas:['rede'],
+    titulo:'Reajuste de preços por inflação/CMV + corte do turno da tarde em ADS',
+    hip:['O reajuste protege margem, mas pode reduzir conversão nos itens que ficaram mais caros.',
+         'Cortar o turno da tarde dos anúncios (−5% de verba em 4 lojas) tende a reduzir visitas à tarde, com pouco efeito em pedidos se esse turno era pouco eficiente.',
+         'Início de mês tem demanda mais forte (ciclo de pagamento): o modelo controla por isso, mas não perfeitamente.']},
+  {id:'E6', ini:'2026-09-04', fim:'2026-09-14', cat:'contexto', lojas:['rede'],
+    titulo:'Rock in Rio (04 a 14/09) — efeito temporário',
+    hip:['Evento grande muda o fluxo de pessoas e o padrão de delivery (mais demanda em alguns bairros, trânsito atrapalhando entregas em outros).',
+         'Por ser temporário, entra no modelo como "pulso": o nível volta ao normal depois do evento.']},
+  {id:'E7', ini:'2026-09-08', cat:'cardapio', lojas:['rede'],
+    titulo:'Ajustes de cardápio: Precinho, entradas acima das bebidas, proteínas e bebidas',
+    hip:['Entradas acima das bebidas e novos preços do Precinho podem ter melhorado a conversão no topo do funil, mas o Wrap Mexicomigo saiu do Precinho (perde atratividade).',
+         'Mudanças em sobremesas/bebidas mexem no ticket médio via itens adicionais.']},
+  {id:'E8', ini:'2026-09-11', fim:'2026-09-14', cat:'hits', lojas:['rede'],
+    titulo:'Hits desativado (11–14/09) para corrigir pratos taggeados errado — efeito temporário',
+    hip:['Com o Hits fora do ar, a queda medida é uma estimativa do quanto o Hits sustenta o volume.',
+         'A janela coincide com a 2ª semana do Rock in Rio — os dois efeitos se misturam.']},
+  {id:'E9', ini:'2026-09-18', cat:'ads', lojas:['Cumbuca - Tijuca','Cumbuca - Zona Sul','Cumbuca Brasileira - Tijuca','Cumbuca Brasileira - Zona Sul','Wraps - Zona Sul'],
+    titulo:'Ajuste da verba diária de ads (R$ 1.200) e retirada dos anúncios da Wraps Zona Sul',
+    hip:['Mexe direto em visitas e no Budget; o efeito em pedidos depende de quanto do tráfego era pago.',
+         'A retirada total de anúncios na Wraps Zona Sul funciona como um "experimento natural" para medir a dependência de mídia paga.']},
+  {id:'E11', ini:'2026-09-30', cat:'hits', lojas:['Wraps - Tijuca','Wraps - Zona Sul'],
+    titulo:'Hits das Wraps: orçamento de R$ 300 para R$ 500',
+    hip:['Esperado: mais exposição (visitas) e mais investimento nas Wraps.']},
+  {id:'E12', ini:'2026-10-05', cat:'hits', lojas:['rede'],
+    titulo:'Hits "turbinado" (budget até R$ 4.000) + Hits diferenciado e corte de ads na Brasileira Tijuca',
+    hip:['Maior ação de Hits até agora: esperado ganho de visitas/pedidos nos itens do Hits, com Budget e CPO subindo.']}
+];
+REG_EVENTOS.forEach(e=>{
+  e.iniMs = Date.parse(e.ini+'T00:00:00Z');
+  e.fimMs = e.fim ? Date.parse(e.fim+'T00:00:00Z')+REG_DAY-1 : null;
+});
+const REG_MARCAS = {};
+['Cumbuca','Cumbuca Brasileira','Wraps'].forEach(b=>{ REG_MARCAS['Marca: '+b] = STORE_KEYS.filter(s=>brandOf(s)===b); });
+let regSel = 'REDE', regIndic = 'pedidos';
+
+function regScopeStores(sel){
+  if(sel==='REDE') return STORE_KEYS;
+  if(CONSOLIDATED_STORES[sel]) return CONSOLIDATED_STORES[sel];
+  if(REG_MARCAS[sel]) return REG_MARCAS[sel];
+  return [sel];
+}
+function regAplicavel(ev, stores){ return ev.lojas.includes('rede') || stores.every(s=>ev.lojas.includes(s)); }
+
+function regAnalisar(sel, indicId){
+  const stores = regScopeStores(sel);
+  const indic = REG_INDICADORES.find(i=>i.id===indicId);
+  const ivsTodos = regBuildIntervals(stores);
+  const ivs = indic.valor ? ivsTodos.filter(iv=>['w7','w14','w21'].includes(iv.endKind)) : ivsTodos;
+  ivs.removidos = ivsTodos.removidos;
+  const aplicaveis = REG_EVENTOS.filter(e=>regAplicavel(e, stores));
+  const naoAplicaveis = REG_EVENTOS.filter(e=>!regAplicavel(e, stores));
+  const elegiveis = [], aguardando = [];
+  aplicaveis.forEach(e=>{
+    const fim = e.fimMs!=null ? e.fimMs : Infinity;
+    const dentro = ivs.filter(iv=>regExposicao(iv, e.iniMs, fim)>=0.5).length;
+    const antes = ivs.filter(iv=>iv.end<e.iniMs).length;
+    ((dentro>=(e.fimMs!=null?1:2) && antes>=3) ? elegiveis : aguardando).push(e);
+  });
+  // se o modelo ficar sem graus de liberdade ou com colunas colineares, tira o evento mais recente e tenta de novo
+  let usados = elegiveis.slice(), fit = null; const descartados = [];
+  while(usados.length){
+    fit = regFit(ivs, indic, usados.map(e=>({id:e.id, ini:e.iniMs, fim:e.fimMs})));
+    if(fit && !fit.erro && fit.df>=3) break;
+    // não separável com este nível de detalhe: sai o evento com menos cortes de dados que o identifiquem
+    const massa = e=>ivs.reduce((s,iv)=>s+regExposicao(iv, e.iniMs, e.fimMs!=null?e.fimMs:Infinity),0);
+    const pior = usados.reduce((m,e)=>massa(e)<=massa(m)?e:m, usados[0]);
+    usados.splice(usados.indexOf(pior),1); descartados.push(pior); fit = null;
+  }
+  if(!fit && !usados.length) fit = regFit(ivs, indic, []);
+  const rows = [];
+  if(fit && !fit.erro){
+    usados.forEach((e,i)=>{
+      const j = 3+i, c = fit.beta[j], se = fit.se[j], t = se>0 ? c/se : 0;
+      // nível "esperado" logo antes do evento (modelo sem o próprio evento), base do % de efeito
+      const tD = e.iniMs - REG_DAY/2, dia = new Date(tD);
+      const row = fit.colunas.map((col,k)=>{
+        if(col.k==='const') return 1;
+        if(col.k==='trend') return (tD-fit.t0)/(7*REG_DAY);
+        if(col.k==='semana1') return dia.getUTCDate()<=7 ? 1 : 0;
+        if(col.e.id===e.id) return 0;
+        return (tD>=col.e.ini && (col.e.fim==null || tD<=col.e.fim)) ? 1 : 0;
+      });
+      const base = row.reduce((s,v,k)=>s+v*fit.beta[k],0);
+      const pct = base>0 ? c/base : null;
+      const c95 = regCrit(fit.df, REG_T95, 1.96), c90 = regCrit(fit.df, REG_T90, 1.645);
+      const conf = Math.abs(t)>=c95 ? 'alta' : (Math.abs(t)>=c90 ? 'media' : 'baixa');
+      rows.push({ev:e, c, se, t, pct, conf});
+    });
+  }
+  return {sel, stores, indic, ivs, fit, rows, aguardando, descartados, naoAplicaveis, removidos: ivs.removidos||[]};
+}
+
+// ---------- gráfico: série observada + modelo ajustado + marcadores dos eventos ----------
+function regChartSvg(res){
+  const {fit, indic, rows} = res;
+  if(!fit || fit.erro) return '<p style="color:var(--ink-soft);padding:20px;">Dados insuficientes para a análise neste recorte.</p>';
+  const W=980, H=320, padL=70, padR=24, padT=34, padB=40;
+  const pts = fit.pts.map((p,i)=>({x:(p.iv.start+p.iv.end)/2, y:p.y, f:fit.fitted[i]}));
+  const xMin = Math.min(...fit.pts.map(p=>p.iv.start)), xMax = Math.max(...fit.pts.map(p=>p.iv.end));
+  const ys = pts.flatMap(p=>[p.y,p.f]);
+  let yMin = Math.min(...ys), yMax = Math.max(...ys); const rg = (yMax-yMin)||1; yMin -= rg*0.15; yMax += rg*0.2;
+  const X = x=>padL+(x-xMin)/(xMax-xMin)*(W-padL-padR), Y = y=>padT+(H-padT-padB)*(1-(y-yMin)/(yMax-yMin));
+  let g='';
+  for(let i=0;i<=4;i++){ const v=yMin+(yMax-yMin)*i/4, y=Y(v);
+    g+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#eee7df"/><text x="${padL-8}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#948b81" font-family="Calibri, sans-serif">${esc(indic.fmt(v))}</text>`; }
+  // rótulos de mês
+  const meses = new Set(); let lab='';
+  fit.pts.forEach(p=>{ const d=new Date(p.iv.start); const k=d.getUTCFullYear()+'-'+d.getUTCMonth(); if(d.getUTCDate()===1 && !meses.has(k)){ meses.add(k);
+    lab+=`<line x1="${X(p.iv.start).toFixed(1)}" y1="${padT}" x2="${X(p.iv.start).toFixed(1)}" y2="${H-padB}" stroke="#f1ebe4"/><text x="${(X(p.iv.start)+4).toFixed(1)}" y="${H-padB+16}" font-size="11.5" fill="#6b6560" font-family="Calibri, sans-serif">${['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][d.getUTCMonth()]}</text>`; }});
+  // faixas dos eventos temporários + linhas dos eventos
+  let ev='';
+  rows.forEach((r,i)=>{ const e=r.ev;
+    if(e.fimMs!=null){ const a=Math.max(xMin,e.iniMs), b=Math.min(xMax,e.fimMs); ev+=`<rect x="${X(a).toFixed(1)}" y="${padT}" width="${Math.max(2,X(b)-X(a)).toFixed(1)}" height="${H-padT-padB}" fill="#c3252522"/>`; }
+    const x=X(Math.min(Math.max(e.iniMs,xMin),xMax));
+    ev+=`<line x1="${x.toFixed(1)}" y1="${padT-6}" x2="${x.toFixed(1)}" y2="${H-padB}" stroke="#5e1255" stroke-dasharray="4 3" stroke-width="1.2"/>`+
+        `<circle cx="${x.toFixed(1)}" cy="${padT-14}" r="9" fill="#5e1255"/><text x="${x.toFixed(1)}" y="${padT-10}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="Calibri, sans-serif">${regNum(res,e)}</text>`;
+  });
+  // eventos aguardando dados também aparecem (tracejado cinza)
+  res.aguardando.forEach(e=>{ if(e.iniMs>xMax) return; const x=X(Math.min(Math.max(e.iniMs,xMin),xMax));
+    ev+=`<line x1="${x.toFixed(1)}" y1="${padT-6}" x2="${x.toFixed(1)}" y2="${H-padB}" stroke="#b5aca2" stroke-dasharray="2 4"/><circle cx="${x.toFixed(1)}" cy="${padT-14}" r="9" fill="#b5aca2"/><text x="${x.toFixed(1)}" y="${padT-10}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="Calibri, sans-serif">${regNum(res,e)}</text>`; });
+  const obs = pts.map((p,i)=>(i?'L':'M')+X(p.x).toFixed(1)+','+Y(p.y).toFixed(1)).join(' ');
+  const mod = pts.map((p,i)=>(i?'L':'M')+X(p.x).toFixed(1)+','+Y(p.f).toFixed(1)).join(' ');
+  const dots = pts.map(p=>`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="4" fill="#5e1255" stroke="#fff" stroke-width="1.5"><title>${esc(indic.fmt(p.y))}</title></circle>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${g}${lab}${ev}
+    <path d="${mod}" fill="none" stroke="#50887a" stroke-width="2.4" stroke-dasharray="6 4"/>
+    <path d="${obs}" fill="none" stroke="#5e1255" stroke-width="2.6" stroke-linejoin="round"/>${dots}</svg>`;
+}
+function regNum(res, e){ const todos = [...res.rows.map(r=>r.ev), ...res.aguardando, ...res.descartados].sort((a,b)=>a.iniMs-b.iniMs); return todos.indexOf(e)+1; }
+
+// ---------- renderização da aba ----------
+function regPctTxt(r, indic){
+  if(r.pct==null) return '—';
+  const p = r.pct*100, seta = p>0.05?'▲':(p<-0.05?'▼':'▬');
+  return `${seta} ${p>0?'+':''}${p.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%`;
+}
+function regCell(r, indic){
+  if(!r) return '<td class="reg-cell">—</td>';
+  const p = r.pct==null ? 0 : r.pct*100, bom = indic.good==='up' ? p>0 : p<0;
+  const cls = r.conf==='baixa' ? 'reg-low' : (Math.abs(p)<0.5 ? 'reg-low' : (bom?'reg-good':'reg-bad'));
+  const marca = r.conf==='alta' ? '●●' : (r.conf==='media' ? '●○' : '○○');
+  return `<td class="reg-cell ${cls}" title="t = ${r.t.toFixed(2)} · confiança ${r.conf}"><b>${regPctTxt(r,indic)}</b><small>${marca}</small></td>`;
+}
+function renderRegressao(){
+  const selEl = qs('regLoja'), indEl = qs('regIndic');
+  if(!selEl || !indEl) return;
+  regSel = selEl.value || 'REDE'; regIndic = indEl.value || 'pedidos';
+  const res = regAnalisar(regSel, regIndic);
+  const indic = res.indic;
+  const cats = ACAO_CATEGORIAS;
+
+  // KPIs
+  const nFortes = res.rows.filter(r=>r.conf!=='baixa').length;
+  const k = [
+    ['Eventos analisados', String(res.rows.length), `de ${res.rows.length+res.aguardando.length+res.descartados.length} relevantes neste recorte`],
+    ['Efeitos com confiança ≥ 90%', String(nFortes), `em ${indic.label.toLowerCase()}`],
+    ['Aguardando mais dados', String(res.aguardando.length), 'ações muito recentes (precisam de ≥ 2 cortes depois)'],
+    ['Quanto o modelo explica', res.fit&&!res.fit.erro&&res.fit.r2!=null ? (res.fit.r2*100).toFixed(0)+'%' : '—', res.fit&&!res.fit.erro ? `${res.fit.n} cortes · ${res.fit.df} graus de liberdade` : '']
+  ];
+  qs('regKpis').innerHTML = k.map(([l,v,s])=>`<div class="kpi"><div class="label">${l}</div><div class="value">${v}</div><div style="font-size:12px;color:var(--ink-soft);">${s}</div></div>`).join('');
+
+  // leitura automática
+  const ins = [];
+  const rel = res.rows.filter(r=>r.conf!=='baixa' && r.pct!=null).sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
+  rel.slice(0,4).forEach(r=>{
+    const bom = indic.good==='up' ? r.pct>0 : r.pct<0;
+    ins.push({type:bom?'good':'bad', icon:bom?'✅':'⚠️', text:`<b>${esc(r.ev.titulo)}</b> (${regFmtDate(r.ev.iniMs)}): ${indic.label.toLowerCase()} <b>${regPctTxt(r,indic)}</b> em relação ao nível esperado, com confiança ${r.conf==='alta'?'alta (95%)':'média (90%)'}.`});
+  });
+  if(!rel.length) ins.push({type:'info', icon:'ℹ️', text:`Nenhuma ação teve efeito estatisticamente distinguível em ${indic.label.toLowerCase()} neste recorte. Isso não prova que elas não funcionaram: com poucos cortes semanais e várias ações próximas, o modelo só enxerga efeitos grandes.`});
+  const juntas = res.rows.filter((r,i,a)=>a.some((o,j)=>j!==i && Math.abs(o.ev.iniMs-r.ev.iniMs)<=10*REG_DAY));
+  if(juntas.length) ins.push({type:'info', icon:'🔗', text:`Ações muito próximas entre si (≤ 10 dias) dividem a mesma janela de dados: ${juntas.map(r=>regFmtDate(r.ev.iniMs)).join(', ')}. O modelo tenta separá-las, mas a incerteza é maior — leia os efeitos como indício, não como prova.`});
+  if(res.aguardando.length) ins.push({type:'info', icon:'⏳', text:`Ainda sem leitura (precisam de mais cortes depois da ação): ${res.aguardando.map(e=>`${regFmtDate(e.iniMs)} — ${esc(e.titulo)}`).join(' · ')}.`});
+  if(res.descartados.length) ins.push({type:'info', icon:'🧩', text:`Não separáveis com cortes semanais (ficaram de fora do modelo para não distorcer as demais): ${res.descartados.map(e=>`${regFmtDate(e.iniMs)} — ${esc(e.titulo)}`).join(' · ')}.`});
+  if(res.removidos.length) ins.push({type:'info', icon:'🧹', text:`${res.removidos.length} corte(s) da planilha foram descartados por inconsistência (acumulado que não bate com os vizinhos): ${res.removidos.map(iv=>`${MONTH_LABEL[iv.month].slice(0,3).toLowerCase()} ${iv.d0}–${iv.d1}`).join(', ')}.`});
+  if(res.naoAplicaveis.length) ins.push({type:'info', icon:'🔎', text:`${res.naoAplicaveis.length} ação(ões) de lojas específicas não se aplicam a este recorte. Selecione a loja/marca correspondente para analisá-las.`});
+  renderInsightsInto('regInsights', ins);
+
+  qs('regChart').innerHTML = regChartSvg(res);
+  qs('regChartTitle').textContent = `${indic.label} — observado × modelo`;
+
+  // matriz eventos × indicadores
+  const porIndic = {}; REG_MATRIZ.forEach(id=>{ porIndic[id] = id===regIndic ? res : regAnalisar(regSel, id); });
+  const head = `<thead><tr><th>#</th><th>Ação</th>${REG_MATRIZ.map(id=>`<th>${REG_INDICADORES.find(i=>i.id===id).label}</th>`).join('')}</tr></thead>`;
+  // lista e status das ações vêm da leitura de pedidos (base com todos os cortes); cada célula vem do seu indicador
+  const ref = porIndic.pedidos;
+  const todos = [...ref.rows.map(r=>r.ev), ...ref.aguardando, ...ref.descartados].sort((a,b)=>a.iniMs-b.iniMs);
+  const body = todos.map(e=>{
+    const n = todos.indexOf(e)+1, ci = cats[e.cat];
+    const dataTxt = e.fimMs ? `${regFmtDate(e.iniMs)} – ${regFmtDate(e.fimMs)}` : regFmtDate(e.iniMs);
+    const first = `<td><span class="reg-n">${n}</span></td><td><b>${esc(e.titulo)}</b><br><span class="badge ${ci.badge}">${ci.label}</span> <span style="color:var(--ink-soft);font-size:12px;">${dataTxt}${e.lojas.includes('rede')?'':' · '+e.lojas.map(shortStore).join(', ')}</span></td>`;
+    if(ref.aguardando.includes(e)) return `<tr>${first}<td colspan="${REG_MATRIZ.length}" class="reg-wait">⏳ Aguardando mais dados (a ação é recente demais para medir)</td></tr>`;
+    if(ref.descartados.includes(e)) return `<tr>${first}<td colspan="${REG_MATRIZ.length}" class="reg-wait">Não separável das ações vizinhas com cortes semanais</td></tr>`;
+    return `<tr>${first}${REG_MATRIZ.map(id=>{
+      const r2 = porIndic[id], rr = r2.rows.find(r=>r.ev===e);
+      if(!rr) return `<td class="reg-cell reg-low" title="${r2.aguardando.includes(e)?'sem dados suficientes neste indicador':'não separável das ações vizinhas neste indicador (poucos cortes em R$)'}">n/d</td>`;
+      return regCell(rr, REG_INDICADORES.find(i=>i.id===id));
+    }).join('')}</tr>`;
+  }).join('');
+  qs('regMatriz').innerHTML = head+`<tbody>${body}</tbody>`;
+
+  // leitura por ação (hipóteses + o que mais aconteceu no período)
+  qs('regDetalhes').innerHTML = todos.map(e=>{
+    const n = todos.indexOf(e)+1, r = res.rows.find(x=>x.ev===e);
+    const viz = ACOES.filter(a=>{ const d=Date.parse(a.date+'T00:00:00Z'); return d!==e.iniMs && Math.abs(d-e.iniMs)<=10*REG_DAY && (a.lojas.includes('rede')||a.lojas.some(l=>res.stores.includes(l))); });
+    const simples = r ? regAntesDepois(res, e) : null;
+    return `<details class="acoes-detail" style="margin:0 0 10px;"><summary>${n}. ${esc(e.titulo)} <span class="chevron">▾</span></summary>
+      <div style="padding:10px 4px 2px;font-size:13.5px;line-height:1.55;">
+        ${r?`<p style="margin:0 0 8px;"><b>Efeito estimado em ${indic.label.toLowerCase()}:</b> ${regPctTxt(r,indic)} (t = ${r.t.toFixed(2)}, confiança ${r.conf}).${simples?` <span style="color:var(--ink-soft);">Comparação simples: ${simples}.</span>`:''}</p>`:''}
+        <p style="margin:0 0 4px;"><b>O que pode ter acontecido (hipóteses para validar):</b></p>
+        <ul style="margin:0 0 8px 18px;padding:0;">${e.hip.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>
+        ${viz.length?`<p style="margin:0 0 4px;"><b>Outras ações em até 10 dias (podem misturar o efeito):</b></p><ul style="margin:0 0 4px 18px;padding:0;">${viz.map(a=>`<li>${a.label} — ${esc(a.titulo)}</li>`).join('')}</ul>`:'<p style="margin:0;color:var(--ink-soft);">Nenhuma outra ação registrada em até 10 dias.</p>'}
+      </div></details>`;
+  }).join('');
+}
+// média do indicador nos 4 cortes antes vs. os 4 depois (ou até a próxima ação relevante)
+function regAntesDepois(res, e){
+  const fim = e.fimMs!=null ? e.fimMs : Infinity, indic = res.indic;
+  const prox = res.rows.map(r=>r.ev).filter(o=>o.iniMs>e.iniMs).sort((a,b)=>a.iniMs-b.iniMs)[0];
+  const antes = res.ivs.filter(iv=>iv.end<e.iniMs).slice(-4);
+  const depois = res.ivs.filter(iv=>regExposicao(iv,e.iniMs,fim)>=0.5 && (!prox||iv.start<prox.iniMs)).slice(0,4);
+  if(antes.length<2 || !depois.length) return null;
+  const agg = ivs=>{ const s={}; Object.keys(REG_ADD).forEach(k=>{ s[k]=ivs.reduce((a,iv)=>a+(iv.inc[k]||0),0); }); return indic.f(s, ivs.reduce((a,iv)=>a+iv.days,0)); };
+  const a = agg(antes), b = agg(depois);
+  if(a==null||b==null||!isFinite(a)||!isFinite(b)||a===0) return null;
+  const d = (b-a)/Math.abs(a)*100;
+  return `${indic.fmt(a)} (${antes.length} cortes antes) → ${indic.fmt(b)} (${depois.length} depois), ${d>0?'+':''}${d.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`;
+}
+function populateRegSelects(){
+  const l = qs('regLoja'), i = qs('regIndic'); if(!l||!i) return;
+  const keepL = l.value, keepI = i.value;
+  l.innerHTML = '<option value="REDE">Rede toda</option>'+
+    Object.keys(CONSOLIDATED_STORES).map(k=>`<option value="${k}">${k}</option>`).join('')+
+    Object.keys(REG_MARCAS).map(k=>`<option value="${k}">${k}</option>`).join('')+
+    STORE_KEYS.map(s=>`<option value="${s}">${s}</option>`).join('');
+  i.innerHTML = REG_INDICADORES.map(x=>`<option value="${x.id}">${x.label}</option>`).join('');
+  if(keepL && [...l.options].some(o=>o.value===keepL)) l.value = keepL;
+  if(keepI && [...i.options].some(o=>o.value===keepI)) i.value = keepI;
+}
+
 function init(){
   safe('seletores', ()=>{ populateSelectors('F'); populateSelectors('P'); populateMonthSelects(); });
 
@@ -3613,6 +4058,11 @@ function init(){
   safe('Projeção', populateProjStoreSelect);
   on('proj_store','change', ()=>safe('Projeção', renderProjecao));
   safe('Projeção', renderProjecao);
+
+  safe('Regressão', populateRegSelects);
+  on('regLoja','change', ()=>safe('Regressão', renderRegressao));
+  on('regIndic','change', ()=>safe('Regressão', renderRegressao));
+  safe('Regressão', renderRegressao);
 
   safe('Ações', bootAcoes);
   on('acoesMonth','change', ()=>safe('Ações', renderAcoesTable));

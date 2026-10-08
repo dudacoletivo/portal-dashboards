@@ -99,6 +99,7 @@
     safe('Investimento', renderInvestimento);
     safe('Diagnóstico Parcial', renderParcial);
     safe('Projeção', () => { populateProjStoreSelect(); renderProjecao(); });
+    safe('Regressão', () => { populateRegSelects(); renderRegressao(); });
   }
 
   function init() {
