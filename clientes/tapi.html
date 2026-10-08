@@ -1527,6 +1527,19 @@ function alavBlockToStores(block){
  });
  return out;
 }
+// A coluna "Faturamento bruto mês anterior" (e o Budget derivado dela) da aba Status Alavancas costuma ficar
+// desatualizada no bloco novo (repete os valores do bloco anterior). A fonte correta é a aba Mensal: o faturamento
+// do mês-base (ex.: Setembro, para a vigência de Outubro) vem de MENSAL, e o Budget = % da planilha (5%) × esse valor.
+function alavCorrigirComMensal(stores,mesBase,block){
+ const idx=MENSAL.labels.findIndex(lb=>mesDoLabel(lb)===deacc(mesBase).toUpperCase());
+ if(idx<0)return stores; // mês-base ainda não está na aba Mensal: mantém o que a planilha trouxe
+ const pct=block.rows.map(r=>alavMoney(r[8])).find(v=>v!=null&&v>0&&v<=1)||0.05; // coluna "% de Faturamento para investimento"
+ Object.keys(stores).forEach(l=>{
+  const m=MENSAL.data[l],fat=m&&m[1]?m[1][idx]:null;
+  if(fat!=null&&isFinite(fat)){stores[l].fat=fat;stores[l].budget=fat*pct;}
+ });
+ return stores;
+}
 
 async function fetchWorkbookAoas(){
  // 1ª tentativa: exportação xlsx (todas as abas)
@@ -1587,8 +1600,17 @@ async function loadLive(){
    const alavBlocksAll=[];
    aoas.forEach(aoa=>{ const bl=parseAlavStatus(aoa); if(bl.length)alavBlocksAll.push(...bl); });
    if(alavBlocksAll.length){
+    const lastBlock=alavBlocksAll[alavBlocksAll.length-1];
+    const vigMes=alavMesFromLabel(lastBlock.label);
+    let lastStores=alavBlockToStores(lastBlock);
+    if(vigMes){
+     const vigIdx=ALAV_MESES_PT.indexOf(vigMes);
+     ALAV_VIG.mes=vigMes;
+     ALAV_VIG.ant=vigIdx>0?ALAV_MESES_PT[vigIdx-1]:ALAV_MESES_PT[11];
+     lastStores=alavCorrigirComMensal(lastStores,ALAV_VIG.ant,lastBlock); // só o bloco vigente; os anteriores ficam como a planilha registrou
+    }
     const histFresh=alavBlocksAll.map(bl=>{
-     const stores=alavBlockToStores(bl);
+     const stores=bl===lastBlock?lastStores:alavBlockToStores(bl);
      const ev=Object.entries(stores).flatMap(([l,a])=>[
       ["BUD",`Budget ${brl(a.budget)} (5% do faturamento bruto anterior: ${brl(a.fat)})`],
       ["FLEX",a.tg?("Ativo | "+a.tg):"Desativado"],
@@ -1598,14 +1620,6 @@ async function loadLive(){
      ].map(([c,t])=>[l,c,t]));
      return {d:bl.label||"Atualização de alavancas",ev};
     });
-    const lastBlock=alavBlocksAll[alavBlocksAll.length-1];
-    const lastStores=alavBlockToStores(lastBlock);
-    const vigMes=alavMesFromLabel(lastBlock.label);
-    if(vigMes){
-     const vigIdx=ALAV_MESES_PT.indexOf(vigMes);
-     ALAV_VIG.mes=vigMes;
-     ALAV_VIG.ant=vigIdx>0?ALAV_MESES_PT[vigIdx-1]:ALAV_MESES_PT[11];
-    }
     Object.keys(ALAV).forEach(k=>delete ALAV[k]);
     Object.assign(ALAV,ALAV_MANUAL_EXTRA,lastStores); // se a planilha já trouxer a loja, ela vale mais que o snapshot manual
     ALAV_HIST.length=0;
