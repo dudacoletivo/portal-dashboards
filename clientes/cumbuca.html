@@ -194,6 +194,18 @@ tbody tr:last-child td{border-bottom:none;}
 .reg-table .reg-bad{background:#fbeaea; color:var(--bad);}
 .reg-table .reg-low{color:#9a948d;}
 .reg-table .reg-wait{color:var(--ink-soft); font-size:12.5px; font-style:italic;}
+.reg-table .reg-click{cursor:pointer;}
+.reg-table td.reg-click:hover{outline:2px solid var(--purple); outline-offset:-2px;}
+.reg-table .reg-sel{outline:3px solid var(--purple); outline-offset:-3px;}
+.reg-table .reg-simple{background:#faf6ef; color:#7a6f64; font-style:italic;}
+.reg-table tr.reg-row-foco td:not(.reg-cell){background:#f6eef4;}
+.reg-table th.reg-th{cursor:pointer;}
+.reg-table th.reg-th:hover, .reg-table th.reg-th-sel{background:#7a1c6e;}
+.reg-foco{font-size:13px; line-height:1.6; padding:8px 12px; background:#f7f2ec; border-radius:10px; margin:0 0 8px; min-height:38px;}
+.reg-btn{font-family:inherit; font-size:12px; font-weight:700; padding:3px 10px; margin-left:6px; border:1.5px solid var(--purple); color:var(--purple); background:#fff; border-radius:999px; cursor:pointer;}
+.reg-btn:hover{background:var(--purple); color:#fff;}
+#regChartCard.reg-fixo{position:sticky; top:8px; z-index:20; box-shadow:0 6px 18px rgba(94,18,85,.18);}
+@media (max-width:900px), (max-height:700px){ #regChartCard.reg-fixo{position:static;} }
 .reg-n{display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:var(--purple); color:#fff; font-weight:700; font-size:12px;}
 .acoes-detail{margin-top:10px;}
 .acoes-detail summary{
@@ -538,15 +550,19 @@ footer.note{text-align:center; font-size:12px; color:var(--ink-soft); margin-top
   <div class="kpi-row" id="regKpis"></div>
   <div class="insight-box" id="regInsights"></div>
   <div class="section-title">Série, ações e modelo <span class="tag">numeradas = ações relevantes</span></div>
-  <div class="card">
-    <h3 id="regChartTitle"></h3>
-    <p style="margin:-4px 0 8px;font-size:12.5px;color:var(--ink-soft);"><span style="color:#5e1255;font-weight:700;">━ observado</span> &nbsp; <span style="color:#50887a;font-weight:700;">╌ modelo ajustado</span> &nbsp; <span style="color:#c32525;font-weight:700;">▮ evento temporário</span> &nbsp; ⚪ cinza = ação ainda sem dados suficientes</p>
+  <div class="card reg-fixo" id="regChartCard">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+      <h3 id="regChartTitle" style="margin:0 0 6px;"></h3>
+      <label style="font-size:12.5px;color:var(--ink-soft);cursor:pointer;white-space:nowrap;"><input type="checkbox" id="regFixo" checked> 📌 manter o gráfico fixo ao rolar a tabela</label>
+    </div>
+    <p style="margin:0 0 6px;font-size:12.5px;color:var(--ink-soft);"><span style="color:#5e1255;font-weight:700;">━ observado</span> &nbsp; <span style="color:#50887a;font-weight:700;">╌ modelo ajustado</span> &nbsp; <span style="color:#c32525;font-weight:700;">▮ evento temporário</span> &nbsp; ● ação modelada &nbsp; ○ ação não separável (só leitura simples) &nbsp; <span style="color:#948b81;font-weight:700;">● cinza</span> = aguardando dados</p>
+    <div id="regFocoBox" class="reg-foco"></div>
     <div id="regChart" class="chart-holder"></div>
   </div>
   <div class="section-title">Efeito de cada ação nos indicadores <span class="tag">regressão múltipla</span></div>
   <div class="card">
     <div class="table-wrap"><table id="regMatriz" class="reg-table"></table></div>
-    <p style="margin:10px 2px 0;font-size:12.5px;color:var(--ink-soft);">●● confiança ≥ 95% · ●○ confiança ≥ 90% · ○○ inconclusivo (em cinza). Verde = efeito favorável ao indicador, vermelho = desfavorável (Budget e CPO: cair é favorável). <b>n/d</b> = indicadores em R$ (GMV, ticket, budget, CPO) só usam os cortes 01–07, 01–14 e 01–21, e nem toda ação é separável das vizinhas só com eles.</p>
+    <p style="margin:10px 2px 0;font-size:12.5px;color:var(--ink-soft);">●● confiança ≥ 95% · ●○ confiança ≥ 90% · ○○ inconclusivo (em cinza). Verde = efeito favorável ao indicador, vermelho = desfavorável (Budget e CPO: cair é favorável). <b><i>simples</i></b> (fundo bege) = o modelo não consegue separar essa ação das vizinhas naquele indicador, então a célula mostra só a comparação direta antes × depois, <u>sem ajuste</u> — é o dado do período, mas pode misturar o efeito de outras ações. Indicadores em R$ (GMV, ticket, budget, CPO) usam só os cortes 01–07, 01–14 e 01–21; <b>n/d</b> = ainda sem cortes suficientes. <b>Clique em qualquer número</b> para ver a ação destacada no gráfico fixo acima.</p>
   </div>
   <div class="section-title">Leitura por ação: hipóteses e o que mais aconteceu no período</div>
   <div class="card" id="regDetalhes"></div>
@@ -3828,8 +3844,24 @@ function regAnalisar(sel, indicId){
   const stores = regScopeStores(sel);
   const indic = REG_INDICADORES.find(i=>i.id===indicId);
   const ivsTodos = regBuildIntervals(stores);
-  const ivs = indic.valor ? ivsTodos.filter(iv=>['w7','w14','w21'].includes(iv.endKind)) : ivsTodos;
-  ivs.removidos = ivsTodos.removidos;
+  let ivs = indic.valor ? ivsTodos.filter(iv=>['w7','w14','w21'].includes(iv.endKind)) : ivsTodos;
+  let removidos = ivsTodos.removidos || [];
+  if(indic.valor){
+    // mesma checagem de inconsistência, agora no próprio indicador em R$ (ex.: investimento de um corte que despenca
+    // para 1/3 do normal na planilha geraria um "efeito" falso): compara com os 2 cortes antes e os 2 depois
+    const [lo,hi] = (indic.id==='gmv'||indic.id==='tm') ? [0.65,1.5] : [0.5,2.0];
+    const val = ivs.map(iv=>indic.f(iv.inc, iv.days));
+    const bons = ivs.filter((iv,i)=>{
+      const v = val[i]; if(v==null || !isFinite(v)) return false;
+      const viz = [val[i-2],val[i-1],val[i+1],val[i+2]].filter(x=>x!=null&&isFinite(x)).sort((a,b)=>a-b);
+      if(viz.length<2) return true;
+      const med = viz.length%2 ? viz[(viz.length-1)/2] : (viz[viz.length/2-1]+viz[viz.length/2])/2;
+      return !(med>0) || (v>=med*lo && v<=med*hi);
+    });
+    removidos = removidos.concat(ivs.filter(iv=>!bons.includes(iv)));
+    ivs = bons;
+  }
+  ivs.removidos = removidos;
   const aplicaveis = REG_EVENTOS.filter(e=>regAplicavel(e, stores));
   const naoAplicaveis = REG_EVENTOS.filter(e=>!regAplicavel(e, stores));
   const elegiveis = [], aguardando = [];
@@ -3873,55 +3905,106 @@ function regAnalisar(sel, indicId){
   return {sel, stores, indic, ivs, fit, rows, aguardando, descartados, naoAplicaveis, removidos: ivs.removidos||[]};
 }
 
-// ---------- gráfico: série observada + modelo ajustado + marcadores dos eventos ----------
-function regChartSvg(res){
+let regFoco = null; // id da ação em foco (clique na matriz, na bolinha do gráfico ou no título da ação)
+
+// comparação simples (sem ajuste): ritmo médio nos até 4 cortes antes × até 4 cortes depois da ação
+function regSimples(res, e){
+  const fim = e.fimMs!=null ? e.fimMs : Infinity, indic = res.indic;
+  // ação permanente: "depois" vai até a próxima ação aplicável; evento temporário: só a própria janela
+  const prox = e.fimMs!=null ? null : REG_EVENTOS.filter(o=>o.iniMs>e.iniMs && regAplicavel(o,res.stores)).sort((a,b)=>a.iniMs-b.iniMs)[0];
+  const antes = res.ivs.filter(iv=>iv.end<e.iniMs).slice(-4);
+  const depois = res.ivs.filter(iv=>regExposicao(iv,e.iniMs,fim)>=0.5 && (!prox||iv.start<prox.iniMs)).slice(0,4);
+  if(antes.length<2 || !depois.length) return null;
+  const agg = ivs=>{ const s={}; Object.keys(REG_ADD).forEach(k=>{ s[k]=ivs.reduce((a,iv)=>a+(iv.inc[k]||0),0); }); return indic.f(s, ivs.reduce((a,iv)=>a+iv.days,0)); };
+  const a = agg(antes), b = agg(depois);
+  if(a==null||b==null||!isFinite(a)||!isFinite(b)||a===0) return null;
+  return {a, b, pct:(b-a)/Math.abs(a), antes, depois};
+}
+function regSimplesTxt(res, s){
+  const d = s.pct*100;
+  return `${res.indic.fmt(s.a)} (${s.antes.length} cortes antes) → ${res.indic.fmt(s.b)} (${s.depois.length} depois), ${d>0?'+':''}${d.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`;
+}
+function regTodasAcoes(res){ return [...res.rows.map(r=>r.ev), ...res.aguardando, ...res.descartados].sort((a,b)=>a.iniMs-b.iniMs); }
+function regNum(res, e){ return regTodasAcoes(res).indexOf(e)+1; }
+
+// ---------- gráfico: série observada + modelo ajustado + marcadores (clicáveis) das ações ----------
+function regChartSvg(res, foco){
   const {fit, indic, rows} = res;
   if(!fit || fit.erro) return '<p style="color:var(--ink-soft);padding:20px;">Dados insuficientes para a análise neste recorte.</p>';
-  const W=980, H=320, padL=70, padR=24, padT=34, padB=40;
+  const W=980, H=212, padL=70, padR=24, padT=32, padB=30;
   const pts = fit.pts.map((p,i)=>({x:(p.iv.start+p.iv.end)/2, y:p.y, f:fit.fitted[i]}));
   const xMin = Math.min(...fit.pts.map(p=>p.iv.start)), xMax = Math.max(...fit.pts.map(p=>p.iv.end));
   const ys = pts.flatMap(p=>[p.y,p.f]);
   let yMin = Math.min(...ys), yMax = Math.max(...ys); const rg = (yMax-yMin)||1; yMin -= rg*0.15; yMax += rg*0.2;
   const X = x=>padL+(x-xMin)/(xMax-xMin)*(W-padL-padR), Y = y=>padT+(H-padT-padB)*(1-(y-yMin)/(yMax-yMin));
+  const F = "font-family=\"Calibri, sans-serif\"";
   let g='';
   for(let i=0;i<=4;i++){ const v=yMin+(yMax-yMin)*i/4, y=Y(v);
-    g+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#eee7df"/><text x="${padL-8}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#948b81" font-family="Calibri, sans-serif">${esc(indic.fmt(v))}</text>`; }
-  // rótulos de mês
+    g+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#eee7df"/><text x="${padL-8}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#948b81" ${F}>${esc(indic.fmt(v))}</text>`; }
   const meses = new Set(); let lab='';
   fit.pts.forEach(p=>{ const d=new Date(p.iv.start); const k=d.getUTCFullYear()+'-'+d.getUTCMonth(); if(d.getUTCDate()===1 && !meses.has(k)){ meses.add(k);
-    lab+=`<line x1="${X(p.iv.start).toFixed(1)}" y1="${padT}" x2="${X(p.iv.start).toFixed(1)}" y2="${H-padB}" stroke="#f1ebe4"/><text x="${(X(p.iv.start)+4).toFixed(1)}" y="${H-padB+16}" font-size="11.5" fill="#6b6560" font-family="Calibri, sans-serif">${['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][d.getUTCMonth()]}</text>`; }});
-  // faixas dos eventos temporários + linhas dos eventos
+    lab+=`<line x1="${X(p.iv.start).toFixed(1)}" y1="${padT}" x2="${X(p.iv.start).toFixed(1)}" y2="${H-padB}" stroke="#f1ebe4"/><text x="${(X(p.iv.start)+4).toFixed(1)}" y="${H-padB+16}" font-size="11.5" fill="#6b6560" ${F}>${['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][d.getUTCMonth()]}</text>`; }});
+
+  // faixas "antes" × "depois" da ação em foco (comparação simples)
+  let bandas = '';
+  if(foco){
+    const s = regSimples(res, foco);
+    if(s){
+      const faixa = (ivs, cor, txt)=>{ const a=Math.min(...ivs.map(i=>i.start)), b=Math.max(...ivs.map(i=>i.end));
+        return `<rect x="${X(a).toFixed(1)}" y="${padT}" width="${Math.max(2,X(b)-X(a)).toFixed(1)}" height="${H-padT-padB}" fill="${cor}"/><text x="${(X(a)+5).toFixed(1)}" y="${padT+13}" font-size="11" font-weight="700" fill="#5b5652" ${F}>${txt}</text>`; };
+      bandas = faixa(s.antes,'#9a8f3f1f','antes') + faixa(s.depois,'#50887a26','depois');
+    }
+  }
+  // marcadores: modelados (cheio), não separáveis (vazado) e aguardando (cinza); tudo clicável
   let ev='';
-  rows.forEach((r,i)=>{ const e=r.ev;
-    if(e.fimMs!=null){ const a=Math.max(xMin,e.iniMs), b=Math.min(xMax,e.fimMs); ev+=`<rect x="${X(a).toFixed(1)}" y="${padT}" width="${Math.max(2,X(b)-X(a)).toFixed(1)}" height="${H-padT-padB}" fill="#c3252522"/>`; }
-    const x=X(Math.min(Math.max(e.iniMs,xMin),xMax));
-    ev+=`<line x1="${x.toFixed(1)}" y1="${padT-6}" x2="${x.toFixed(1)}" y2="${H-padB}" stroke="#5e1255" stroke-dasharray="4 3" stroke-width="1.2"/>`+
-        `<circle cx="${x.toFixed(1)}" cy="${padT-14}" r="9" fill="#5e1255"/><text x="${x.toFixed(1)}" y="${padT-10}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="Calibri, sans-serif">${regNum(res,e)}</text>`;
-  });
-  // eventos aguardando dados também aparecem (tracejado cinza)
-  res.aguardando.forEach(e=>{ if(e.iniMs>xMax) return; const x=X(Math.min(Math.max(e.iniMs,xMin),xMax));
-    ev+=`<line x1="${x.toFixed(1)}" y1="${padT-6}" x2="${x.toFixed(1)}" y2="${H-padB}" stroke="#b5aca2" stroke-dasharray="2 4"/><circle cx="${x.toFixed(1)}" cy="${padT-14}" r="9" fill="#b5aca2"/><text x="${x.toFixed(1)}" y="${padT-10}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="Calibri, sans-serif">${regNum(res,e)}</text>`; });
+  const marcador = (e, estilo)=>{
+    if(e.iniMs>xMax) return '';
+    const x = X(Math.min(Math.max(e.iniMs,xMin),xMax)), emFoco = foco && foco.id===e.id, esmaecer = foco && !emFoco;
+    const cor = estilo==='cinza' ? '#b5aca2' : '#5e1255', fill = estilo==='vazado' ? '#fff' : cor, txt = estilo==='vazado' ? '#5e1255' : '#fff';
+    const banda = (e.fimMs!=null && estilo!=='cinza') ? `<rect x="${X(Math.max(xMin,e.iniMs)).toFixed(1)}" y="${padT}" width="${Math.max(2,X(Math.min(xMax,e.fimMs))-X(Math.max(xMin,e.iniMs))).toFixed(1)}" height="${H-padT-padB}" fill="#c3252522"/>` : '';
+    return `<g class="reg-mk" data-ev="${e.id}" style="cursor:pointer" opacity="${esmaecer?0.35:1}">${banda}
+      <line x1="${x.toFixed(1)}" y1="${padT-6}" x2="${x.toFixed(1)}" y2="${H-padB}" stroke="${cor}" stroke-width="${emFoco?2.4:1.2}" stroke-dasharray="${estilo==='cinza'?'2 4':'4 3'}"/>
+      <circle cx="${x.toFixed(1)}" cy="${padT-14}" r="${emFoco?12:9}" fill="${fill}" stroke="${cor}" stroke-width="${emFoco?3:1.5}"/>
+      <text x="${x.toFixed(1)}" y="${padT-10}" text-anchor="middle" font-size="${emFoco?12.5:11}" font-weight="700" fill="${txt}" ${F} pointer-events="none">${regNum(res,e)}</text>
+      <title>${esc(e.titulo)}</title></g>`;
+  };
+  rows.forEach(r=>{ ev += marcador(r.ev,'cheio'); });
+  res.descartados.forEach(e=>{ ev += marcador(e,'vazado'); });
+  res.aguardando.forEach(e=>{ ev += marcador(e,'cinza'); });
+
   const obs = pts.map((p,i)=>(i?'L':'M')+X(p.x).toFixed(1)+','+Y(p.y).toFixed(1)).join(' ');
   const mod = pts.map((p,i)=>(i?'L':'M')+X(p.x).toFixed(1)+','+Y(p.f).toFixed(1)).join(' ');
   const dots = pts.map(p=>`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="4" fill="#5e1255" stroke="#fff" stroke-width="1.5"><title>${esc(indic.fmt(p.y))}</title></circle>`).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${g}${lab}${ev}
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${g}${lab}${bandas}
     <path d="${mod}" fill="none" stroke="#50887a" stroke-width="2.4" stroke-dasharray="6 4"/>
-    <path d="${obs}" fill="none" stroke="#5e1255" stroke-width="2.6" stroke-linejoin="round"/>${dots}</svg>`;
+    <path d="${obs}" fill="none" stroke="#5e1255" stroke-width="2.6" stroke-linejoin="round"/>${dots}${ev}</svg>`;
 }
-function regNum(res, e){ const todos = [...res.rows.map(r=>r.ev), ...res.aguardando, ...res.descartados].sort((a,b)=>a.iniMs-b.iniMs); return todos.indexOf(e)+1; }
 
 // ---------- renderização da aba ----------
-function regPctTxt(r, indic){
+function regPctTxt(r){
   if(r.pct==null) return '—';
   const p = r.pct*100, seta = p>0.05?'▲':(p<-0.05?'▼':'▬');
   return `${seta} ${p>0?'+':''}${p.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%`;
 }
-function regCell(r, indic){
-  if(!r) return '<td class="reg-cell">—</td>';
+function regCell(r, indic, attrs, sel){
   const p = r.pct==null ? 0 : r.pct*100, bom = indic.good==='up' ? p>0 : p<0;
   const cls = r.conf==='baixa' ? 'reg-low' : (Math.abs(p)<0.5 ? 'reg-low' : (bom?'reg-good':'reg-bad'));
   const marca = r.conf==='alta' ? '●●' : (r.conf==='media' ? '●○' : '○○');
-  return `<td class="reg-cell ${cls}" title="t = ${r.t.toFixed(2)} · confiança ${r.conf}"><b>${regPctTxt(r,indic)}</b><small>${marca}</small></td>`;
+  return `<td class="reg-cell reg-click ${cls}${sel}" ${attrs} title="Efeito ajustado pelo modelo · t = ${r.t.toFixed(2)} · confiança ${r.conf} · clique para ver no gráfico"><b>${regPctTxt(r)}</b><small>${marca}</small></td>`;
+}
+function regCellSimples(res, e, s, attrs, sel){
+  if(!s) return `<td class="reg-cell reg-low reg-click${sel}" ${attrs} title="Ainda não há cortes suficientes antes/depois desta ação neste indicador">n/d</td>`;
+  return `<td class="reg-cell reg-simple reg-click${sel}" ${attrs} title="Comparação simples, sem ajuste: ${esc(regSimplesTxt(res,s))}. Não separa o efeito de outras ações próximas. Clique para ver no gráfico."><b>${regPctTxt(s)}</b><small>simples</small></td>`;
+}
+function regFocoHtml(res, foco, todos){
+  if(!foco) return '<span style="color:var(--ink-soft);">👆 Clique em um número da tabela, no título de uma ação ou numa bolinha do gráfico para destacá-la aqui sem sair desta posição.</span>';
+  const n = todos.indexOf(foco)+1, r = res.rows.find(x=>x.ev===foco), s = regSimples(res, foco);
+  const conf = r ? (r.conf==='alta'?'confiança alta':(r.conf==='media'?'confiança média':'inconclusivo')) : '';
+  const aj = r ? `efeito ajustado <b>${regPctTxt(r)}</b> (${conf})` : 'sem efeito ajustado (ação recente ou não separável das vizinhas)';
+  const sim = s ? `comparação simples: ${regSimplesTxt(res,s)}` : 'sem cortes suficientes para comparar neste indicador';
+  return `<span class="reg-n">${n}</span> <b>${esc(foco.titulo)}</b> <span style="color:var(--ink-soft);">(${foco.fimMs?regFmtDate(foco.iniMs)+' – '+regFmtDate(foco.fimMs):regFmtDate(foco.iniMs)})</span><br>
+    <b>${res.indic.label}:</b> ${aj} · <span style="color:var(--ink-soft);">${sim}</span>
+    <span style="white-space:nowrap;"><button type="button" class="reg-btn" data-act="hip" data-ev="${foco.id}">Hipóteses e ações próximas ↓</button> <button type="button" class="reg-btn" data-act="limpar">Limpar</button></span>`;
 }
 function renderRegressao(){
   const selEl = qs('regLoja'), indEl = qs('regIndic');
@@ -3931,10 +4014,17 @@ function renderRegressao(){
   const indic = res.indic;
   const cats = ACAO_CATEGORIAS;
 
+  // matriz eventos × indicadores: lista e status das ações vêm da leitura de pedidos (todos os cortes)
+  const porIndic = {}; REG_MATRIZ.forEach(id=>{ porIndic[id] = id===regIndic ? res : regAnalisar(regSel, id); });
+  const ref = porIndic.pedidos;
+  const todos = regTodasAcoes(ref);
+  const foco = todos.find(e=>e.id===regFoco) || null;
+  if(!foco) regFoco = null;
+
   // KPIs
   const nFortes = res.rows.filter(r=>r.conf!=='baixa').length;
   const k = [
-    ['Eventos analisados', String(res.rows.length), `de ${res.rows.length+res.aguardando.length+res.descartados.length} relevantes neste recorte`],
+    ['Eventos analisados', String(res.rows.length), `de ${todos.length} relevantes neste recorte`],
     ['Efeitos com confiança ≥ 90%', String(nFortes), `em ${indic.label.toLowerCase()}`],
     ['Aguardando mais dados', String(res.aguardando.length), 'ações muito recentes (precisam de ≥ 2 cortes depois)'],
     ['Quanto o modelo explica', res.fit&&!res.fit.erro&&res.fit.r2!=null ? (res.fit.r2*100).toFixed(0)+'%' : '—', res.fit&&!res.fit.erro ? `${res.fit.n} cortes · ${res.fit.df} graus de liberdade` : '']
@@ -3946,66 +4036,65 @@ function renderRegressao(){
   const rel = res.rows.filter(r=>r.conf!=='baixa' && r.pct!=null).sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
   rel.slice(0,4).forEach(r=>{
     const bom = indic.good==='up' ? r.pct>0 : r.pct<0;
-    ins.push({type:bom?'good':'bad', icon:bom?'✅':'⚠️', text:`<b>${esc(r.ev.titulo)}</b> (${regFmtDate(r.ev.iniMs)}): ${indic.label.toLowerCase()} <b>${regPctTxt(r,indic)}</b> em relação ao nível esperado, com confiança ${r.conf==='alta'?'alta (95%)':'média (90%)'}.`});
+    ins.push({type:bom?'good':'bad', icon:bom?'✅':'⚠️', text:`<b>${esc(r.ev.titulo)}</b> (${regFmtDate(r.ev.iniMs)}): ${indic.label.toLowerCase()} <b>${regPctTxt(r)}</b> em relação ao nível esperado, com confiança ${r.conf==='alta'?'alta (95%)':'média (90%)'}.`});
   });
-  if(!rel.length) ins.push({type:'info', icon:'ℹ️', text:`Nenhuma ação teve efeito estatisticamente distinguível em ${indic.label.toLowerCase()} neste recorte. Isso não prova que elas não funcionaram: com poucos cortes semanais e várias ações próximas, o modelo só enxerga efeitos grandes.`});
+  if(!rel.length) ins.push({type:'info', icon:'ℹ️', text:`Nenhuma ação teve efeito estatisticamente distinguível em ${indic.label.toLowerCase()} neste recorte. Isso não prova que elas não funcionaram: com poucos cortes semanais e várias ações próximas, o modelo só enxerga efeitos grandes. Nas células cinzas "simples" você vê a comparação antes × depois, sem ajuste.`});
   const juntas = res.rows.filter((r,i,a)=>a.some((o,j)=>j!==i && Math.abs(o.ev.iniMs-r.ev.iniMs)<=10*REG_DAY));
   if(juntas.length) ins.push({type:'info', icon:'🔗', text:`Ações muito próximas entre si (≤ 10 dias) dividem a mesma janela de dados: ${juntas.map(r=>regFmtDate(r.ev.iniMs)).join(', ')}. O modelo tenta separá-las, mas a incerteza é maior — leia os efeitos como indício, não como prova.`});
-  if(res.aguardando.length) ins.push({type:'info', icon:'⏳', text:`Ainda sem leitura (precisam de mais cortes depois da ação): ${res.aguardando.map(e=>`${regFmtDate(e.iniMs)} — ${esc(e.titulo)}`).join(' · ')}.`});
-  if(res.descartados.length) ins.push({type:'info', icon:'🧩', text:`Não separáveis com cortes semanais (ficaram de fora do modelo para não distorcer as demais): ${res.descartados.map(e=>`${regFmtDate(e.iniMs)} — ${esc(e.titulo)}`).join(' · ')}.`});
+  if(res.aguardando.length) ins.push({type:'info', icon:'⏳', text:`Ainda sem efeito ajustado (precisam de mais cortes depois da ação): ${res.aguardando.map(e=>`${regFmtDate(e.iniMs)} — ${esc(e.titulo)}`).join(' · ')}.`});
+  if(res.descartados.length) ins.push({type:'info', icon:'🧩', text:`Os dados existem, mas estas ações caem nas mesmas semanas de outras e o modelo não consegue separar o efeito de cada uma (mostradas só com a comparação simples): ${res.descartados.map(e=>`${regFmtDate(e.iniMs)} — ${esc(e.titulo)}`).join(' · ')}.`});
   if(res.removidos.length) ins.push({type:'info', icon:'🧹', text:`${res.removidos.length} corte(s) da planilha foram descartados por inconsistência (acumulado que não bate com os vizinhos): ${res.removidos.map(iv=>`${MONTH_LABEL[iv.month].slice(0,3).toLowerCase()} ${iv.d0}–${iv.d1}`).join(', ')}.`});
   if(res.naoAplicaveis.length) ins.push({type:'info', icon:'🔎', text:`${res.naoAplicaveis.length} ação(ões) de lojas específicas não se aplicam a este recorte. Selecione a loja/marca correspondente para analisá-las.`});
   renderInsightsInto('regInsights', ins);
 
-  qs('regChart').innerHTML = regChartSvg(res);
+  qs('regChart').innerHTML = regChartSvg(res, foco);
   qs('regChartTitle').textContent = `${indic.label} — observado × modelo`;
+  qs('regFocoBox').innerHTML = regFocoHtml(res, foco, todos);
 
-  // matriz eventos × indicadores
-  const porIndic = {}; REG_MATRIZ.forEach(id=>{ porIndic[id] = id===regIndic ? res : regAnalisar(regSel, id); });
-  const head = `<thead><tr><th>#</th><th>Ação</th>${REG_MATRIZ.map(id=>`<th>${REG_INDICADORES.find(i=>i.id===id).label}</th>`).join('')}</tr></thead>`;
-  // lista e status das ações vêm da leitura de pedidos (base com todos os cortes); cada célula vem do seu indicador
-  const ref = porIndic.pedidos;
-  const todos = [...ref.rows.map(r=>r.ev), ...ref.aguardando, ...ref.descartados].sort((a,b)=>a.iniMs-b.iniMs);
+  const head = `<thead><tr><th>#</th><th>Ação</th>${REG_MATRIZ.map(id=>`<th class="reg-th${id===regIndic?' reg-th-sel':''}" data-ind="${id}" title="Clique para ver este indicador no gráfico">${REG_INDICADORES.find(i=>i.id===id).label}</th>`).join('')}</tr></thead>`;
   const body = todos.map(e=>{
-    const n = todos.indexOf(e)+1, ci = cats[e.cat];
+    const n = todos.indexOf(e)+1, ci = cats[e.cat], emFoco = foco===e;
     const dataTxt = e.fimMs ? `${regFmtDate(e.iniMs)} – ${regFmtDate(e.fimMs)}` : regFmtDate(e.iniMs);
-    const first = `<td><span class="reg-n">${n}</span></td><td><b>${esc(e.titulo)}</b><br><span class="badge ${ci.badge}">${ci.label}</span> <span style="color:var(--ink-soft);font-size:12px;">${dataTxt}${e.lojas.includes('rede')?'':' · '+e.lojas.map(shortStore).join(', ')}</span></td>`;
-    if(ref.aguardando.includes(e)) return `<tr>${first}<td colspan="${REG_MATRIZ.length}" class="reg-wait">⏳ Aguardando mais dados (a ação é recente demais para medir)</td></tr>`;
-    if(ref.descartados.includes(e)) return `<tr>${first}<td colspan="${REG_MATRIZ.length}" class="reg-wait">Não separável das ações vizinhas com cortes semanais</td></tr>`;
-    return `<tr>${first}${REG_MATRIZ.map(id=>{
-      const r2 = porIndic[id], rr = r2.rows.find(r=>r.ev===e);
-      if(!rr) return `<td class="reg-cell reg-low" title="${r2.aguardando.includes(e)?'sem dados suficientes neste indicador':'não separável das ações vizinhas neste indicador (poucos cortes em R$)'}">n/d</td>`;
-      return regCell(rr, REG_INDICADORES.find(i=>i.id===id));
+    const nota = ref.aguardando.includes(e) ? ' · ⏳ aguardando mais dados' : (ref.descartados.includes(e) ? ' · 🧩 não separável — só leitura simples' : '');
+    const first = `<td><span class="reg-n">${n}</span></td><td class="reg-click" data-ev="${e.id}" title="Clique para destacar no gráfico"><b>${esc(e.titulo)}</b><br><span class="badge ${ci.badge}">${ci.label}</span> <span style="color:var(--ink-soft);font-size:12px;">${dataTxt}${e.lojas.includes('rede')?'':' · '+e.lojas.map(shortStore).join(', ')}${nota}</span></td>`;
+    return `<tr class="${emFoco?'reg-row-foco':''}">${first}${REG_MATRIZ.map(id=>{
+      const r2 = porIndic[id], rr = r2.rows.find(r=>r.ev===e), ind = REG_INDICADORES.find(i=>i.id===id);
+      const attrs = `data-ev="${e.id}" data-ind="${id}" tabindex="0" role="button"`, sel = (emFoco && id===regIndic) ? ' reg-sel' : '';
+      return rr ? regCell(rr, ind, attrs, sel) : regCellSimples(r2, e, regSimples(r2, e), attrs, sel);
     }).join('')}</tr>`;
   }).join('');
   qs('regMatriz').innerHTML = head+`<tbody>${body}</tbody>`;
 
-  // leitura por ação (hipóteses + o que mais aconteceu no período)
+  // leitura por ação (hipóteses + o que mais aconteceu no período); preserva quais ficaram abertas
+  const abertas = new Set([...document.querySelectorAll('#regDetalhes details[open]')].map(d=>d.id));
   qs('regDetalhes').innerHTML = todos.map(e=>{
-    const n = todos.indexOf(e)+1, r = res.rows.find(x=>x.ev===e);
+    const n = todos.indexOf(e)+1, r = res.rows.find(x=>x.ev===e), s = regSimples(res, e);
     const viz = ACOES.filter(a=>{ const d=Date.parse(a.date+'T00:00:00Z'); return d!==e.iniMs && Math.abs(d-e.iniMs)<=10*REG_DAY && (a.lojas.includes('rede')||a.lojas.some(l=>res.stores.includes(l))); });
-    const simples = r ? regAntesDepois(res, e) : null;
-    return `<details class="acoes-detail" style="margin:0 0 10px;"><summary>${n}. ${esc(e.titulo)} <span class="chevron">▾</span></summary>
+    const id = 'regDet-'+e.id;
+    return `<details id="${id}" class="acoes-detail" style="margin:0 0 10px;"${abertas.has(id)?' open':''}><summary>${n}. ${esc(e.titulo)} <span class="chevron">▾</span></summary>
       <div style="padding:10px 4px 2px;font-size:13.5px;line-height:1.55;">
-        ${r?`<p style="margin:0 0 8px;"><b>Efeito estimado em ${indic.label.toLowerCase()}:</b> ${regPctTxt(r,indic)} (t = ${r.t.toFixed(2)}, confiança ${r.conf}).${simples?` <span style="color:var(--ink-soft);">Comparação simples: ${simples}.</span>`:''}</p>`:''}
+        <p style="margin:0 0 8px;">${r?`<b>Efeito ajustado em ${indic.label.toLowerCase()}:</b> ${regPctTxt(r)} (t = ${r.t.toFixed(2)}, confiança ${r.conf}). `:''}${s?`<span style="color:var(--ink-soft);">Comparação simples: ${regSimplesTxt(res,s)}.</span>`:'<span style="color:var(--ink-soft);">Sem cortes suficientes para comparar neste indicador.</span>'}</p>
         <p style="margin:0 0 4px;"><b>O que pode ter acontecido (hipóteses para validar):</b></p>
         <ul style="margin:0 0 8px 18px;padding:0;">${e.hip.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>
         ${viz.length?`<p style="margin:0 0 4px;"><b>Outras ações em até 10 dias (podem misturar o efeito):</b></p><ul style="margin:0 0 4px 18px;padding:0;">${viz.map(a=>`<li>${a.label} — ${esc(a.titulo)}</li>`).join('')}</ul>`:'<p style="margin:0;color:var(--ink-soft);">Nenhuma outra ação registrada em até 10 dias.</p>'}
       </div></details>`;
   }).join('');
 }
-// média do indicador nos 4 cortes antes vs. os 4 depois (ou até a próxima ação relevante)
-function regAntesDepois(res, e){
-  const fim = e.fimMs!=null ? e.fimMs : Infinity, indic = res.indic;
-  const prox = res.rows.map(r=>r.ev).filter(o=>o.iniMs>e.iniMs).sort((a,b)=>a.iniMs-b.iniMs)[0];
-  const antes = res.ivs.filter(iv=>iv.end<e.iniMs).slice(-4);
-  const depois = res.ivs.filter(iv=>regExposicao(iv,e.iniMs,fim)>=0.5 && (!prox||iv.start<prox.iniMs)).slice(0,4);
-  if(antes.length<2 || !depois.length) return null;
-  const agg = ivs=>{ const s={}; Object.keys(REG_ADD).forEach(k=>{ s[k]=ivs.reduce((a,iv)=>a+(iv.inc[k]||0),0); }); return indic.f(s, ivs.reduce((a,iv)=>a+iv.days,0)); };
-  const a = agg(antes), b = agg(depois);
-  if(a==null||b==null||!isFinite(a)||!isFinite(b)||a===0) return null;
-  const d = (b-a)/Math.abs(a)*100;
-  return `${indic.fmt(a)} (${antes.length} cortes antes) → ${indic.fmt(b)} (${depois.length} depois), ${d>0?'+':''}${d.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`;
+// cliques: números da matriz, títulos das ações, cabeçalhos de indicador, bolinhas do gráfico e botões do painel de foco
+function regOnClick(ev){
+  const t = ev.target;
+  const btn = t.closest && t.closest('.reg-btn');
+  if(btn){
+    if(btn.dataset.act==='limpar'){ regFoco = null; renderRegressao(); }
+    else if(btn.dataset.act==='hip'){ const d = document.getElementById('regDet-'+btn.dataset.ev); if(d){ d.open = true; d.scrollIntoView({behavior:'smooth', block:'center'}); } }
+    return;
+  }
+  const alvo = t.closest && t.closest('[data-ev],[data-ind]');
+  if(!alvo || !alvo.closest('#tab-regressao')) return;
+  const e = alvo.dataset.ev, i = alvo.dataset.ind;
+  if(i && REG_INDICADORES.some(x=>x.id===i)){ const s = qs('regIndic'); if(s) s.value = i; }
+  if(e) regFoco = (alvo.dataset.ind ? e : (regFoco===e ? null : e)); // clicar de novo no título/bolinha da ação em foco tira o foco
+  renderRegressao();
 }
 function populateRegSelects(){
   const l = qs('regLoja'), i = qs('regIndic'); if(!l||!i) return;
@@ -4062,6 +4151,9 @@ function init(){
   safe('Regressão', populateRegSelects);
   on('regLoja','change', ()=>safe('Regressão', renderRegressao));
   on('regIndic','change', ()=>safe('Regressão', renderRegressao));
+  on('tab-regressao','click', e=>safe('Regressão', ()=>regOnClick(e)));
+  on('tab-regressao','keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target.dataset && e.target.dataset.ev){ e.preventDefault(); safe('Regressão', ()=>regOnClick(e)); } });
+  on('regFixo','change', e=>{ qs('regChartCard').classList.toggle('reg-fixo', e.target.checked); });
   safe('Regressão', renderRegressao);
 
   safe('Ações', bootAcoes);
