@@ -3695,7 +3695,7 @@ const REG_INDICADORES = [
   {id:'cpo',     label:'CPO',               fmt:v=>fmtCurrency(v),                   good:'down', valor:true, f:(i,d)=>i.PROMO!=null?i.PROMO/i.VENDAS:null},
   {id:'roi',     label:'ROI',               fmt:v=>fmtRatio(v),                      good:'up',   valor:true, f:(i,d)=>i.PROMO>0?i.GMV/i.PROMO-1:null}
 ];
-const REG_MATRIZ = ['visitas','conv','pedidos','gmv','tm','budget','cpo']; // ordem do funil: visitas → conversão → pedidos → R$
+const REG_MATRIZ = ['visitas','conv','pedidos','novos','gmv','tm','budget','cpo']; // ordem do funil: visitas → conversão → pedidos → R$
 
 // ---------- álgebra mínima (OLS ponderado) ----------
 function regSolve(A, B){ // resolve A·X = B por Gauss-Jordan; devolve {X, inv}
