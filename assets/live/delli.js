@@ -11,9 +11,8 @@
 //     e futuramente "SETEMBRO (01-14)", "SETEMBRO (01-21)" conforme o mês avança) -> alimenta
 //     STORES[id].semanal[mes][janela] = {métricas}, janela em 'w7'/'w14'/'w21'/'w28'. Usada
 //     pela aba Investimento (pega a janela mais completa disponível em cada mês) e pela aba
-//     Comparativo Parcial (janela escolhida no filtro). Hoje só existe para a Padaria Delli —
-//     a Pizzaria Delli ainda não tem aba "Semanal" própria na planilha, então fica com
-//     semanal:{} até o cliente criar essa aba (ver pizzariaSemanalFromSheet abaixo, hoje null).
+//     Comparativo Parcial (janela escolhida no filtro). Padaria Delli lê "Delli | Semanal" e a
+//     Pizzaria Delli lê "Pizzaria Delli | Semanal" (mesmo formato; ver PIZZARIA_JANELAS_IGNORADAS).
 //
 // A aba "Delli | Acompanhamento Cardápio" (datas soltas, não meses) não é usada por este
 // dashboard — fica de fora por ora.
@@ -25,6 +24,10 @@
   const GID_SEMANAL = '2125793866'; // aba "Delli | Semanal" (só Padaria Delli, por ora)
   const GID_MENSAL_PADARIA = '1167192831'; // aba "Padaria Delli | Mensal"
   const GID_MENSAL_PIZZARIA = '1559849814'; // aba "Pizzaria Delli | Mensal"
+  const GID_SEMANAL_PIZZARIA = '1372993113'; // aba "Pizzaria Delli | Semanal"
+  // Cortes da Pizzaria que ficam de fora por enquanto: na planilha, as colunas 01–21 vieram idênticas às da Padaria
+  // (cópia). Quando forem preenchidas com os dados reais da Pizzaria, é só esvaziar esta lista.
+  const PIZZARIA_JANELAS_IGNORADAS = ['w21'];
 
   const MONTH_NAMES_PT = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
   const MONTH_KEY_PT = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -150,9 +153,21 @@
     if (!Object.keys(semanalPadaria).length && !Object.keys(mensalPadaria).length && !Object.keys(mensalPizzaria).length) {
       throw new Error('Nenhum mês encontrado nas abas Semanal/Mensal');
     }
+    // Semanal da Pizzaria é isolado: se essa aba falhar, o restante do dashboard continua com os dados atuais
+    let semanalPizzaria = {};
+    try {
+      semanalPizzaria = parseSemanal(await SheetsSync.fetchCsvRows(SHEET_ID, GID_SEMANAL_PIZZARIA));
+      Object.keys(semanalPizzaria).forEach(function (mes) {
+        PIZZARIA_JANELAS_IGNORADAS.forEach(function (w) { delete semanalPizzaria[mes][w]; });
+        if (!Object.keys(semanalPizzaria[mes]).length) delete semanalPizzaria[mes];
+      });
+    } catch (e) {
+      console.warn('[live-sync] Aba "Pizzaria Delli | Semanal" indisponível:', e);
+      semanalPizzaria = {};
+    }
     return {
       'padaria-delli': { label: 'Padaria Delli', semanal: semanalPadaria, mensal: mensalPadaria },
-      'pizzaria-delli': { label: 'Pizzaria Delli', semanal: {}, mensal: mensalPizzaria }
+      'pizzaria-delli': { label: 'Pizzaria Delli', semanal: semanalPizzaria, mensal: mensalPizzaria }
     };
   }
 

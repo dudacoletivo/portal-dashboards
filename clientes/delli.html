@@ -400,7 +400,9 @@ const RAW = window.__LIVE_RAW || {
                     w21:{vendas:818, gmv:48634.77, tm:59.46, novos:173, visitas:3714, conversao:22.02, budget:10.32, promo:5020.70, subifood:3856.24, cpo:6.14, roi:8.69} },
         setembro: { w7: {vendas:333, gmv:18941.92, tm:56.88, novos:102, visitas:1673, conversao:19.90, budget:9.23, promo:1748.74, subifood:1031.88, cpo:5.25, roi:9.83},
                     w14:{vendas:628, gmv:36667.76, tm:58.39, novos:163, visitas:3265, conversao:19.23, budget:6.96, promo:2553.38, subifood:1325.23, cpo:4.07, roi:13.36},
-                    w21:{vendas:851, gmv:51304.56, tm:60.29, novos:205, visitas:4638, conversao:18.35, budget:5.32, promo:2728.38, subifood:1325.22, cpo:3.21, roi:17.80} }
+                    w21:{vendas:851, gmv:51304.56, tm:60.29, novos:205, visitas:4638, conversao:18.35, budget:5.32, promo:2728.38, subifood:1325.22, cpo:3.21, roi:17.80} },
+        outubro:  { w7: {vendas:242, gmv:13002.12, tm:53.73, novos:68,  visitas:3009, conversao:8.04,  budget:14.44, promo:1877.98, subifood:1128.83, cpo:7.76, roi:5.92},
+                    w14:{vendas:476, gmv:26524.75, tm:55.72, novos:121, visitas:6059, conversao:7.86,  budget:13.92, promo:3693.05, subifood:2167.12, cpo:7.76, roi:6.18} }
       }
     },
     "pizzaria-delli": {
@@ -411,7 +413,17 @@ const RAW = window.__LIVE_RAW || {
         agosto:   {vendas:344, gmv:26553.77, tm:77.19, novos:89, visitas:1260, conversao:27.30, budget:10.39, promo:2758.58, subifood:1878.56, cpo:8.02, roi:8.63},
         setembro: {vendas:341, gmv:27457.30, tm:80.52, novos:73, visitas:1282, conversao:26.60, budget:9.20, promo:2526.98, subifood:1577.86, cpo:7.41, roi:9.87}
       },
-      semanal: {}
+      // cortes 01–21 ficam de fora por enquanto (na planilha vieram idênticos aos da Padaria)
+      semanal: {
+        julho:    { w7: {vendas:53,  gmv:4300.33, tm:81.14, novos:13, visitas:550,  conversao:9.64,  budget:7.08, promo:304.47, subifood:337.90, cpo:5.74, roi:13.12},
+                    w14:{vendas:133, gmv:10610.08,tm:79.78, novos:35, visitas:1143, conversao:11.64, budget:6.76, promo:716.93, subifood:825.70, cpo:5.39, roi:13.80} },
+        agosto:   { w7: {vendas:79,  gmv:6925.53, tm:87.66, novos:21, visitas:578,  conversao:13.67, budget:7.31, promo:506.57, subifood:429.86, cpo:6.41, roi:12.67},
+                    w14:{vendas:139, gmv:11595.65,tm:83.42, novos:38, visitas:1129, conversao:12.31, budget:7.58, promo:878.68, subifood:720.68, cpo:6.32, roi:12.20} },
+        setembro: { w7: {vendas:90,  gmv:7024.29, tm:78.05, novos:21, visitas:813,  conversao:11.07, budget:9.54, promo:669.86, subifood:387.43, cpo:7.44, roi:9.49},
+                    w14:{vendas:177, gmv:14314.23,tm:80.87, novos:38, visitas:1481, conversao:11.95, budget:8.25, promo:1180.66,subifood:933.97, cpo:6.67, roi:11.12} },
+        outubro:  { w7: {vendas:82,  gmv:7108.84, tm:86.69, novos:19, visitas:824,  conversao:9.95,  budget:7.94, promo:564.30, subifood:430.93, cpo:6.88, roi:11.60},
+                    w14:{vendas:169, gmv:14322.43,tm:84.75, novos:34, visitas:1672, conversao:10.11, budget:8.16, promo:1169.33,subifood:915.92, cpo:6.92, roi:11.25} }
+      }
     }
   }
 };
