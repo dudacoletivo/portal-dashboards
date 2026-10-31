@@ -9,6 +9,9 @@
 <script src="../assets/auth-guard.js" data-client="tapi"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --vinho:#7B131F;
@@ -27,7 +30,7 @@
   --borda:#E8DDD3;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:Calibri,'Segoe UI',sans-serif;background:var(--creme);color:var(--texto);font-size:15px;}
+body{font-family:'Manrope','Segoe UI',sans-serif;background:var(--creme);color:var(--texto);font-size:15px;}
 header{background:var(--tapioca);border-bottom:3px solid var(--vinho);padding:14px 28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(123,19,31,.06);}
 header img{height:52px;}
 header{transition:transform .25s ease;}
@@ -628,7 +631,7 @@ function evoTag(e,goodUp=1){
  return `<span class="${good?'up':'down'}">${arrow} ${s}</span>`; // a cor é que diz se é bom (verde) ou ruim (vermelho)
 }
 function chart(id,cfg){const el=document.getElementById(id);const ex=Chart.getChart(el);if(ex)ex.destroy();return new Chart(el,cfg);}
-Chart.defaults.font.family="Calibri,'Segoe UI',sans-serif";
+Chart.defaults.font.family="'Manrope','Segoe UI',sans-serif";
 Chart.defaults.elements.line.cubicInterpolationMode='monotone';
 Chart.defaults.plugins.legend.onClick=()=>{}; // legenda é informativa; ocultar linha por clique confundia a leitura
 Chart.defaults.font.size=13;

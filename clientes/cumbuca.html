@@ -23,7 +23,7 @@ function showFatalError(msg){
     if(!banner){
       banner = document.createElement('div');
       banner.id = 'fatalErrorBanner';
-      banner.setAttribute('style','position:sticky;top:0;z-index:9999;background:#c32525;color:#fff;padding:10px 16px;font-family:Calibri,Arial,sans-serif;font-size:13px;text-align:center;line-height:1.4;');
+      banner.setAttribute('style','position:sticky;top:0;z-index:9999;background:#c32525;color:#fff;padding:10px 16px;font-family:'Manrope',Arial,sans-serif;font-size:13px;text-align:center;line-height:1.4;');
       document.body.insertBefore(banner, document.body.firstChild);
     }
     banner.textContent = '⚠️ Erro no dashboard: ' + msg + ' — tire um print desta faixa e envie para o suporte.';
@@ -32,6 +32,9 @@ function showFatalError(msg){
   else document.addEventListener('DOMContentLoaded', render);
 }
 </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme: light;
@@ -54,7 +57,7 @@ function showFatalError(msg){
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
 body{
-  font-family: Calibri, Candara, "Segoe UI", Optima, Arial, sans-serif;
+  font-family: 'Manrope', Candara, "Segoe UI", Optima, Arial, sans-serif;
   background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing:antialiased;
@@ -2921,7 +2924,7 @@ function svgLineChart({labels, values, color, formatter, highlightIndex}){
   const W=640, H=260, padL=64, padR=20, padT=26, padB=34;
   const plotW = W-padL-padR, plotH = H-padT-padB;
   const valid = values.filter(v=>v!=null && !isNaN(v));
-  if(valid.length===0){ return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet"><text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" fill="#9a8f3f" font-family="Calibri, sans-serif">Sem dados para exibir</text></svg>`; }
+  if(valid.length===0){ return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet"><text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" fill="#9a8f3f" font-family="Manrope, sans-serif">Sem dados para exibir</text></svg>`; }
   let minV = Math.min(...valid), maxV = Math.max(...valid);
   if(minV===maxV){ minV -= Math.abs(minV||1)*0.1; maxV += Math.abs(maxV||1)*0.1; }
   const range = maxV-minV;
@@ -2936,7 +2939,7 @@ function svgLineChart({labels, values, color, formatter, highlightIndex}){
     const gv = minV + (maxV-minV)*g/gridCount;
     const gy = yFor(gv);
     gridSvg += `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR}" y2="${gy.toFixed(1)}" stroke="#eee7df" stroke-width="1"/>`;
-    gridSvg += `<text x="${padL-8}" y="${(gy+4).toFixed(1)}" text-anchor="end" font-size="10.5" fill="#948b81" font-family="Calibri, sans-serif">${esc(formatter(gv))}</text>`;
+    gridSvg += `<text x="${padL-8}" y="${(gy+4).toFixed(1)}" text-anchor="end" font-size="10.5" fill="#948b81" font-family="Manrope, sans-serif">${esc(formatter(gv))}</text>`;
   }
 
   const pts = values.map((v,i)=>({x:xFor(i), y: (v==null||isNaN(v)) ? null : yFor(v)}));
@@ -2948,12 +2951,12 @@ function svgLineChart({labels, values, color, formatter, highlightIndex}){
     if(pt.y==null) return;
     const r = (highlightIndex===i) ? 7 : 4.5;
     pointsSvg += `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${r}" fill="${color}" stroke="#fff" stroke-width="2"/>`;
-    pointsSvg += `<text x="${pt.x.toFixed(1)}" y="${(pt.y-13).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="700" fill="${color}" font-family="Calibri, sans-serif">${esc(formatter(values[i]))}</text>`;
+    pointsSvg += `<text x="${pt.x.toFixed(1)}" y="${(pt.y-13).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="700" fill="${color}" font-family="Manrope, sans-serif">${esc(formatter(values[i]))}</text>`;
   });
 
   let labelsSvg='';
   labels.forEach((lb,i)=>{
-    labelsSvg += `<text x="${xFor(i).toFixed(1)}" y="${H-10}" text-anchor="middle" font-size="12" fill="#6b6560" font-family="Calibri, sans-serif">${esc(lb)}</text>`;
+    labelsSvg += `<text x="${xFor(i).toFixed(1)}" y="${H-10}" text-anchor="middle" font-size="12" fill="#6b6560" font-family="Manrope, sans-serif">${esc(lb)}</text>`;
   });
 
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
@@ -2969,7 +2972,7 @@ function svgBarChart({labels, series, formatter}){
   const plotW = W-padL-padR, plotH = H-padT-padB;
   const n = labels.length;
   const allVals = series.flatMap(s=>s.data).filter(v=>v!=null && !isNaN(v));
-  if(allVals.length===0){ return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet"><text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" fill="#9a8f3f" font-family="Calibri, sans-serif">Sem dados para exibir</text></svg>`; }
+  if(allVals.length===0){ return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet"><text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" fill="#9a8f3f" font-family="Manrope, sans-serif">Sem dados para exibir</text></svg>`; }
   let maxV = Math.max(0, ...allVals), minV = Math.min(0, ...allVals);
   if(maxV===minV) maxV = minV+1;
   const yFor = v => padT + plotH - ((v-minV)/(maxV-minV))*plotH;
@@ -2981,7 +2984,7 @@ function svgBarChart({labels, series, formatter}){
     const gv = minV + (maxV-minV)*g/gridCount;
     const gy = yFor(gv);
     gridSvg += `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR}" y2="${gy.toFixed(1)}" stroke="#eee7df" stroke-width="1"/>`;
-    gridSvg += `<text x="${padL-8}" y="${(gy+4).toFixed(1)}" text-anchor="end" font-size="10.5" fill="#948b81" font-family="Calibri, sans-serif">${esc(formatter(gv))}</text>`;
+    gridSvg += `<text x="${padL-8}" y="${(gy+4).toFixed(1)}" text-anchor="end" font-size="10.5" fill="#948b81" font-family="Manrope, sans-serif">${esc(formatter(gv))}</text>`;
   }
 
   const groupW = plotW/n;
@@ -3001,8 +3004,8 @@ function svgBarChart({labels, series, formatter}){
       line1 = words.slice(0,mid).join(' ');
       line2 = words.slice(mid).join(' ');
     }
-    labelsSvg += `<text x="${(groupX+groupW/2).toFixed(1)}" y="${H-24}" text-anchor="middle" font-size="10.5" fill="#6b6560" font-family="Calibri, sans-serif">${esc(line1)}</text>`;
-    if(line2) labelsSvg += `<text x="${(groupX+groupW/2).toFixed(1)}" y="${H-11}" text-anchor="middle" font-size="10.5" fill="#6b6560" font-family="Calibri, sans-serif">${esc(line2)}</text>`;
+    labelsSvg += `<text x="${(groupX+groupW/2).toFixed(1)}" y="${H-24}" text-anchor="middle" font-size="10.5" fill="#6b6560" font-family="Manrope, sans-serif">${esc(line1)}</text>`;
+    if(line2) labelsSvg += `<text x="${(groupX+groupW/2).toFixed(1)}" y="${H-11}" text-anchor="middle" font-size="10.5" fill="#6b6560" font-family="Manrope, sans-serif">${esc(line2)}</text>`;
 
     const totalBarsW = barW*seriesCount + barGap*(seriesCount-1);
     const startX = groupX + (groupW-totalBarsW)/2;
@@ -3013,7 +3016,7 @@ function svgBarChart({labels, series, formatter}){
       const y0=zeroY, y1=yFor(v);
       const y = Math.min(y0,y1), h = Math.max(Math.abs(y1-y0),1.5);
       barsSvg += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="6" fill="${(s.colors&&s.colors[i])||s.color}"/>`;
-      barsSvg += `<text x="${(x+barW/2).toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="${(s.colors&&s.colors[i])||s.color}" font-family="Calibri, sans-serif">${esc(formatter(v))}</text>`;
+      barsSvg += `<text x="${(x+barW/2).toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="${(s.colors&&s.colors[i])||s.color}" font-family="Manrope, sans-serif">${esc(formatter(v))}</text>`;
     });
   }
 
@@ -3952,7 +3955,7 @@ function regChartSvg(res, foco){
   const ys = pts.flatMap(p=>[p.y,p.f]);
   let yMin = Math.min(...ys), yMax = Math.max(...ys); const rg = (yMax-yMin)||1; yMin -= rg*0.15; yMax += rg*0.2;
   const X = x=>padL+(x-xMin)/(xMax-xMin)*(W-padL-padR), Y = y=>padT+(H-padT-padB)*(1-(y-yMin)/(yMax-yMin));
-  const F = "font-family=\"Calibri, sans-serif\"";
+  const F = "font-family=\"Manrope, sans-serif\"";
   let g='';
   for(let i=0;i<=4;i++){ const v=yMin+(yMax-yMin)*i/4, y=Y(v);
     g+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#eee7df"/><text x="${padL-8}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#948b81" ${F}>${esc(indic.fmt(v))}</text>`; }

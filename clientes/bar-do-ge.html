@@ -7,6 +7,9 @@
 <link rel="icon" id="faviconLink" type="image/jpeg" href="../assets/logos/bar-do-ge.jpg">
 <script src="../assets/portal-config.js"></script>
 <script src="../assets/auth-guard.js" data-client="bar-do-ge"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     /* Cores da marca Bar do Ge — extraídas da logo (laranja, carvão e areia do brasão). */
@@ -29,7 +32,7 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    font-family:Calibri,'Segoe UI',Candara,Optima,Arial,sans-serif;
+    font-family:'Manrope','Segoe UI',Candara,Optima,Arial,sans-serif;
     background:var(--bg); color:var(--ink);
     padding:20px; max-width:1180px; margin:0 auto;
   }
@@ -119,7 +122,7 @@
 </head>
 <body>
 
-<div id="js-fallback-banner" style="max-width:900px;margin:20px auto;padding:18px 22px;border:1px solid #EAD9A9;background:#FBF0DA;color:#6b4b00;border-radius:14px;font-family:Calibri,Carlito,sans-serif;font-size:.95rem;line-height:1.55;">
+<div id="js-fallback-banner" style="max-width:900px;margin:20px auto;padding:18px 22px;border:1px solid #EAD9A9;background:#FBF0DA;color:#6b4b00;border-radius:14px;font-family:'Manrope',sans-serif;font-size:.95rem;line-height:1.55;">
   Carregando o dashboard… se esta mensagem não sumir em alguns segundos, algo no JavaScript da página falhou — chame a Coletivo.
 </div>
 
@@ -524,7 +527,7 @@ function scopeLabelFor(ids){
 }
 
 /* ============ SVG CHARTS (sem dependência externa) ============ */
-const CHART_FONT = "font-family='Calibri, Carlito, sans-serif'";
+const CHART_FONT = "font-family='Manrope, sans-serif'";
 function svgLineChart(el, {labels, series, fmtKind}){
   const W=560,H=240, padL=54,padR=16,padT=18,padB=32;
   const innerW=W-padL-padR, innerH=H-padT-padB;

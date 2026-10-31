@@ -7,6 +7,9 @@
 <link rel="icon" type="image/jpeg" href="../assets/logos/pato-com-laranja.jpg">
 <script src="../assets/portal-config.js"></script>
 <script src="../assets/auth-guard.js" data-client="pato-com-laranja"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --orange:#F89E26;
@@ -26,7 +29,7 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    font-family: Calibri, 'Segoe UI', Candara, Optima, Arial, sans-serif;
+    font-family: 'Manrope', 'Segoe UI', Candara, Optima, Arial, sans-serif;
     background: var(--cream);
     color: var(--charcoal);
     -webkit-font-smoothing:antialiased;
@@ -902,7 +905,7 @@ function svgLineChart({labels, series, valueFormatter, axisFormatter}){
       `<span style="display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:#4b463d;"><span style="width:18px;height:${s.dashed?'0':'3.5px'};border-top:${s.dashed?'3.5px dashed '+s.color:'none'};background:${s.dashed?'transparent':s.color};display:inline-block;border-radius:2px;"></span>${s.label}</span>`
     ).join('')}</div>`;
   }
-  return `<svg viewBox="0 0 ${w} ${h}" style="font-family:Calibri,'Segoe UI',Candara,Arial,sans-serif; overflow:visible;" class="chart-svg-animate">${grid}${seriesSvg}${dataLabels}${xLabels}</svg>${legend}`;
+  return `<svg viewBox="0 0 ${w} ${h}" style="font-family:'Manrope','Segoe UI',Candara,Arial,sans-serif; overflow:visible;" class="chart-svg-animate">${grid}${seriesSvg}${dataLabels}${xLabels}</svg>${legend}`;
 }
 
 function svgBarChart({labels, series, valueFormatter, axisFormatter}){
@@ -949,7 +952,7 @@ function svgBarChart({labels, series, valueFormatter, axisFormatter}){
       `<span style="display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:#4b463d;"><span style="width:12px;height:12px;background:${s.color};display:inline-block;border-radius:3px;"></span>${s.label}</span>`
     ).join('')}</div>`;
   }
-  return `<svg viewBox="0 0 ${w} ${h}" style="font-family:Calibri,'Segoe UI',Candara,Arial,sans-serif; overflow:visible;" class="chart-svg-animate">${grid}${bars}${dataLabels}${xLabels}</svg>${legend}`;
+  return `<svg viewBox="0 0 ${w} ${h}" style="font-family:'Manrope','Segoe UI',Candara,Arial,sans-serif; overflow:visible;" class="chart-svg-animate">${grid}${bars}${dataLabels}${xLabels}</svg>${legend}`;
 }
 
 function renderHBarList(containerEl, {labels, data, color, valueFormatter}){
