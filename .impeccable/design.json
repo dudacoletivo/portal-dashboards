@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-30T00:00:00.000Z",
+  "title": "Design System: Portal de Dashboards",
+  "extensions": {
+    "colorMeta": {
+      "shell-accent": { "role": "primary", "displayName": "Shell Indigo", "canonical": "#4f5eff" },
+      "status-good": { "role": "status", "displayName": "Good / Up Green", "canonical": "#1E7A46" },
+      "status-bad": { "role": "status", "displayName": "Bad / Down Red", "canonical": "#c32525" },
+      "status-neutral": { "role": "status", "displayName": "Neutral / Watch Amber", "canonical": "#8a6d1a" },
+      "client-cumbuca-primary": { "role": "primary", "displayName": "Cumbuca Deep Plum", "canonical": "#5e1255" },
+      "client-pato-primary": { "role": "primary", "displayName": "Pato com Laranja Marigold", "canonical": "#F89E26" },
+      "client-spesso-primary": { "role": "primary", "displayName": "Spesso Navy", "canonical": "#00498e" },
+      "client-sunomono-primary": { "role": "primary", "displayName": "Sunomono Crimson", "canonical": "#c32525" },
+      "client-garami-primary": { "role": "primary", "displayName": "Garami/Kimura/Ipoke Near-Black", "canonical": "#221F1D" },
+      "client-tapi-primary": { "role": "primary", "displayName": "Tapí Tapioca Brick Red", "canonical": "#7B131F" },
+      "client-delli-primary": { "role": "primary", "displayName": "Delli Jardim Terracotta", "canonical": "#C1503F" },
+      "client-bar-do-ge-primary": { "role": "primary", "displayName": "Bar do Ge Burnt Orange", "canonical": "#DD6627" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Screen-level titles only (Portal de Dashboards, admin hero)." },
+      "title": { "displayName": "Title", "purpose": "Dashboard header name, card titles, section titles." },
+      "label": { "displayName": "Label", "purpose": "Uppercase micro-labels: KPI labels, filter labels, table headers." },
+      "body": { "displayName": "Body", "purpose": "Paragraph text, table cells, inputs." }
+    },
+    "shadows": [
+      { "name": "panel-shadow", "value": "0 1px 2px rgba(16,38,73,.05), 0 8px 24px rgba(16,38,73,.08)", "purpose": "Default lift for every card, tile, table wrapper, and pill badge." },
+      { "name": "modal-shadow", "value": "0 20px 50px rgba(0,0,0,.25)", "purpose": "Reserved for the legend/help modal only." }
+    ],
+    "motion": [
+      { "name": "ease-fast", "value": "0.12s-0.15s ease", "purpose": "Default transition for hover fill/opacity changes; no shadow or transform animation." }
+    ],
+    "breakpoints": [
+      { "name": "sticky-off", "value": "900px width / 700px height", "purpose": "Below this, sticky chart/table elements become static instead of pinned." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Solid-fill primary action, pill-shaped, in the active scope's accent color.",
+      "html": "<button class=\"ds-btn-primary\">Entrar</button>",
+      "css": ".ds-btn-primary{background:#4f5eff;color:#fff;border:none;padding:13px 18px;border-radius:12px;font-weight:700;font-size:14.5px;cursor:pointer;transition:filter .15s ease;} .ds-btn-primary:hover{filter:brightness(1.08);} .ds-btn-primary:focus-visible{outline:2px solid #2c3ecb;outline-offset:2px;} .ds-btn-primary:disabled{opacity:.6;cursor:default;}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Outlined button that fills solid with the accent color on hover.",
+      "html": "<button class=\"ds-btn-ghost\">🔄 Atualizar</button>",
+      "css": ".ds-btn-ghost{border:1.5px solid #5e1255;color:#5e1255;background:#fff;padding:8px 16px;border-radius:999px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.15s;} .ds-btn-ghost:hover{background:#5e1255;color:#fff;} .ds-btn-ghost:focus-visible{outline:2px solid #50887a;outline-offset:1px;}"
+    },
+    {
+      "name": "KPI Tile",
+      "kind": "card",
+      "refersTo": "kpi-tile",
+      "description": "KPI card with an uppercase label, a bold headline value, and an optional colored delta badge.",
+      "html": "<div class=\"ds-kpi\"><div class=\"ds-kpi-label\">Gasto em Ads</div><div class=\"ds-kpi-value\">R$ 1.240</div><span class=\"ds-delta ds-delta-up\">▲ 8%</span></div>",
+      "css": ".ds-kpi{background:#fff;border:1px solid #e7e1da;border-top:4px solid #50887a;border-radius:18px;padding:16px 18px;box-shadow:0 1px 2px rgba(16,38,73,.05),0 8px 24px rgba(16,38,73,.08);} .ds-kpi-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#6b6560;} .ds-kpi-value{font-size:23px;font-weight:800;margin:6px 0 4px;color:#2b2320;} .ds-delta{font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;} .ds-delta-up{color:#3f8f5f;background:#e7f5ec;} .ds-delta-down{color:#c32525;background:#fbeaea;}"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "pill-badge",
+      "description": "Live/snapshot/loading data-sync indicator; colors signal state, never client brand.",
+      "html": "<span class=\"ds-status-pill ds-status-live\">● dados ao vivo (14:32)</span>",
+      "css": ".ds-status-pill{padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.15);white-space:nowrap;} .ds-status-live{background:#e7f6ee;color:#1c8a53;} .ds-status-snapshot{background:#faf3e0;color:#8a6d1a;} .ds-status-loading{background:#eef1f5;color:#5b6675;}"
+    },
+    {
+      "name": "Category Chip",
+      "kind": "chip",
+      "refersTo": "chip-filter",
+      "description": "Toggle filter chip; outlined by default, fills with a named client color when active.",
+      "html": "<span class=\"ds-chip ds-chip-on\">Cumbuca</span>",
+      "css": ".ds-chip{font-size:12.5px;padding:6px 12px;border-radius:999px;border:1.5px solid #e7e1da;cursor:pointer;background:#fff;color:#6b6560;font-weight:600;transition:.12s;} .ds-chip-on{color:#fff;border-color:transparent;background:#5e1255;}"
+    },
+    {
+      "name": "Data Table",
+      "kind": "custom",
+      "refersTo": "table",
+      "description": "Dense data table with a solid-fill accent header row and subtle hover tint.",
+      "html": "<div class=\"ds-table-wrap\"><table class=\"ds-table\"><thead><tr><th>Loja</th><th>Vendas</th></tr></thead><tbody><tr><td>Tijuca</td><td>R$ 4.200</td></tr></tbody></table></div>",
+      "css": ".ds-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid #e7e1da;} .ds-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;} .ds-table thead th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:#fff;background:#5e1255;padding:10px 12px;} .ds-table tbody td{padding:9px 12px;border-bottom:1px solid #e7e1da;} .ds-table tbody tr:hover{background:#faf7f4;}"
+    },
+    {
+      "name": "Login Card",
+      "kind": "card",
+      "refersTo": "card-shell",
+      "description": "Shell's single-column centered auth card; indigo-only, no client branding.",
+      "html": "<div class=\"ds-login-card\"><h1>Portal de Dashboards</h1><p class=\"ds-login-sub\">Digite sua senha de acesso.</p><input type=\"password\" class=\"ds-login-input\" placeholder=\"••••••••\"><button class=\"ds-btn-primary\">Entrar</button></div>",
+      "css": ".ds-login-card{background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(16,38,73,.14);padding:44px 38px 38px;max-width:380px;width:100%;text-align:center;} .ds-login-card h1{margin:0 0 8px;font-size:24px;font-weight:800;color:#12172a;} .ds-login-sub{margin:0 0 28px;color:#5b6675;font-size:14px;} .ds-login-input{width:100%;font-size:15px;padding:13px 14px;border-radius:12px;border:1.5px solid #e7ebf3;margin-bottom:16px;text-align:center;letter-spacing:.1em;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Painel de Operação",
+    "overview": "This is an operator's tool, not a showcase: every screen exists so someone at Agência Coletivo can glance at a number, see if it's up or down, and decide the next move on a campaign. The system has two layers that deliberately look different from each other on purpose. The shell (login screen, admin panel) is the agency's own neutral territory — indigo accent, soft blue-grey background, no client branding visible until after login, because the point of that screen is that nobody should learn which clients exist just by looking at it. The dashboards (one per client) share one structural recipe — light cards, rounded corners, soft shadow, uppercase micro-labels, green/red/amber status language — but each is skinned in that client's own primary color, logo, and occasional named-category accent colors specific to their business. The two layers never swap vocabulary: the shell's indigo never appears inside a client dashboard, and a client's brand color never appears in the shell. The current recipe is deliberately plain (a souped-up spreadsheet), and that's an acknowledged, confirmed starting point rather than a fixed ceiling: the agency wants room to grow each client's dashboard beyond just an accent color into more of that client's actual brand identity over time, as long as it never compromises the fast-read KPI/table core.",
+    "keyCharacteristics": [
+      "Two-layer system: a neutral agency shell + per-client-skinned dashboards, never mixing vocabularies.",
+      "One shared structural recipe (cards, radius, shadow, badges) reused across all 8 client dashboards, re-colored per client.",
+      "Status language (green = good, red = bad, amber/gold = neutral/attention) is constant across every dashboard regardless of client color.",
+      "Flat, light, high-density — built for a fast read and a decision, not for dwelling."
+    ],
+    "rules": [
+      { "name": "The One Accent Per Client Rule", "body": "Each dashboard has exactly one primary brand color, used for headers, active states, and primary actions.", "section": "colors" },
+      { "name": "The Status Colors Are Sacred Rule", "body": "Green/red/amber mean good/bad/watch everywhere in this system, independent of whatever client color is active.", "section": "colors" },
+      { "name": "The Uppercase Label Rule", "body": "Any field or metric name that isn't a card title is set uppercase, 11-12px, 700 weight, with slight letter-spacing.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Nothing lifts or deepens on hover. The only hover feedback is a color/background swap.", "section": "elevation" },
+      { "name": "The Two-Radius Rule", "body": "A card radius and its children's radius are never the same number — inner elements always use the smaller step.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do keep the shell (login, admin) in its own neutral indigo territory — no client name, logo, or color should ever be visible before a successful login.",
+      "Do reuse the pill shape for anything meant to be scanned as a small status/category unit, and the two-step radius pattern for anything nested.",
+      "Do keep the green/red/amber status vocabulary literal and identical across every client dashboard.",
+      "Do treat the uppercase micro-label as the system's primary hierarchy tool at the component level.",
+      "Do look for ways to extend a client's brand identity beyond just the accent swatch as the system matures."
+    ],
+    "donts": [
+      "Don't let a client's brand color leak into the shell, or the shell's indigo leak into a client dashboard.",
+      "Don't add hover elevation (shadow growth) to cards or tiles.",
+      "Don't repurpose a status color for anything other than good/bad/watch meaning.",
+      "Don't recolor the live-status indicator per client."
+    ]
+  }
+}
