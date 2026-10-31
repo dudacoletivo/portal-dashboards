@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portal de Dashboards</title>
 <link rel="icon" type="image/jpeg" href="assets/logos/agencia-coletivo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#1b2430;
@@ -21,7 +24,7 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    font-family: Calibri, 'Segoe UI', Candara, Optima, Arial, sans-serif;
+    font-family: 'Manrope', 'Segoe UI', Candara, Optima, Arial, sans-serif;
     background:
       radial-gradient(560px 340px at 8% 0%, rgba(79,94,255,.07), transparent 60%),
       radial-gradient(620px 380px at 96% 18%, rgba(200,67,61,.06), transparent 60%),
@@ -44,23 +47,48 @@
     position:relative; z-index:1;
     background:var(--card); border-radius:24px; box-shadow:0 20px 60px rgba(16,38,73,.14);
     padding:44px 38px 38px; max-width:380px; width:100%; text-align:center;
+    animation: card-in .5s cubic-bezier(.16,1,.3,1) both;
+  }
+  @keyframes card-in{
+    from{ opacity:0; transform:translateY(10px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .login-card{ animation:none; }
   }
 
   .agency-logo{
     width:64px; height:64px; margin:0 auto 20px; border-radius:18px;
-    box-shadow:0 10px 24px rgba(30,86,240,.35);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.25),
+      0 14px 28px -6px rgba(30,86,240,.4);
     display:block; object-fit:cover;
   }
 
-  h1{ margin:0 0 8px; font-size:24px; font-weight:800; letter-spacing:.2px; color:#12172a; }
-  p.sub{ margin:0 0 28px; color:var(--ink-soft); font-size:14px; }
+  h1{ margin:0 0 8px; font-size:25px; font-weight:800; letter-spacing:-.015em; color:#12172a; }
+  p.sub{ margin:0 0 28px; color:var(--ink-soft); font-size:14.5px; font-weight:500; }
 
-  label{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); display:block; margin-bottom:8px; text-align:left; }
-  input[type="password"]{
-    width:100%; font-family:inherit; font-size:15px; padding:13px 14px; border-radius:12px;
-    border:1.5px solid var(--line); margin-bottom:16px; outline:none; text-align:center; letter-spacing:.1em;
+  label{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); display:block; margin-bottom:8px; text-align:left; }
+
+  .pw-field{ position:relative; margin-bottom:16px; }
+  input[type="password"], input[type="text"].pw-input{
+    width:100%; font-family:inherit; font-size:15px; padding:13px 44px 13px 14px; border-radius:12px;
+    border:1.5px solid var(--line); outline:none; text-align:center; letter-spacing:.1em;
   }
-  input[type="password"]:focus{ border-color:var(--accent); }
+  input.pw-input:focus{ border-color:var(--accent); }
+
+  .pw-toggle{
+    position:absolute; top:0; right:0; height:100%; width:44px;
+    display:flex; align-items:center; justify-content:center;
+    background:none; border:none; cursor:pointer; color:var(--ink-soft); padding:0;
+    transition: color .15s ease;
+  }
+  .pw-toggle:hover{ color:var(--accent); }
+  .pw-toggle:focus-visible{ outline:2px solid var(--accent); outline-offset:-2px; border-radius:8px; }
+  .pw-toggle svg{ display:block; }
+  .pw-toggle .eye-off{ display:none; }
+  .pw-toggle.is-visible .eye-on{ display:none; }
+  .pw-toggle.is-visible .eye-off{ display:block; }
 
   .btn{
     width:100%; font-family:inherit; font-size:14.5px; font-weight:700; border-radius:12px; padding:13px 18px;
@@ -68,6 +96,7 @@
     transition: filter .15s ease;
   }
   .btn:hover{ filter:brightness(1.08); }
+  .btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   .btn:disabled{ opacity:.6; cursor:default; }
 
   .error-msg{
@@ -92,7 +121,20 @@
 
   <div class="error-msg" id="loginError">Senha incorreta. Tente novamente.</div>
   <label for="loginPassword">Senha</label>
-  <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••">
+  <div class="pw-field">
+    <input type="password" id="loginPassword" class="pw-input" autocomplete="current-password" placeholder="••••••••">
+    <button class="pw-toggle" id="pwToggle" type="button" aria-label="Mostrar senha" aria-pressed="false">
+      <svg class="eye-on" width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 12C3.6 7.6 7.4 5 12 5s8.4 2.6 10 7c-1.6 4.4-5.4 7-10 7s-8.4-2.6-10-7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+      </svg>
+      <svg class="eye-off" width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 12C3.6 7.6 7.4 5 12 5s8.4 2.6 10 7c-1.6 4.4-5.4 7-10 7s-8.4-2.6-10-7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M4 4l16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
   <button class="btn" id="loginSubmit" type="button">Entrar</button>
 </div>
 
@@ -103,6 +145,16 @@
   const passwordInput = document.getElementById('loginPassword');
   const submitBtn = document.getElementById('loginSubmit');
   const errorMsg = document.getElementById('loginError');
+  const pwToggle = document.getElementById('pwToggle');
+
+  pwToggle.addEventListener('click', () => {
+    const show = passwordInput.type === 'password';
+    passwordInput.type = show ? 'text' : 'password';
+    pwToggle.classList.toggle('is-visible', show);
+    pwToggle.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
+    pwToggle.setAttribute('aria-pressed', String(show));
+    passwordInput.focus();
+  });
 
   // Não há seleção de cliente na tela — a senha digitada é comparada contra o hash de
   // cada cliente cadastrado até achar a correspondência, e só então redireciona.
