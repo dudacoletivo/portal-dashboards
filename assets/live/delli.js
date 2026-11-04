@@ -1,71 +1,65 @@
-// Sincronização ao vivo do dashboard Delli com a planilha [Dashboard] Delli Jardim.
-// Cliente novo, sincronização própria e simples (mesmo espírito da do Tapí): cada aba de dados
-// tem um único bloco de métricas (1 marca/loja), sem "UNIDADE:" por loja — por isso não
-// reaproveita o parser genérico de assets/sheets-sync.js (parseMonthlyLikeSheet espera o
-// formato com "UNIDADE:"/várias lojas por aba); em vez disso, lê a linha "Métrica" e as
-// colunas de cada aba diretamente.
-//   - "Padaria Delli | Mensal" e "Pizzaria Delli | Mensal": 1 coluna por mês FECHADO (ex:
-//     "JUNHO", "JULHO", "AGOSTO") -> alimenta STORES[id].mensal[mes] = {métricas}. Usada só
-//     pela aba Dash.
-//   - "Delli | Semanal": 1 coluna por corte parcial dentro de um mês (ex: "SETEMBRO (01-07)",
-//     e futuramente "SETEMBRO (01-14)", "SETEMBRO (01-21)" conforme o mês avança) -> alimenta
-//     STORES[id].semanal[mes][janela] = {métricas}, janela em 'w7'/'w14'/'w21'/'w28'. Usada
-//     pela aba Investimento (pega a janela mais completa disponível em cada mês) e pela aba
-//     Comparativo Parcial (janela escolhida no filtro). Padaria Delli lê "Delli | Semanal" e a
-//     Pizzaria Delli lê "Pizzaria Delli | Semanal" (mesmo formato; ver PIZZARIA_JANELAS_IGNORADAS).
+// Sincronização ao vivo do dashboard Delli com a planilha "Delli Jardim — Performance iFood
+// Jan-Nov 2026" (alimentada automaticamente pela IA do iFood/Toqan, sem depender de input manual).
+// Trocado em 04/11/2026 a partir da planilha antiga "[Dashboard] Delli Jardim" — ver commit para
+// o registro das divergências encontradas entre as duas fontes.
 //
-// A aba "Delli | Acompanhamento Cardápio" (datas soltas, não meses) não é usada por este
-// dashboard — fica de fora por ora.
+// Formato desta planilha: cada aba de loja ("Padaria Delli Jardim" / "Pizzaria Delli Jardim") traz
+// VÁRIOS blocos empilhados na mesma aba, cada um com seu próprio cabeçalho "Métrica" e colunas
+// Jan..Nov — um bloco por corte parcial ("── 01-07 ──", "── 01-14 ──", "── 01-21 ──") mais um bloco
+// final "── Mês Fechado ──". Isso é diferente da planilha antiga, que tinha abas Mensal/Semanal
+// separadas — por isso o parser abaixo (parseMultiBlockTab) lê blocos em sequência, alimentando
+// semanal[mes][janela] para os blocos de corte parcial e mensal[mes] para o bloco "Mês Fechado".
+//
+// Há também uma aba nova "Cancelamentos", com um resumo mensal por loja (cancelamentos + taxa %)
+// e, por mês, o detalhamento (reembolso/origens/estágio) e a lista de motivos — parseCancelamentos
+// lê isso para alimentar a aba "Cancelamentos" do dashboard (ver delli.html).
 //
 // Requer assets/sheets-sync.js e assets/live-status-ui.js já carregados, rodando depois
-// do bloco principal do dashboard (STORES/renderAll já definidos).
+// do bloco principal do dashboard (STORES/CANCEL/renderAll já definidos).
 (function () {
-  const SHEET_ID = '1qw8inqRLODVKKnjRMpleFspLIv75zZxALNIGmCVQnM4';
-  const GID_SEMANAL = '2125793866'; // aba "Delli | Semanal" (só Padaria Delli, por ora)
-  const GID_MENSAL_PADARIA = '1167192831'; // aba "Padaria Delli | Mensal"
-  const GID_MENSAL_PIZZARIA = '1559849814'; // aba "Pizzaria Delli | Mensal"
-  const GID_SEMANAL_PIZZARIA = '1372993113'; // aba "Pizzaria Delli | Semanal"
-  // Cortes da Pizzaria que ficam de fora por enquanto: na planilha, as colunas 01–21 vieram idênticas às da Padaria
-  // (cópia). Quando forem preenchidas com os dados reais da Pizzaria, é só esvaziar esta lista.
-  const PIZZARIA_JANELAS_IGNORADAS = ['w21'];
+  const SHEET_ID = '12Dedb3coQoqfCBJVWBzhxK3QpsFTI005eKG1u145dxM';
+  const GID_PADARIA = '1789508947'; // aba "Padaria Delli Jardim"
+  const GID_PIZZARIA = '838687631'; // aba "Pizzaria Delli Jardim"
+  const GID_CANCELAMENTOS = '2059198122'; // aba "Cancelamentos"
 
-  const MONTH_NAMES_PT = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
-  const MONTH_KEY_PT = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const MONTH_ABBR_PT = { JAN:'janeiro', FEV:'fevereiro', MAR:'marco', ABR:'abril', MAI:'maio', JUN:'junho', JUL:'julho', AGO:'agosto', SET:'setembro', OUT:'outubro', NOV:'novembro', DEZ:'dezembro' };
 
+  // Linhas reconhecidas nas abas "Padaria/Pizzaria Delli Jardim". A ordem dos testes não importa:
+  // cada padrão é específico o bastante para não colidir com os outros.
   function metricKeyFor(name) {
     const n = (name || '').trim().toUpperCase();
-    if (/^VENDAS/.test(n)) return 'vendas';
-    if (/^GMV|FATURAMENTO/.test(n)) return 'gmv';
-    if (/^TM/.test(n)) return 'tm';
-    if (/^NOVOS/.test(n)) return 'novos';
+    if (/^PEDIDOS/.test(n)) return 'vendas';
+    if (/^GMV/.test(n)) return 'gmv';
+    if (/^TICKET M/.test(n)) return 'tm';
+    if (/^CLIENTES NOVOS/.test(n)) return 'novos';
+    if (/^CLIENTES RECORRENTES/.test(n)) return 'recorrentes';
+    if (/^CLIENTES RECUPERADOS/.test(n)) return 'recuperados';
     if (/^VISITAS/.test(n)) return 'visitas';
-    if (/CONVERS/.test(n)) return 'conversao';
-    if (/BUDGET/.test(n)) return 'budget';
-    if (/PROMO/.test(n)) return 'promo';
-    if (/SUB\s*IFOOD/.test(n)) return 'subifood';
+    if (/^CONVERS/.test(n)) return 'conversao';
+    if (/^% INVEST/.test(n)) return 'budget';
+    if (/^INVEST\. LOJA/.test(n)) return 'investLoja';
+    if (/^ADS/.test(n)) return 'ads';
+    if (/^TOTAL INVEST/.test(n)) return 'promo';
+    if (/^SUBS[IÍ]DIO/.test(n)) return 'subifood';
+    if (/^ROI\s*\(GMV/.test(n)) return 'roi';
+    if (/^ROI\s*\(SUB/.test(n)) return 'roiSubsidio';
     if (/^CPO/.test(n)) return 'cpo';
-    if (/^ROI/.test(n)) return 'roi';
+    if (/^AVALIA/.test(n)) return 'avaliacao';
     return null;
   }
 
-  // Casa cabeçalhos tipo "JULHO (01-07)" ou só "JULHO" com o mês em português, sem se prender
-  // ao sufixo do corte de dias (assim continua funcionando se a planilha mudar o corte, ou se
-  // a coluna não tiver corte nenhum, como na aba Mensal).
+  // Cabeçalhos de mês nesta planilha vêm abreviados ("Jan", "Fev", ... "Nov*(01-04)"), não por
+  // extenso como na planilha antiga — por isso casa pelas 3 primeiras letras (sem acento).
   function monthKeyFor(header) {
     const h = (header || '').trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    for (let i = 0; i < MONTH_NAMES_PT.length; i++) {
-      const plain = MONTH_NAMES_PT[i].normalize('NFD').replace(/[̀-ͯ]/g, '');
-      if (h.indexOf(plain) === 0) return MONTH_KEY_PT[i];
-    }
-    return null;
+    const abbr = h.slice(0, 3);
+    return MONTH_ABBR_PT[abbr] || null;
   }
 
-  // Extrai a janela parcial ("w7"/"w14"/"w21"/...) do sufixo "(01-XX)" de um cabeçalho da aba
-  // Semanal. Sem sufixo (formato legado ou aba Mensal), assume-se corte de 7 dias.
-  function windowKeyFor(header) {
-    const m = /\((\d{1,2})-(\d{1,2})\)/.exec(header || '');
-    if (!m) return 'w7';
-    return 'w' + parseInt(m[2], 10);
+  function monthKeyFromAbbr(s) {
+    const m = /([A-ZÇ]{3})\s*\d{4}/i.exec((s || '').toUpperCase());
+    if (!m) return null;
+    return MONTH_ABBR_PT[m[1]] || null;
   }
 
   function parseNum(v) {
@@ -73,101 +67,232 @@
     let s = String(v).trim();
     if (/^[-–—]$/.test(s)) return null;
     s = s.replace(/R\$\s?/g, '').replace(/%/g, '').trim();
-    // pt-BR: vírgula é decimal, ponto é separador de milhar. "1.661" (sem vírgula) tem que virar
-    // 1661, não 1.661 — sem essa checagem um parseFloat ingênuo trunca visitas/vendas grandes.
     if (s.indexOf(',') !== -1) s = s.replace(/\./g, '').replace(',', '.');
     else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
     const n = parseFloat(s);
     return isFinite(n) ? n : null;
   }
 
-  // Acha a linha de cabeçalho ("Métrica") e as colunas de mês reconhecidas — compartilhado
-  // pelas duas abas, que têm o mesmo formato de título mesclado.
-  function findHeaderAndMonthCols(rows) {
-    // As 3 linhas de título mescladas ("DASHBOARD - DELLI" / "PADARIA DELLI" / "Métrica") saem
-    // do export CSV grudadas numa célula só ("DASHBOARD - DELLI PADARIA DELLI Métrica"), não como
-    // uma célula limpa "Métrica" — por isso o teste é "termina com métrica", não igualdade exata.
-    let headerRow = -1;
-    for (let r = 0; r < rows.length; r++) {
-      const first = (rows[r][0] || '').trim().toLowerCase();
-      if (/m[eé]trica$/.test(first)) { headerRow = r; break; }
-    }
-    if (headerRow < 0) throw new Error('Cabeçalho "Métrica" não encontrado na aba');
-
-    const cols = [];
-    const headerCells = rows[headerRow];
-    for (let c = 1; c < headerCells.length; c++) {
-      const mk = monthKeyFor(headerCells[c]);
-      if (mk) cols.push({ c: c, month: mk, window: windowKeyFor(headerCells[c]) });
-    }
-    if (!cols.length) throw new Error('Nenhuma coluna de mês reconhecida na aba');
-    return { headerRow: headerRow, cols: cols };
+  // Marca de início de bloco: "── 01-07 ──", "── 01-14 ──", "── 01-21 ──", "── Mês Fechado ──".
+  // Retorna a janela ('w7'/'w14'/'w21'/'w28'), 'CLOSED' pro bloco de mês fechado, ou null se não
+  // for uma linha de bloco (nesse caso o chamador segue tratando a linha anterior).
+  function parseBlockLabel(cell) {
+    const s = (cell || '').trim();
+    const m = /^──\s*(.+?)\s*──$/.exec(s);
+    if (!m) return null;
+    const label = m[1].trim();
+    const plain = label.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (plain === 'MES FECHADO') return 'CLOSED';
+    const wm = /^(\d{1,2})-(\d{1,2})$/.exec(label);
+    if (wm) return 'w' + parseInt(wm[2], 10);
+    return null;
   }
 
-  // Aba "Delli | Mensal": 1 coluna por mês fechado -> { mes: {métricas} }.
-  function parseMensal(rows) {
-    const { headerRow, cols } = findHeaderAndMonthCols(rows);
-    const mensal = {};
-    for (let r = headerRow + 1; r < rows.length; r++) {
-      const metricName = rows[r][0];
-      if (!metricName) continue;
-      const key = metricKeyFor(metricName);
-      if (!key) continue;
-      cols.forEach(function (col) {
-        const val = parseNum(rows[r][col.c]);
-        mensal[col.month] = mensal[col.month] || {};
-        mensal[col.month][key] = val;
-      });
-    }
-    return mensal;
-  }
-
-  // Aba "Delli | Semanal": 1 coluna por corte parcial -> { mes: { janela: {métricas} } }.
-  function parseSemanal(rows) {
-    const { headerRow, cols } = findHeaderAndMonthCols(rows);
+  // Lê uma aba de loja inteira (vários blocos empilhados) -> { semanal, mensal }.
+  // Guarda contra linha de métrica duplicada dentro do MESMO bloco (ex.: a planilha atual tem
+  // "Conversão % *" duplicada no bloco 01-21, com uma segunda linha de valores claramente errada
+  // — bem menor que todas as outras janelas) mantendo só a primeira ocorrência de cada métrica.
+  function parseMultiBlockTab(rows) {
     const semanal = {};
-    for (let r = headerRow + 1; r < rows.length; r++) {
-      const metricName = rows[r][0];
+    const mensal = {};
+    let blockType = null;
+    let cols = null;
+    let seenInBlock = null;
+
+    for (let r = 0; r < rows.length; r++) {
+      const row = rows[r] || [];
+      const first = (row[0] || '').trim();
+
+      const blockKind = parseBlockLabel(first);
+      if (blockKind) {
+        blockType = blockKind;
+        cols = null;
+        seenInBlock = new Set();
+        continue;
+      }
+      if (/m[eé]trica$/i.test(first)) {
+        cols = [];
+        for (let c = 1; c < row.length; c++) {
+          const mk = monthKeyFor(row[c]);
+          if (mk) cols.push({ c: c, month: mk });
+        }
+        seenInBlock = new Set();
+        continue;
+      }
+      if (!blockType || !cols || !cols.length) continue;
+
+      const metricName = row[0];
       if (!metricName) continue;
       const key = metricKeyFor(metricName);
       if (!key) continue;
+      if (seenInBlock.has(key)) continue;
+      seenInBlock.add(key);
+
       cols.forEach(function (col) {
-        const val = parseNum(rows[r][col.c]);
-        semanal[col.month] = semanal[col.month] || {};
-        semanal[col.month][col.window] = semanal[col.month][col.window] || {};
-        semanal[col.month][col.window][key] = val;
+        const val = parseNum(row[col.c]);
+        if (blockType === 'CLOSED') {
+          mensal[col.month] = mensal[col.month] || {};
+          mensal[col.month][key] = val;
+        } else {
+          semanal[col.month] = semanal[col.month] || {};
+          semanal[col.month][blockType] = semanal[col.month][blockType] || {};
+          semanal[col.month][blockType][key] = val;
+        }
       });
     }
-    return semanal;
+    // "Total Invest." na planilha, por enquanto, não soma "Invest. Loja" + "ADS" nos meses em
+    // que ADS tem valor (ex.: Padaria, Mês Fechado, Junho: Invest. Loja=5378,23, ADS=4500,00,
+    // mas Total Invest. continua 5378,23) — provável fórmula pendente de ajuste na planilha.
+    // Pra não deixar o investimento em ADS de fora das contas (CPO/ROI/insights usam 'promo'),
+    // usamos o maior entre o que a planilha chama de "Total Invest." e a soma Loja+ADS.
+    function fixPromo(obj) {
+      if (obj.investLoja == null && obj.ads == null) return;
+      const soma = (obj.investLoja || 0) + (obj.ads || 0);
+      if (soma > (obj.promo || 0)) obj.promo = soma;
+    }
+    Object.keys(mensal).forEach(function (m) { fixPromo(mensal[m]); });
+    Object.keys(semanal).forEach(function (m) {
+      Object.keys(semanal[m]).forEach(function (w) { fixPromo(semanal[m][w]); });
+    });
+
+    return { semanal: semanal, mensal: mensal };
+  }
+
+  function lojaKeyFor(cell) {
+    const n = (cell || '').trim().toUpperCase();
+    if (/^PADARIA/.test(n)) return 'padaria';
+    if (/^PIZZARIA/.test(n)) return 'pizzaria';
+    if (/^TOTAL/.test(n)) return 'total';
+    return null;
+  }
+
+  // Lê a aba "Cancelamentos" -> { meses, resumo, detalhe, motivos }. Formato: um bloco "RESUMO
+  // MENSAL POR LOJA" (Padaria/Pizzaria/TOTAL GRUPO x um par Canc./Taxa % por mês), seguido de um
+  // bloco por mês ("SET 2026 — ...") com o detalhe (reembolso/origens/estágio) por loja e, logo
+  // depois, "MOTIVOS — SET 2026" com a lista de motivos. Cresce sozinho conforme novos meses forem
+  // adicionados pela IA — não depende de nomes de mês fixos.
+  function parseCancelamentos(rows) {
+    const resumo = {};
+    const detalhe = {};
+    const motivos = {};
+
+    const resumoIdx = rows.findIndex(function (r) { return (r[0] || '').trim().toUpperCase() === 'RESUMO MENSAL POR LOJA'; });
+    if (resumoIdx >= 0) {
+      const header = rows[resumoIdx + 1] || [];
+      const monthCols = [];
+      for (let c = 1; c < header.length; c++) {
+        const mm = /^(.+?)\s*Canc\.$/.exec((header[c] || '').trim());
+        if (mm) {
+          const mes = monthKeyFromAbbr(mm[1]);
+          if (mes) monthCols.push({ month: mes, cCanc: c, cTaxa: c + 1 });
+        }
+      }
+      let r = resumoIdx + 2;
+      while (r < rows.length && rows[r][0]) {
+        const loja = lojaKeyFor(rows[r][0]);
+        if (!loja) break;
+        monthCols.forEach(function (mc) {
+          resumo[mc.month] = resumo[mc.month] || {};
+          resumo[mc.month][loja] = { canc: parseNum(rows[r][mc.cCanc]), taxa: parseNum(rows[r][mc.cTaxa]) };
+        });
+        r++;
+      }
+    }
+
+    for (let r = 0; r < rows.length; r++) {
+      const first = (rows[r][0] || '').trim();
+
+      const motivosMatch = /^MOTIVOS\s*—\s*(.+)$/i.exec(first);
+      if (motivosMatch) {
+        const mes = monthKeyFromAbbr(motivosMatch[1]);
+        let rr = r + 1;
+        if (mes && rows[rr] && /^motivo$/i.test((rows[rr][0] || '').trim())) {
+          rr++;
+          const list = [];
+          while (rr < rows.length && rows[rr][0] && !/^──/.test(rows[rr][0]) && !/—/.test(rows[rr][0])) {
+            list.push({ motivo: rows[rr][0], padaria: parseNum(rows[rr][1]), pizzaria: parseNum(rows[rr][2]), total: parseNum(rows[rr][3]) });
+            rr++;
+          }
+          motivos[mes] = list;
+        }
+        continue;
+      }
+
+      const monthHeaderMatch = /^([A-ZÇ]{3}\s*\d{4})\s*—/i.exec(first);
+      if (monthHeaderMatch) {
+        const mes = monthKeyFromAbbr(monthHeaderMatch[1]);
+        let rr = r + 1;
+        if (mes && rows[rr] && /^loja$/i.test((rows[rr][0] || '').trim())) {
+          rr++;
+          detalhe[mes] = detalhe[mes] || {};
+          while (rr < rows.length && rows[rr][0]) {
+            const loja = lojaKeyFor(rows[rr][0]);
+            if (!loja || loja === 'total') break;
+            detalhe[mes][loja] = {
+              canc: parseNum(rows[rr][1]),
+              taxa: parseNum(rows[rr][2]),
+              reembolso: parseNum(rows[rr][3]),
+              origens: rows[rr][4] || '',
+              estagio: rows[rr][5] || ''
+            };
+            rr++;
+          }
+        }
+      }
+    }
+
+    const meses = [...new Set(Object.keys(resumo))].sort(function (a, b) {
+      return (MONTH_ORDER[a] || 99) - (MONTH_ORDER[b] || 99);
+    });
+    return { meses: meses, resumo: resumo, detalhe: detalhe, motivos: motivos };
+  }
+
+  // Esta planilha tem linhas de rótulo de bloco ("── 01-07 ──") com só a coluna A preenchida
+  // antes do cabeçalho real ("Métrica"). O endpoint gviz/tq que SheetsSync.fetchCsvRows usa
+  // tenta inferir o esquema de colunas a partir das primeiras linhas e se confunde nesse caso,
+  // colapsando a linha inteira numa única célula — por isso usamos aqui o endpoint de exportação
+  // CSV direto (/export?format=csv), que preserva as colunas corretamente, com o mesmo parser.
+  async function fetchCsvRowsExport(sheetId, gid, timeoutMs) {
+    const controller = new AbortController();
+    const t = setTimeout(function () { controller.abort(); }, timeoutMs || 10000);
+    try {
+      const url = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/export?format=csv&gid=' + gid;
+      const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      if (!text || !text.trim()) throw new Error('CSV vazio');
+      return SheetsSync.parseCsv(text);
+    } finally {
+      clearTimeout(t);
+    }
   }
 
   async function loadLive() {
-    const [semanalRows, mensalPadariaRows, mensalPizzariaRows] = await Promise.all([
-      SheetsSync.fetchCsvRows(SHEET_ID, GID_SEMANAL),
-      SheetsSync.fetchCsvRows(SHEET_ID, GID_MENSAL_PADARIA),
-      SheetsSync.fetchCsvRows(SHEET_ID, GID_MENSAL_PIZZARIA)
+    const [padariaRows, pizzariaRows] = await Promise.all([
+      fetchCsvRowsExport(SHEET_ID, GID_PADARIA),
+      fetchCsvRowsExport(SHEET_ID, GID_PIZZARIA)
     ]);
-    const semanalPadaria = parseSemanal(semanalRows);
-    const mensalPadaria = parseMensal(mensalPadariaRows);
-    const mensalPizzaria = parseMensal(mensalPizzariaRows);
-    if (!Object.keys(semanalPadaria).length && !Object.keys(mensalPadaria).length && !Object.keys(mensalPizzaria).length) {
-      throw new Error('Nenhum mês encontrado nas abas Semanal/Mensal');
+    const padaria = parseMultiBlockTab(padariaRows);
+    const pizzaria = parseMultiBlockTab(pizzariaRows);
+    if (!Object.keys(padaria.mensal).length && !Object.keys(padaria.semanal).length
+      && !Object.keys(pizzaria.mensal).length && !Object.keys(pizzaria.semanal).length) {
+      throw new Error('Nenhum mês encontrado nas abas "Padaria Delli Jardim" / "Pizzaria Delli Jardim"');
     }
-    // Semanal da Pizzaria é isolado: se essa aba falhar, o restante do dashboard continua com os dados atuais
-    let semanalPizzaria = {};
+
+    // Aba de cancelamentos é isolada: se falhar, o resto do dashboard continua normalmente.
+    let cancel = { meses: [], resumo: {}, detalhe: {}, motivos: {} };
     try {
-      semanalPizzaria = parseSemanal(await SheetsSync.fetchCsvRows(SHEET_ID, GID_SEMANAL_PIZZARIA));
-      Object.keys(semanalPizzaria).forEach(function (mes) {
-        PIZZARIA_JANELAS_IGNORADAS.forEach(function (w) { delete semanalPizzaria[mes][w]; });
-        if (!Object.keys(semanalPizzaria[mes]).length) delete semanalPizzaria[mes];
-      });
+      cancel = parseCancelamentos(await fetchCsvRowsExport(SHEET_ID, GID_CANCELAMENTOS));
     } catch (e) {
-      console.warn('[live-sync] Aba "Pizzaria Delli | Semanal" indisponível:', e);
-      semanalPizzaria = {};
+      console.warn('[live-sync] Aba "Cancelamentos" indisponível:', e);
     }
+
     return {
-      'padaria-delli': { label: 'Padaria Delli', semanal: semanalPadaria, mensal: mensalPadaria },
-      'pizzaria-delli': { label: 'Pizzaria Delli', semanal: semanalPizzaria, mensal: mensalPizzaria }
+      stores: {
+        'padaria-delli': { label: 'Padaria Delli', semanal: padaria.semanal, mensal: padaria.mensal },
+        'pizzaria-delli': { label: 'Pizzaria Delli', semanal: pizzaria.semanal, mensal: pizzaria.mensal }
+      },
+      cancel: cancel
     };
   }
 
@@ -179,14 +304,18 @@
       ui.setBusy(true);
       try {
         const fresh = await loadLive();
-        Object.keys(fresh).forEach(function (id) {
-          STORES[id] = STORES[id] || { label: fresh[id].label, semanal: {}, mensal: {} };
-          STORES[id].label = fresh[id].label;
+        Object.keys(fresh.stores).forEach(function (id) {
+          STORES[id] = STORES[id] || { label: fresh.stores[id].label, semanal: {}, mensal: {} };
+          STORES[id].label = fresh.stores[id].label;
           STORES[id].semanal = STORES[id].semanal || {};
           STORES[id].mensal = STORES[id].mensal || {};
-          SheetsSync.mutateObjectInPlace(STORES[id].semanal, fresh[id].semanal);
-          SheetsSync.mutateObjectInPlace(STORES[id].mensal, fresh[id].mensal);
+          SheetsSync.mutateObjectInPlace(STORES[id].semanal, fresh.stores[id].semanal);
+          SheetsSync.mutateObjectInPlace(STORES[id].mensal, fresh.stores[id].mensal);
         });
+        CANCEL.meses = fresh.cancel.meses;
+        CANCEL.resumo = fresh.cancel.resumo;
+        CANCEL.detalhe = fresh.cancel.detalhe;
+        CANCEL.motivos = fresh.cancel.motivos;
         renderAll();
         ui.setStatus('live');
       } catch (e) {

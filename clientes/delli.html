@@ -167,6 +167,7 @@
   <button class="tab-btn" data-tab="invest">💰 Investimento</button>
   <button class="tab-btn" data-tab="parcial">🔍 Comparativo Parcial</button>
   <button class="tab-btn" data-tab="acoes">🗂️ Ações</button>
+  <button class="tab-btn" data-tab="cancel">🚫 Cancelamentos</button>
 </nav>
 
 <!-- ================= DASH — MÊS FECHADO ================= -->
@@ -355,7 +356,28 @@
   </div>
 </section>
 
-<footer class="foot">Delli · Dashboard gerado a partir da planilha [Dashboard] Delli Jardim (iFood)</footer>
+<!-- ================= CANCELAMENTOS ================= -->
+<section class="panel" id="panel-cancel">
+  <div class="card">
+    <h2 style="margin-top:0;font-size:16px;">Cancelamentos</h2>
+    <p class="sub">Pedidos cancelados no iFood por loja e por mês, com os principais motivos — alimentado junto com o resto do dashboard pela planilha da IA.</p>
+  </div>
+
+  <div class="section-title">Mês mais recente <span class="tag" id="cancelPeriod"></span></div>
+  <div class="kpi-row" id="cancelKpiRow"></div>
+
+  <div class="section-title">Cancelamentos por mês</div>
+  <div class="card">
+    <div class="table-wrap"><table id="cancelTable"></table></div>
+  </div>
+
+  <div class="section-title" id="cancelMotivosTitle">Motivos de cancelamento</div>
+  <div class="card">
+    <div class="table-wrap"><table id="cancelMotivosTable"></table></div>
+  </div>
+</section>
+
+<footer class="foot">Delli · Dashboard gerado a partir da planilha "Delli Jardim — Performance iFood Jan-Nov 2026"</footer>
 
 <!-- LEGEND MODAL -->
 <div class="modal-overlay hidden" id="legend-modal">
@@ -375,15 +397,16 @@
       <dt>SUB IFOOD</dt><dd>Valor em R$ referente ao subsídio da plataforma iFood no período.</dd>
       <dt>ROI</dt><dd>Retorno sobre investimento — quanto a loja fatura em R$ para cada R$ investido em promoções/ads.</dd>
       <dt>ECONOMIZANDO E CRESCENDO</dt><dd>Quando o % de investimento cai enquanto pedidos e GMV sobem — a loja vende mais gastando menos, o cenário mais saudável.</dd>
+      <dt>TAXA DE CANCELAMENTO</dt><dd>Cancelamentos ÷ (Cancelamentos + Pedidos Concluídos) no período — quanto menor, melhor.</dd>
     </dl>
   </div>
 </div>
 
 <script>
-/* ============ DADOS (snapshot da planilha [Dashboard] Delli Jardim — abas "Padaria Delli |
-   Mensal", "Pizzaria Delli | Mensal" e "Delli | Semanal") — substituído por window.__LIVE_RAW
-   quando o live-sync carrega. A Pizzaria Delli ainda não tem aba "Semanal" própria na
-   planilha, por isso entra só com "mensal" (semanal:{}) até o cliente criar essa aba. ============ */
+/* ============ DADOS — snapshot congelado (histórico até início de novembro/2026, planilha
+   antiga). A partir daqui o live-sync (assets/live/delli.js) busca a planilha "Delli Jardim —
+   Performance iFood Jan-Nov 2026" (alimentada automaticamente pela IA do iFood) e sobrescreve
+   este snapshot assim que carrega — ele só aparece se a planilha ficar inacessível. ============ */
 const RAW = window.__LIVE_RAW || {
   stores: {
     "padaria-delli": {
@@ -433,6 +456,10 @@ const RAW = window.__LIVE_RAW || {
 const STORES = RAW.stores;
 const STORE_IDS = Object.keys(STORES);
 const NETWORK_ID = '__rede__';
+
+// Dados da aba "Cancelamentos" — fica vazio até o live-sync carregar (não tem sentido embutir
+// um snapshot congelado aqui: a aba é nova, criada direto na planilha nova em 04/11/2026).
+let CANCEL = { meses: [], resumo: {}, detalhe: {}, motivos: {} };
 
 const MONTH_ORDER = {janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
 const MONTH_LABEL = {janeiro:'Janeiro',fevereiro:'Fevereiro',marco:'Março',abril:'Abril',maio:'Maio',junho:'Junho',julho:'Julho',agosto:'Agosto',setembro:'Setembro',outubro:'Outubro',novembro:'Novembro',dezembro:'Dezembro'};
@@ -1185,6 +1212,58 @@ function bootAcoes(){
 }
 
 /* =================================================================== */
+/* ============================ CANCELAMENTOS =========================== */
+/* =================================================================== */
+function renderCancelamentos(){
+  const meses = CANCEL.meses || [];
+  const kpiRow = document.getElementById('cancelKpiRow');
+  const latest = meses[meses.length-1];
+
+  if (!latest) {
+    document.getElementById('cancelPeriod').textContent = '';
+    kpiRow.innerHTML = '<div class="kpi"><div class="lbl">Sem dados ainda</div><div class="val">—</div></div>';
+    document.getElementById('cancelTable').innerHTML = '';
+    document.getElementById('cancelMotivosTable').innerHTML = '';
+    document.getElementById('cancelMotivosTitle').textContent = 'Motivos de cancelamento';
+    return;
+  }
+
+  document.getElementById('cancelPeriod').textContent = MONTH_LABEL[latest];
+  const r = CANCEL.resumo[latest] || {};
+  const d = CANCEL.detalhe[latest] || {};
+  const reembolsoMes = (d.padaria && d.padaria.reembolso || 0) + (d.pizzaria && d.pizzaria.reembolso || 0);
+  const tiles = [
+    {label:'Padaria', loja:'padaria'},
+    {label:'Pizzaria', loja:'pizzaria'},
+    {label:'Rede', loja:'total'}
+  ];
+  kpiRow.innerHTML = tiles.map(t=>{
+    const v = r[t.loja] || {};
+    return `<div class="kpi"><div class="lbl">${t.label} — cancelamentos</div><div class="val">${fmt(v.canc,'num')}</div></div>`
+      + `<div class="kpi"><div class="lbl">${t.label} — taxa</div><div class="val">${fmt(v.taxa,'pct')}</div></div>`;
+  }).join('') + `<div class="kpi"><div class="lbl">Reembolsado no mês</div><div class="val">${fmt(reembolsoMes,'money')}</div></div>`;
+
+  const rows = meses.map(m=>{
+    const rr = CANCEL.resumo[m] || {};
+    const p = rr.padaria||{}, z = rr.pizzaria||{}, t = rr.total||{};
+    return `<tr>
+      <td>${MONTH_LABEL[m]}</td>
+      <td>${fmt(p.canc,'num')}</td><td>${fmt(p.taxa,'pct')}</td>
+      <td>${fmt(z.canc,'num')}</td><td>${fmt(z.taxa,'pct')}</td>
+      <td><strong>${fmt(t.canc,'num')}</strong></td><td><strong>${fmt(t.taxa,'pct')}</strong></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('cancelTable').innerHTML = `<thead><tr><th>Mês</th><th>Padaria — Canc.</th><th>Padaria — Taxa</th><th>Pizzaria — Canc.</th><th>Pizzaria — Taxa</th><th>Rede — Canc.</th><th>Rede — Taxa</th></tr></thead>
+    <tbody>${rows}</tbody>`;
+
+  document.getElementById('cancelMotivosTitle').innerHTML = `Motivos de cancelamento <span class="tag">${MONTH_LABEL[latest]}</span>`;
+  const motivos = (CANCEL.motivos[latest]||[]).slice().sort((a,b)=>(b.total||0)-(a.total||0));
+  const motivoRows = motivos.map(mo=>`<tr><td>${esc(mo.motivo)}</td><td>${fmt(mo.padaria,'num')}</td><td>${fmt(mo.pizzaria,'num')}</td><td><strong>${fmt(mo.total,'num')}</strong></td></tr>`).join('');
+  document.getElementById('cancelMotivosTable').innerHTML = `<thead><tr><th>Motivo</th><th>Padaria</th><th>Pizzaria</th><th>Total</th></tr></thead>
+    <tbody>${motivoRows || '<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);padding:20px;">Sem detalhamento de motivos para este mês.</td></tr>'}</tbody>`;
+}
+
+/* =================================================================== */
 /* ================================ INIT =============================== */
 /* =================================================================== */
 function renderAll(){
@@ -1202,6 +1281,7 @@ function renderAll(){
   renderInvest();
   renderParcial();
   bootAcoes();
+  renderCancelamentos();
   const periodPill = document.getElementById('periodPill');
   const allMonths = sortMonths([...CLOSED_MONTHS, ...discoverPartialMonthsAny()]);
   if(allMonths.length) periodPill.textContent = allMonths.length>1 ? `${MONTH_LABEL[allMonths[0]]} → ${MONTH_LABEL[allMonths[allMonths.length-1]]} 2026` : MONTH_LABEL[allMonths[0]]+' 2026';

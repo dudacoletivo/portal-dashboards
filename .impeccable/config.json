@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "manrope",
+        "createdAt": "2026-11-04T23:44:00.172Z",
+        "reason": "user confirmed: Manrope adopted as the portal-wide typeface earlier in this session, replacing Calibri across login/admin/all client dashboards"
+      }
+    ]
+  }
+}
