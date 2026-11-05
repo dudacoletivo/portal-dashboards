@@ -365,6 +365,13 @@
     <p class="sub">Pedidos cancelados no iFood por loja e por mês, com os principais motivos — alimentado junto com o resto do dashboard pela planilha da IA.</p>
   </div>
 
+  <div class="card">
+    <div class="filtergroup">
+      <label class="title">Unidade</label>
+      <div class="seg" id="cancelUnidadeSeg"></div>
+    </div>
+  </div>
+
   <div class="section-title">Mês mais recente <span class="tag" id="cancelPeriod"></span></div>
   <div class="kpi-row" id="cancelKpiRow"></div>
 
@@ -1223,6 +1230,29 @@ function bootAcoes(){
 /* ============================ CANCELAMENTOS =========================== */
 /* =================================================================== */
 let cancelMotivoMonth = null;
+let cancelUnidade = NETWORK_ID;
+
+// Mapeia o valor do seletor de unidade (id de loja, ou "Rede Toda") pra chave usada nos dados
+// de cancelamento ('padaria'/'pizzaria'/'total') — essas chaves vêm do texto da própria
+// planilha, não dos ids de loja do resto do dashboard, por isso o mapeamento.
+function cancelLojaKeyFor(unidade){
+  if (unidade === NETWORK_ID) return 'total';
+  if (/padaria/i.test(unidade)) return 'padaria';
+  if (/pizzaria/i.test(unidade)) return 'pizzaria';
+  return null;
+}
+
+function syncCancelUnidadeSeg(){
+  const seg = document.getElementById('cancelUnidadeSeg');
+  const options = [{id:NETWORK_ID, label:'Rede Toda'}, ...STORE_IDS.map(id=>({id, label:STORES[id].label}))];
+  seg.innerHTML = options.map(o=>`<button data-u="${o.id}"${o.id===cancelUnidade?' class="on"':''}>${esc(o.label)}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); cancelUnidade = b.dataset.u; renderCancelamentos();
+    });
+  });
+}
 
 // Monta o seletor de mês (botões) dos motivos a partir do que a planilha realmente trouxe —
 // mantém a seleção atual se o mês ainda existir, senão cai no mais recente.
@@ -1254,10 +1284,22 @@ function renderCancelMotivos(){
     <tbody>${motivoRows || '<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);padding:20px;">Sem detalhamento de motivos para este mês.</td></tr>'}</tbody>`;
 }
 
+// Reembolso do mês pra uma unidade: soma Padaria+Pizzaria pra "Rede Toda", ou pega direto do
+// detalhe da loja selecionada (CANCEL.resumo não traz reembolso por mês, só o detalhe traz).
+function cancelReembolsoFor(mes, unidade){
+  const d = CANCEL.detalhe[mes] || {};
+  if (unidade === NETWORK_ID) return (d.padaria && d.padaria.reembolso || 0) + (d.pizzaria && d.pizzaria.reembolso || 0);
+  const lojaKey = cancelLojaKeyFor(unidade);
+  return (d[lojaKey] && d[lojaKey].reembolso) || 0;
+}
+
 function renderCancelamentos(){
+  syncCancelUnidadeSeg();
   const meses = CANCEL.meses || [];
   const kpiRow = document.getElementById('cancelKpiRow');
   const latest = meses[meses.length-1];
+  const unidadeLabel = cancelUnidade === NETWORK_ID ? 'Rede Toda' : STORES[cancelUnidade].label;
+  const lojaKey = cancelLojaKeyFor(cancelUnidade);
 
   if (!latest) {
     document.getElementById('cancelPeriod').textContent = '';
@@ -1271,23 +1313,13 @@ function renderCancelamentos(){
 
   const latestPeriodo = CANCEL.periodos[latest];
   document.getElementById('cancelPeriod').textContent = MONTH_LABEL[latest] + (latestPeriodo && latestPeriodo.parcial ? ' (parcial)' : '');
-  const r = CANCEL.resumo[latest] || {};
-  const d = CANCEL.detalhe[latest] || {};
-  const reembolsoMes = (d.padaria && d.padaria.reembolso || 0) + (d.pizzaria && d.pizzaria.reembolso || 0);
-  const tiles = [
-    {label:'Padaria', loja:'padaria'},
-    {label:'Pizzaria', loja:'pizzaria'},
-    {label:'Rede', loja:'total'}
-  ];
-  kpiRow.innerHTML = tiles.map(t=>{
-    const v = r[t.loja] || {};
-    return `<div class="kpi"><div class="lbl">${t.label} — cancelamentos</div><div class="val">${fmt(v.canc,'num')}</div></div>`
-      + `<div class="kpi"><div class="lbl">${t.label} — taxa</div><div class="val">${fmt(v.taxa,'pct')}</div></div>`;
-  }).join('') + `<div class="kpi"><div class="lbl">Reembolsado no mês</div><div class="val">${fmt(reembolsoMes,'money')}</div></div>`;
+  const v = (CANCEL.resumo[latest] || {})[lojaKey] || {};
+  kpiRow.innerHTML = `<div class="kpi"><div class="lbl">${esc(unidadeLabel)} — cancelamentos</div><div class="val">${fmt(v.canc,'num')}</div></div>`
+    + `<div class="kpi"><div class="lbl">${esc(unidadeLabel)} — taxa</div><div class="val">${fmt(v.taxa,'pct')}</div></div>`
+    + `<div class="kpi"><div class="lbl">Reembolsado no mês</div><div class="val">${fmt(cancelReembolsoFor(latest, cancelUnidade),'money')}</div></div>`;
 
   const rows = meses.map(m=>{
-    const rr = CANCEL.resumo[m] || {};
-    const p = rr.padaria||{}, z = rr.pizzaria||{}, t = rr.total||{};
+    const rr = (CANCEL.resumo[m] || {})[lojaKey] || {};
     const periodo = CANCEL.periodos[m];
     const statusHtml = periodo && periodo.parcial
       ? '<span class="badge badge-parcial">Parcial</span>'
@@ -1295,12 +1327,11 @@ function renderCancelamentos(){
     return `<tr>
       <td>${MONTH_LABEL[m]}</td>
       <td>${statusHtml}</td>
-      <td>${fmt(p.canc,'num')}</td><td>${fmt(p.taxa,'pct')}</td>
-      <td>${fmt(z.canc,'num')}</td><td>${fmt(z.taxa,'pct')}</td>
-      <td><strong>${fmt(t.canc,'num')}</strong></td><td><strong>${fmt(t.taxa,'pct')}</strong></td>
+      <td>${fmt(rr.canc,'num')}</td><td>${fmt(rr.taxa,'pct')}</td>
+      <td>${fmt(cancelReembolsoFor(m, cancelUnidade),'money')}</td>
     </tr>`;
   }).join('');
-  document.getElementById('cancelTable').innerHTML = `<thead><tr><th>Mês</th><th>Status</th><th>Padaria — Canc.</th><th>Padaria — Taxa</th><th>Pizzaria — Canc.</th><th>Pizzaria — Taxa</th><th>Rede — Canc.</th><th>Rede — Taxa</th></tr></thead>
+  document.getElementById('cancelTable').innerHTML = `<thead><tr><th>Mês</th><th>Status</th><th>Cancelamentos</th><th>Taxa</th><th>Reembolsado</th></tr></thead>
     <tbody>${rows}</tbody>`;
 
   syncCancelMotivoMonthSeg();
