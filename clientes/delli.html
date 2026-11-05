@@ -81,6 +81,8 @@
   .delta.up{color:var(--good); background:#e5f3ec;}
   .delta.down{color:var(--bad); background:#fbeaea;}
   .delta.flat{color:var(--neutral); background:#f7f3e2;}
+  .badge-parcial{color:var(--neutral); background:#f7f3e2;}
+  .badge-fechado{color:var(--good); background:#e5f3ec;}
 
   .insight-box .insight{display:flex; align-items:flex-start; gap:10px; padding:11px 14px; border-radius:12px; margin-bottom:8px; font-size:13.5px; line-height:1.5;}
   .insight .ico{flex-shrink:0;}
@@ -463,7 +465,7 @@ const NETWORK_ID = '__rede__';
 
 // Dados da aba "Cancelamentos" — fica vazio até o live-sync carregar (não tem sentido embutir
 // um snapshot congelado aqui: a aba é nova, criada direto na planilha nova em 04/11/2026).
-let CANCEL = { meses: [], resumo: {}, detalhe: {}, motivos: {} };
+let CANCEL = { meses: [], resumo: {}, detalhe: {}, motivos: {}, periodos: {} };
 
 const MONTH_ORDER = {janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
 const MONTH_LABEL = {janeiro:'Janeiro',fevereiro:'Fevereiro',marco:'Março',abril:'Abril',maio:'Maio',junho:'Junho',julho:'Julho',agosto:'Agosto',setembro:'Setembro',outubro:'Outubro',novembro:'Novembro',dezembro:'Dezembro'};
@@ -1244,7 +1246,8 @@ function renderCancelMotivos(){
     document.getElementById('cancelMotivosTable').innerHTML = '';
     return;
   }
-  document.getElementById('cancelMotivosTitle').innerHTML = `Motivos de cancelamento <span class="tag">${MONTH_LABEL[mes]}</span>`;
+  const periodo = CANCEL.periodos[mes];
+  document.getElementById('cancelMotivosTitle').innerHTML = `Motivos de cancelamento <span class="tag">${MONTH_LABEL[mes]}${periodo && periodo.parcial ? ' (parcial)' : ''}</span>`;
   const motivos = (CANCEL.motivos[mes]||[]).slice().sort((a,b)=>(b.total||0)-(a.total||0));
   const motivoRows = motivos.map(mo=>`<tr><td>${esc(mo.motivo)}</td><td>${fmt(mo.padaria,'num')}</td><td>${fmt(mo.pizzaria,'num')}</td><td><strong>${fmt(mo.total,'num')}</strong></td></tr>`).join('');
   document.getElementById('cancelMotivosTable').innerHTML = `<thead><tr><th>Motivo</th><th>Padaria</th><th>Pizzaria</th><th>Total</th></tr></thead>
@@ -1266,7 +1269,8 @@ function renderCancelamentos(){
     return;
   }
 
-  document.getElementById('cancelPeriod').textContent = MONTH_LABEL[latest];
+  const latestPeriodo = CANCEL.periodos[latest];
+  document.getElementById('cancelPeriod').textContent = MONTH_LABEL[latest] + (latestPeriodo && latestPeriodo.parcial ? ' (parcial)' : '');
   const r = CANCEL.resumo[latest] || {};
   const d = CANCEL.detalhe[latest] || {};
   const reembolsoMes = (d.padaria && d.padaria.reembolso || 0) + (d.pizzaria && d.pizzaria.reembolso || 0);
@@ -1284,14 +1288,19 @@ function renderCancelamentos(){
   const rows = meses.map(m=>{
     const rr = CANCEL.resumo[m] || {};
     const p = rr.padaria||{}, z = rr.pizzaria||{}, t = rr.total||{};
+    const periodo = CANCEL.periodos[m];
+    const statusHtml = periodo && periodo.parcial
+      ? '<span class="badge badge-parcial">Parcial</span>'
+      : '<span class="badge badge-fechado">Fechado</span>';
     return `<tr>
       <td>${MONTH_LABEL[m]}</td>
+      <td>${statusHtml}</td>
       <td>${fmt(p.canc,'num')}</td><td>${fmt(p.taxa,'pct')}</td>
       <td>${fmt(z.canc,'num')}</td><td>${fmt(z.taxa,'pct')}</td>
       <td><strong>${fmt(t.canc,'num')}</strong></td><td><strong>${fmt(t.taxa,'pct')}</strong></td>
     </tr>`;
   }).join('');
-  document.getElementById('cancelTable').innerHTML = `<thead><tr><th>Mês</th><th>Padaria — Canc.</th><th>Padaria — Taxa</th><th>Pizzaria — Canc.</th><th>Pizzaria — Taxa</th><th>Rede — Canc.</th><th>Rede — Taxa</th></tr></thead>
+  document.getElementById('cancelTable').innerHTML = `<thead><tr><th>Mês</th><th>Status</th><th>Padaria — Canc.</th><th>Padaria — Taxa</th><th>Pizzaria — Canc.</th><th>Pizzaria — Taxa</th><th>Rede — Canc.</th><th>Rede — Taxa</th></tr></thead>
     <tbody>${rows}</tbody>`;
 
   syncCancelMotivoMonthSeg();

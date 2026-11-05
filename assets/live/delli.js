@@ -175,6 +175,7 @@
     const resumo = {};
     const detalhe = {};
     const motivos = {};
+    const periodos = {}; // mes -> { label: "01/09 a 30/09/2026", parcial: true/false }
 
     const resumoIdx = rows.findIndex(function (r) { return (r[0] || '').trim().toUpperCase() === 'RESUMO MENSAL POR LOJA'; });
     if (resumoIdx >= 0) {
@@ -218,9 +219,16 @@
         continue;
       }
 
-      const monthHeaderMatch = /^([A-ZÇ]{3}\s*\d{4})\s*—/i.exec(first);
+      // Ex.: "SET 2026 — 01/09 a 30/09/2026" (mês fechado) ou "NOV 2026 — 01/11 a 04/11/2026
+      // (parcial)" (mês em andamento, sinalizado pela própria planilha com "(parcial)").
+      const monthHeaderMatch = /^([A-ZÇ]{3}\s*\d{4})\s*—\s*(.+)$/i.exec(first);
       if (monthHeaderMatch) {
         const mes = monthKeyFromAbbr(monthHeaderMatch[1]);
+        if (mes) {
+          const parcial = /\(parcial\)\s*$/i.test(monthHeaderMatch[2]);
+          const label = monthHeaderMatch[2].replace(/\s*\(parcial\)\s*$/i, '').trim();
+          periodos[mes] = { label: label, parcial: parcial };
+        }
         let rr = r + 1;
         if (mes && rows[rr] && /^loja$/i.test((rows[rr][0] || '').trim())) {
           rr++;
@@ -244,7 +252,7 @@
     const meses = [...new Set(Object.keys(resumo))].sort(function (a, b) {
       return (MONTH_ORDER[a] || 99) - (MONTH_ORDER[b] || 99);
     });
-    return { meses: meses, resumo: resumo, detalhe: detalhe, motivos: motivos };
+    return { meses: meses, resumo: resumo, detalhe: detalhe, motivos: motivos, periodos: periodos };
   }
 
   // Esta planilha tem linhas de rótulo de bloco ("── 01-07 ──") com só a coluna A preenchida
@@ -280,7 +288,7 @@
     }
 
     // Aba de cancelamentos é isolada: se falhar, o resto do dashboard continua normalmente.
-    let cancel = { meses: [], resumo: {}, detalhe: {}, motivos: {} };
+    let cancel = { meses: [], resumo: {}, detalhe: {}, motivos: {}, periodos: {} };
     try {
       cancel = parseCancelamentos(await fetchCsvRowsExport(SHEET_ID, GID_CANCELAMENTOS));
     } catch (e) {
@@ -316,6 +324,7 @@
         CANCEL.resumo = fresh.cancel.resumo;
         CANCEL.detalhe = fresh.cancel.detalhe;
         CANCEL.motivos = fresh.cancel.motivos;
+        CANCEL.periodos = fresh.cancel.periodos;
         renderAll();
         ui.setStatus('live');
       } catch (e) {
