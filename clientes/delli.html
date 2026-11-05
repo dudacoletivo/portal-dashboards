@@ -373,6 +373,10 @@
 
   <div class="section-title" id="cancelMotivosTitle">Motivos de cancelamento</div>
   <div class="card">
+    <div class="filtergroup" style="margin-bottom:14px;">
+      <label class="title">Mês</label>
+      <div class="seg" id="cancelMotivoMonthSeg"></div>
+    </div>
     <div class="table-wrap"><table id="cancelMotivosTable"></table></div>
   </div>
 </section>
@@ -1216,6 +1220,37 @@ function bootAcoes(){
 /* =================================================================== */
 /* ============================ CANCELAMENTOS =========================== */
 /* =================================================================== */
+let cancelMotivoMonth = null;
+
+// Monta o seletor de mês (botões) dos motivos a partir do que a planilha realmente trouxe —
+// mantém a seleção atual se o mês ainda existir, senão cai no mais recente.
+function syncCancelMotivoMonthSeg(){
+  const meses = CANCEL.meses || [];
+  if (!cancelMotivoMonth || !meses.includes(cancelMotivoMonth)) cancelMotivoMonth = meses[meses.length-1] || null;
+  const seg = document.getElementById('cancelMotivoMonthSeg');
+  seg.innerHTML = meses.map(m=>`<button data-m="${m}"${m===cancelMotivoMonth?' class="on"':''}>${MONTH_LABEL[m]}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); cancelMotivoMonth = b.dataset.m; renderCancelMotivos();
+    });
+  });
+}
+
+function renderCancelMotivos(){
+  const mes = cancelMotivoMonth;
+  if (!mes) {
+    document.getElementById('cancelMotivosTitle').textContent = 'Motivos de cancelamento';
+    document.getElementById('cancelMotivosTable').innerHTML = '';
+    return;
+  }
+  document.getElementById('cancelMotivosTitle').innerHTML = `Motivos de cancelamento <span class="tag">${MONTH_LABEL[mes]}</span>`;
+  const motivos = (CANCEL.motivos[mes]||[]).slice().sort((a,b)=>(b.total||0)-(a.total||0));
+  const motivoRows = motivos.map(mo=>`<tr><td>${esc(mo.motivo)}</td><td>${fmt(mo.padaria,'num')}</td><td>${fmt(mo.pizzaria,'num')}</td><td><strong>${fmt(mo.total,'num')}</strong></td></tr>`).join('');
+  document.getElementById('cancelMotivosTable').innerHTML = `<thead><tr><th>Motivo</th><th>Padaria</th><th>Pizzaria</th><th>Total</th></tr></thead>
+    <tbody>${motivoRows || '<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);padding:20px;">Sem detalhamento de motivos para este mês.</td></tr>'}</tbody>`;
+}
+
 function renderCancelamentos(){
   const meses = CANCEL.meses || [];
   const kpiRow = document.getElementById('cancelKpiRow');
@@ -1225,6 +1260,7 @@ function renderCancelamentos(){
     document.getElementById('cancelPeriod').textContent = '';
     kpiRow.innerHTML = '<div class="kpi"><div class="lbl">Sem dados ainda</div><div class="val">—</div></div>';
     document.getElementById('cancelTable').innerHTML = '';
+    document.getElementById('cancelMotivoMonthSeg').innerHTML = '';
     document.getElementById('cancelMotivosTable').innerHTML = '';
     document.getElementById('cancelMotivosTitle').textContent = 'Motivos de cancelamento';
     return;
@@ -1258,11 +1294,8 @@ function renderCancelamentos(){
   document.getElementById('cancelTable').innerHTML = `<thead><tr><th>Mês</th><th>Padaria — Canc.</th><th>Padaria — Taxa</th><th>Pizzaria — Canc.</th><th>Pizzaria — Taxa</th><th>Rede — Canc.</th><th>Rede — Taxa</th></tr></thead>
     <tbody>${rows}</tbody>`;
 
-  document.getElementById('cancelMotivosTitle').innerHTML = `Motivos de cancelamento <span class="tag">${MONTH_LABEL[latest]}</span>`;
-  const motivos = (CANCEL.motivos[latest]||[]).slice().sort((a,b)=>(b.total||0)-(a.total||0));
-  const motivoRows = motivos.map(mo=>`<tr><td>${esc(mo.motivo)}</td><td>${fmt(mo.padaria,'num')}</td><td>${fmt(mo.pizzaria,'num')}</td><td><strong>${fmt(mo.total,'num')}</strong></td></tr>`).join('');
-  document.getElementById('cancelMotivosTable').innerHTML = `<thead><tr><th>Motivo</th><th>Padaria</th><th>Pizzaria</th><th>Total</th></tr></thead>
-    <tbody>${motivoRows || '<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);padding:20px;">Sem detalhamento de motivos para este mês.</td></tr>'}</tbody>`;
+  syncCancelMotivoMonthSeg();
+  renderCancelMotivos();
 }
 
 /* =================================================================== */
