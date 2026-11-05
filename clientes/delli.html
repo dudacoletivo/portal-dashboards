@@ -520,6 +520,8 @@ const METRICS = [
   {id:'conversao', label:'Conversão %', fmt:'pct'},
   {id:'budget', label:'Budget de Investimento', fmt:'pct'},
   {id:'promo', label:'Promoções + Ads', fmt:'money'},
+  {id:'investLoja', label:'Invest. Loja', fmt:'money'},
+  {id:'ads', label:'ADS', fmt:'money'},
   {id:'subifood', label:'Sub iFood', fmt:'money'},
   {id:'cpo', label:'CPO', fmt:'money'},
   {id:'roi', label:'ROI', fmt:'money'},
@@ -559,9 +561,9 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 function aggregateFrom(rows){
   const sum = k => rows.reduce((a,r)=>a+(r[k]||0),0);
   const vendas=sum('vendas'), gmv=sum('gmv'), novos=sum('novos'), visitas=sum('visitas'),
-        promo=sum('promo'), subifood=sum('subifood');
+        promo=sum('promo'), subifood=sum('subifood'), ads=sum('ads'), investLoja=sum('investLoja');
   return {
-    vendas, gmv, novos, visitas, promo, subifood,
+    vendas, gmv, novos, visitas, promo, subifood, ads, investLoja,
     tm: vendas? gmv/vendas : 0,
     conversao: visitas? (vendas/visitas*100) : 0,
     budget: gmv? (promo/gmv*100) : 0,
@@ -961,7 +963,7 @@ function renderDashP(){
 /* =================================================================== */
 let investMonth = null;
 let PARTIAL_MONTHS = [];
-const INVEST_COLS = ['vendas','gmv','budget','promo','subifood','cpo','roi'];
+const INVEST_COLS = ['vendas','gmv','budget','promo','investLoja','ads','subifood','cpo','roi'];
 
 function syncInvestMonthSeg(){
   PARTIAL_MONTHS = discoverPartialMonthsAny();
