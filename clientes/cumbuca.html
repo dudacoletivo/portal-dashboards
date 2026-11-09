@@ -23,7 +23,7 @@ function showFatalError(msg){
     if(!banner){
       banner = document.createElement('div');
       banner.id = 'fatalErrorBanner';
-      banner.setAttribute('style','position:sticky;top:0;z-index:9999;background:#c32525;color:#fff;padding:10px 16px;font-family:'Manrope',Arial,sans-serif;font-size:13px;text-align:center;line-height:1.4;');
+      banner.setAttribute('style','position:sticky;top:0;z-index:9999;background:#c32525;color:#fff;padding:10px 16px;font-family:"Manrope",Arial,sans-serif;font-size:13px;text-align:center;line-height:1.4;');
       document.body.insertBefore(banner, document.body.firstChild);
     }
     banner.textContent = '⚠️ Erro no dashboard: ' + msg + ' — tire um print desta faixa e envie para o suporte.';
