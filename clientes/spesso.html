@@ -142,6 +142,9 @@
   .kpi.flag-good::before{background:var(--good);}
   .kpi.flag-bad{border-color:#f3caca;}
   .kpi.flag-bad::before{background:var(--bad);}
+  .badge-parcial,.badge-fechado{display:inline-flex;align-items:center;font-weight:700;font-size:12px;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+  .badge-parcial{color:#8a6d1a;background:#f7f0dc;}
+  .badge-fechado{color:#1c8a53;background:#dcf0e5;}
   .kpi .label{font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.4px;}
   .kpi .value{font-size:22px;font-weight:700;color:var(--blue-deep);margin:6px 0 4px;}
   .kpi .delta{font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;}
@@ -312,7 +315,6 @@
             <button data-period="7" class="active">01–07</button>
             <button data-period="14">01–14</button>
             <button data-period="21">01–21</button>
-            <button data-period="28">01–28</button>
           </div>
         </div>
       </div>
@@ -397,13 +399,13 @@
 
       <div class="chart-row" style="margin-bottom:18px;">
         <div>
-          <h2>Motivos de cancelamento</h2>
-          <p class="sub">Quantidade de pedidos por motivo, do mais para o menos frequente</p>
+          <h2>Motivos de cancelamento <small style="font-weight:600;color:var(--ink-soft);">(acumulado Jan-Nov)</small></h2>
+          <p class="sub">Quantidade de pedidos por motivo, do mais para o menos frequente — a planilha não quebra isso por mês</p>
           <div id="motivosList"></div>
         </div>
         <div>
-          <h2>Origem do cancelamento</h2>
-          <p class="sub">Quem originou o cancelamento (loja, cliente ou iFood)</p>
+          <h2>Origem do cancelamento <small style="font-weight:600;color:var(--ink-soft);">(acumulado Jan-Nov)</small></h2>
+          <p class="sub">Quem originou o cancelamento (loja, cliente ou iFood) — acumulado, mesma observação acima</p>
           <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
             <div class="chart-box" style="height:220px;width:220px;flex:0 0 220px;"><canvas id="origemChart"></canvas></div>
             <div id="origemLegend" style="flex:1;min-width:160px;"></div>
@@ -1286,30 +1288,13 @@ function renderAlavancas(){
   });
 }
 
-/* ============ CANCELAMENTOS ============ */
-const CANCELAMENTOS_DATA = {
-  julho: {
-    label: "Julho",
-    orders: [
-      { data:"23/07/2026 16:20:23", turno:"Café da Tarde", status:"Cancelado", motivo:"Item indisponível",
-        impactouSuper:true, valorPedido:10.89, valorCancelamento:10.89, itens:"Torta al Cioccolato",
-        origem:"Loja", tentativaNegociacao:false, contestavel:false, prazoContestacao:null,
-        lojaSolicitouContestacao:false, motivoImpossibilidade:"Sua loja cancelou o pedido por item indisponível", statusContestacao:null },
-      { data:"23/07/2026 16:21:05", turno:"Café da Tarde", status:"Cancelado", motivo:"Item indisponível",
-        impactouSuper:true, valorPedido:10.89, valorCancelamento:10.89, itens:"Tortas",
-        origem:"Loja", tentativaNegociacao:false, contestavel:false, prazoContestacao:null,
-        lojaSolicitouContestacao:false, motivoImpossibilidade:"Sua loja cancelou o pedido por item indisponível", statusContestacao:null },
-      { data:"12/07/2026 13:04:59", turno:"Almoço", status:"Cancelamento parcial", motivo:"Parte do item ou integrante de um grupo não foi enviado",
-        impactouSuper:true, valorPedido:72.80, valorCancelamento:11.90, itens:"[Coca-Cola 350ml]",
-        origem:"Cliente", tentativaNegociacao:true, contestavel:true, prazoContestacao:"19/07/2026 16:49:26",
-        lojaSolicitouContestacao:false, motivoImpossibilidade:null, statusContestacao:null },
-      { data:"01/07/2026 18:09:44", turno:"Jantar", status:"Cancelado", motivo:"Pedido ou item veio errado",
-        impactouSuper:false, valorPedido:65.60, valorCancelamento:65.60, itens:"Combo Panine: 1 Panine + 1 Bebida",
-        origem:"Cliente", tentativaNegociacao:true, contestavel:false, prazoContestacao:null,
-        lojaSolicitouContestacao:false, motivoImpossibilidade:"O iFood proativamente reembolsou sua loja", statusContestacao:null },
-    ]
-  }
-};
+/* ============ CANCELAMENTOS ============
+   Vem da planilha nova (aba "Cancelamentos"): totais acumulados Jan-Nov (sem detalhe pedido a
+   pedido — a planilha antiga tinha isso, a nova não) + 1 linha de resumo por mês. Motivos/
+   Origem/Estágio ficam sempre acumulados (não há essa quebra por mês na planilha nova); o
+   seletor de mês e a tabela de baixo são o que de fato varia por mês. */
+const CANCEL_RESUMO = { data: {}, origem: [], estagio: [], motivo: [], codigo: [] };
+const CANCEL_MESES = [];
 
 let selectedCancelamentosMonth = null;
 let origemChartInst;
@@ -1319,17 +1304,17 @@ let origemChartInst;
 function populateCancelamentosMonthSeg(){
   const seg = document.getElementById("cancelamentosMonthSeg");
   seg.innerHTML = "";
-  const keys = Object.keys(CANCELAMENTOS_DATA);
-  selectedCancelamentosMonth = keys[keys.length-1];
-  keys.forEach(key=>{
+  if(!CANCEL_MESES.length) return;
+  selectedCancelamentosMonth = CANCEL_MESES[CANCEL_MESES.length-1].key;
+  CANCEL_MESES.forEach(mes=>{
     const btn = document.createElement("button");
-    btn.textContent = CANCELAMENTOS_DATA[key].label;
-    btn.dataset.month = key;
-    if(key === selectedCancelamentosMonth) btn.classList.add("active");
+    btn.textContent = mes.label + (mes.parcial ? " (parcial)" : "");
+    btn.dataset.month = mes.key;
+    if(mes.key === selectedCancelamentosMonth) btn.classList.add("active");
     btn.addEventListener("click", ()=>{
       document.querySelectorAll("#cancelamentosMonthSeg button").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
-      selectedCancelamentosMonth = key;
+      selectedCancelamentosMonth = mes.key;
       renderCancelamentos();
     });
     seg.appendChild(btn);
@@ -1337,60 +1322,50 @@ function populateCancelamentosMonthSeg(){
 }
 
 function renderCancelamentos(){
-  const data = CANCELAMENTOS_DATA[selectedCancelamentosMonth];
+  const mes = CANCEL_MESES.find(m=>m.key===selectedCancelamentosMonth);
   const grid = document.getElementById("kpiGridCancelamentos");
   const table = document.getElementById("cancelamentosTable");
   grid.innerHTML = ""; table.innerHTML = "";
 
-  if(!data || !data.orders.length){
-    renderInsightBox("insightCancelamentos","neutral","ℹ️","Sem cancelamentos",["Nenhum pedido cancelado registrado neste mês."]);
+  if(!mes){
+    renderInsightBox("insightCancelamentos","neutral","ℹ️","Sem cancelamentos",["Nenhum dado de cancelamento disponível."]);
     return;
   }
 
-  const orders = data.orders;
-  const total = orders.length;
-  const valorTotal = orders.reduce((s,o)=>s+o.valorCancelamento,0);
-  const impactaramSuper = orders.filter(o=>o.impactouSuper).length;
-  const porOrigem = {};
-  orders.forEach(o=>{ porOrigem[o.origem] = (porOrigem[o.origem]||0)+1; });
-  const origemTop = Object.entries(porOrigem).sort((a,b)=>b[1]-a[1])[0];
-  const contestaveis = orders.filter(o=>o.contestavel).length;
-
+  const afetaSuperNum = parseInt((mes.afetaSuper.match(/(\d+)/)||[0,0])[1], 10) || 0;
   grid.insertAdjacentHTML("beforeend", `
-    <div class="kpi"><div class="label">Pedidos cancelados</div><div class="value">${total}</div></div>
-    <div class="kpi"><div class="label">Valor total cancelado</div><div class="value">${fmt(valorTotal,'money')}</div></div>
-    <div class="kpi"><div class="label">Impactaram o Super</div><div class="value">${impactaramSuper} de ${total}</div></div>
-    <div class="kpi"><div class="label">Contestáveis</div><div class="value">${contestaveis} de ${total}</div></div>
+    <div class="kpi"><div class="label">Pedidos cancelados</div><div class="value">${fmt(mes.cancelamentos,'num')}</div></div>
+    <div class="kpi"><div class="label">Valor cancelado (GMV)</div><div class="value">${fmt(mes.gmvCancelado,'money')}</div></div>
+    <div class="kpi"><div class="label">Valor devolvido</div><div class="value">${fmt(mes.devolvido,'money')}</div></div>
+    <div class="kpi"><div class="label">Taxa de cancelamento</div><div class="value">${fmt(mes.taxa,'pct')}</div></div>
   `);
 
-  const type = impactaramSuper >= total*0.5 ? "bad" : "neutral";
-  renderInsightBox("insightCancelamentos", type, "📦", `${total} pedidos cancelados em ${data.label}`,
-    [`Origem mais comum: <b>${origemTop[0]}</b> (${origemTop[1]} de ${total}). ${impactaramSuper} pedido(s) impactaram o indicador de Super da loja no iFood.`]);
+  const type = (mes.taxa||0) >= 10 ? "bad" : "neutral";
+  renderInsightBox("insightCancelamentos", type, "📦", `${fmt(mes.cancelamentos,'num')} pedidos cancelados em ${mes.label}${mes.parcial?' (parcial)':''}`,
+    [`Origem principal: <b>${mes.origemPrincipal||'—'}</b>. Estágio principal: <b>${mes.estagioPrincipal||'—'}</b>. ${afetaSuperNum} pedido(s) impactaram o indicador de Super da loja no iFood. Motivos: ${mes.motivos||'—'}.`]);
 
-  // Motivos de cancelamento (barras horizontais, do mais para o menos frequente)
-  const porMotivo = {};
-  orders.forEach(o=>{ porMotivo[o.motivo] = (porMotivo[o.motivo]||0)+1; });
-  const motivosOrdenados = Object.entries(porMotivo).sort((a,b)=>b[1]-a[1]);
-  const maxMotivo = motivosOrdenados[0][1];
+  // Motivos/Origem são acumulados Jan-Nov (a planilha nova não quebra isso por mês).
+  const motivosOrdenados = CANCEL_RESUMO.motivo.slice().sort((a,b)=>(b.qtde||0)-(a.qtde||0));
+  const maxMotivo = motivosOrdenados.length ? (motivosOrdenados[0].qtde||1) : 1;
   const motivosList = document.getElementById("motivosList");
-  motivosList.innerHTML = motivosOrdenados.map(([motivo,count])=>`
+  motivosList.innerHTML = motivosOrdenados.map(m=>`
     <div class="motivo-row">
-      <div class="motivo-label">${motivo}</div>
+      <div class="motivo-label">${m.label}</div>
       <div class="motivo-track">
-        <div class="motivo-fill" style="width:${Math.max(10, (count/maxMotivo)*100)}%">${count}</div>
+        <div class="motivo-fill" style="width:${Math.max(10, (m.qtde/maxMotivo)*100)}%">${m.qtde}</div>
       </div>
     </div>
-  `).join("");
+  `).join("") || '<p class="sub">Sem motivos registrados.</p>';
 
-  // Origem do cancelamento (gráfico de pizza + legenda)
-  const origemOrdenada = Object.entries(porOrigem).sort((a,b)=>b[1]-a[1]);
+  const origemOrdenada = CANCEL_RESUMO.origem.slice().sort((a,b)=>(b.qtde||0)-(a.qtde||0));
+  const origemTotal = origemOrdenada.reduce((s,o)=>s+(o.qtde||0),0) || 1;
   const origemColors = [COLORS.blue, COLORS.amber, "#1b2430", COLORS.blueLight];
   const origemLegend = document.getElementById("origemLegend");
-  origemLegend.innerHTML = origemOrdenada.map(([origem,count],i)=>`
+  origemLegend.innerHTML = origemOrdenada.map((o,i)=>`
     <div class="origem-legend-row">
       <span class="dot" style="background:${origemColors[i%origemColors.length]}"></span>
-      <span>${origem}</span> — <b>${count}</b>
-      <span class="pct">(${Math.round(count/total*100)}%)</span>
+      <span>${o.label}</span> — <b>${o.qtde}</b>
+      <span class="pct">(${Math.round(o.qtde/origemTotal*100)}%)</span>
     </div>
   `).join("");
 
@@ -1399,23 +1374,22 @@ function renderCancelamentos(){
   origemChartInst = new Chart(ctxOrigem, {
     type:"pie",
     data:{
-      labels: origemOrdenada.map(([origem])=>origem),
-      datasets:[{ data: origemOrdenada.map(([,count])=>count), backgroundColor: origemColors, borderWidth:2, borderColor:"#fff" }]
+      labels: origemOrdenada.map(o=>o.label),
+      datasets:[{ data: origemOrdenada.map(o=>o.qtde), backgroundColor: origemColors, borderWidth:2, borderColor:"#fff" }]
     },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} } }
   });
 
-  const head = `<thead><tr><th>Data e hora</th><th>Turno</th><th>Status</th><th>Motivo</th><th>Impactou o Super?</th>
-    <th>Valor do pedido</th><th>Valor cancelado</th><th>Itens</th><th>Origem</th><th>Negociação?</th>
-    <th>Contestável?</th><th>Prazo p/ contestar</th><th>Loja contestou?</th><th>Motivo (se não contestável)</th></tr></thead>`;
+  const head = `<thead><tr><th>Mês</th><th>Status</th><th>Pedidos concl.</th><th>Cancelamentos</th><th>Taxa</th>
+    <th>GMV cancelado</th><th>Devolvido</th><th>Afeta Super</th><th>Origem principal</th><th>Estágio principal</th><th>Motivos</th></tr></thead>`;
   let body = "<tbody>";
-  orders.forEach(o=>{
+  CANCEL_MESES.forEach(m=>{
     body += `<tr>
-      <td class="metric">${o.data}</td><td>${o.turno}</td><td>${o.status}</td><td>${o.motivo}</td>
-      <td>${o.impactouSuper?'Sim':'Não'}</td><td>${fmt(o.valorPedido,'money')}</td><td>${fmt(o.valorCancelamento,'money')}</td>
-      <td>${o.itens}</td><td>${o.origem}</td><td>${o.tentativaNegociacao?'Sim':'Não'}</td>
-      <td>${o.contestavel?'Sim':'Não'}</td><td>${o.prazoContestacao||'—'}</td><td>${o.lojaSolicitouContestacao?'Sim':'Não'}</td>
-      <td>${o.motivoImpossibilidade||'—'}</td>
+      <td class="metric">${m.label}</td>
+      <td>${m.parcial ? '<span class="badge-parcial">Parcial</span>' : '<span class="badge-fechado">Fechado</span>'}</td>
+      <td>${fmt(m.pedidosConcl,'num')}</td><td>${fmt(m.cancelamentos,'num')}</td><td>${fmt(m.taxa,'pct')}</td>
+      <td>${fmt(m.gmvCancelado,'money')}</td><td>${fmt(m.devolvido,'money')}</td><td>${m.afetaSuper||'—'}</td>
+      <td>${m.origemPrincipal||'—'}</td><td>${m.estagioPrincipal||'—'}</td><td>${m.motivos||'—'}</td>
     </tr>`;
   });
   body += "</tbody>";
