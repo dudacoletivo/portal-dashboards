@@ -10,9 +10,14 @@
 // separadas — por isso o parser abaixo (parseMultiBlockTab) lê blocos em sequência, alimentando
 // semanal[mes][janela] para os blocos de corte parcial e mensal[mes] para o bloco "Mês Fechado".
 //
-// Há também uma aba nova "Cancelamentos", com um resumo mensal por loja (cancelamentos + taxa %)
+// Há também uma aba "Cancelamentos", com um resumo mensal por loja (cancelamentos + taxa %)
 // e, por mês, o detalhamento (reembolso/origens/estágio) e a lista de motivos — parseCancelamentos
 // lê isso para alimentar a aba "Cancelamentos" do dashboard (ver delli.html).
+//
+// E, desde 18/11/2026, uma aba "Itens Cancelados" com um registro por ITEM afetado em cada
+// pedido cancelado (não por pedido) — cruzando item, categoria, tipo (Total/Parcial) e motivo.
+// Acumula histórico de vários meses na mesma aba; parseItensCancelados lê tudo e o filtro por
+// mês/loja é feito no próprio dashboard (seção "Itens mais cancelados" dentro de Cancelamentos).
 //
 // Requer assets/sheets-sync.js e assets/live-status-ui.js já carregados, rodando depois
 // do bloco principal do dashboard (STORES/CANCEL/renderAll já definidos).
@@ -21,6 +26,14 @@
   const GID_PADARIA = '1789508947'; // aba "Padaria Delli Jardim"
   const GID_PIZZARIA = '838687631'; // aba "Pizzaria Delli Jardim"
   const GID_CANCELAMENTOS = '2059198122'; // aba "Cancelamentos"
+  const GID_ITENS_CANCELADOS = '774520597'; // aba "Itens Cancelados"
+
+  const MONTH_BY_NUM = ['', 'janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  function monthKeyFromDDMMYYYY(s) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((s || '').trim());
+    if (!m) return null;
+    return MONTH_BY_NUM[parseInt(m[2], 10)] || null;
+  }
 
   const MONTH_ABBR_PT = { JAN:'janeiro', FEV:'fevereiro', MAR:'marco', ABR:'abril', MAI:'maio', JUN:'junho', JUL:'julho', AGO:'agosto', SET:'setembro', OUT:'outubro', NOV:'novembro', DEZ:'dezembro' };
 
@@ -255,6 +268,36 @@
     return { meses: meses, resumo: resumo, detalhe: detalhe, motivos: motivos, periodos: periodos };
   }
 
+  // Lê a aba "Itens Cancelados" -> lista de registros, um por item afetado num pedido cancelado
+  // (Tipo="Total": o pedido inteiro foi cancelado por causa desse item) ou parcialmente cancelado
+  // (Tipo="Parcial": o item saiu faltando/errado mas o resto do pedido seguiu). Ao lado dessa
+  // tabela (colunas A-J) a planilha mantém uma segunda tabela de controle (colunas L em diante,
+  // log de processamento por dia) que ignoramos aqui. A aba acumula histórico de vários meses
+  // (não só o mês corrente) — por isso o mês de cada linha vem da própria data (coluna A,
+  // dd/mm/aaaa), e o filtro por mês/loja acontece no dashboard (ver renderItensCancelados em
+  // delli.html), não aqui.
+  function parseItensCancelados(rows) {
+    const registros = [];
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r] || [];
+      const mes = monthKeyFromDDMMYYYY(row[0]);
+      if (!mes) continue;
+      const loja = lojaKeyFor(row[1]);
+      if (!loja || loja === 'total') continue;
+      const item = (row[2] || '').trim();
+      if (!item) continue;
+      let categoria = (row[3] || '').trim();
+      if (!categoria || categoria.toUpperCase() === 'NONE') categoria = 'Outros';
+      const tipo = /parcial/i.test(row[4] || '') ? 'Parcial' : 'Total';
+      const motivo = (row[6] || '').trim() || 'Não informado';
+      registros.push({
+        mes: mes, loja: loja, item: item, categoria: categoria, tipo: tipo, motivo: motivo,
+        qtde: parseNum(row[7]) || 0, pedidos: parseNum(row[8]) || 0, valor: parseNum(row[9]) || 0
+      });
+    }
+    return registros;
+  }
+
   // Esta planilha tem linhas de rótulo de bloco ("── 01-07 ──") com só a coluna A preenchida
   // antes do cabeçalho real ("Métrica"). O endpoint gviz/tq que SheetsSync.fetchCsvRows usa
   // tenta inferir o esquema de colunas a partir das primeiras linhas e se confunde nesse caso,
@@ -295,12 +338,21 @@
       console.warn('[live-sync] Aba "Cancelamentos" indisponível:', e);
     }
 
+    // Idem para a aba de itens cancelados.
+    let itensCancel = [];
+    try {
+      itensCancel = parseItensCancelados(await fetchCsvRowsExport(SHEET_ID, GID_ITENS_CANCELADOS));
+    } catch (e) {
+      console.warn('[live-sync] Aba "Itens Cancelados" indisponível:', e);
+    }
+
     return {
       stores: {
         'padaria-delli': { label: 'Padaria Delli', semanal: padaria.semanal, mensal: padaria.mensal },
         'pizzaria-delli': { label: 'Pizzaria Delli', semanal: pizzaria.semanal, mensal: pizzaria.mensal }
       },
-      cancel: cancel
+      cancel: cancel,
+      itensCancel: itensCancel
     };
   }
 
@@ -325,6 +377,7 @@
         CANCEL.detalhe = fresh.cancel.detalhe;
         CANCEL.motivos = fresh.cancel.motivos;
         CANCEL.periodos = fresh.cancel.periodos;
+        SheetsSync.mutateArrayInPlace(ITENS_CANCEL, fresh.itensCancel);
         renderAll();
         ui.setStatus('live');
       } catch (e) {

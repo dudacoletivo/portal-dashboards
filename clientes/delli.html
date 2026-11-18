@@ -388,6 +388,33 @@
     </div>
     <div class="table-wrap"><table id="cancelMotivosTable"></table></div>
   </div>
+
+  <div class="section-title">Itens mais cancelados <span class="tag" id="itensPeriod"></span></div>
+  <div class="card">
+    <p class="sub" style="margin-top:0;">Cruza cada pedido cancelado (ou parcialmente cancelado) com o item específico envolvido — mostra quais pratos puxam mais cancelamento, quanto isso custou em R$ e o principal motivo. Usa a unidade selecionada acima.</p>
+    <div class="filtergroup" style="margin-bottom:0;">
+      <label class="title">Mês</label>
+      <div class="seg" id="itensMonthSeg"></div>
+    </div>
+  </div>
+
+  <div class="kpi-row" id="itensKpiRow"></div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Top itens — valor perdido</div>
+      <div class="chart-holder" id="itensTopChart"></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Cancelamento total x parcial</div>
+      <div class="chart-holder" id="itensTipoChart"></div>
+      <p class="sub" style="margin-bottom:0;"><span class="badge badge-fechado" style="background:#fbeaea;color:var(--bad);">Total</span> = pedido inteiro cancelado por causa deste item. <span class="badge badge-parcial">Parcial</span> = item saiu faltando/errado, mas o pedido seguiu.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap"><table id="itensTable"></table></div>
+  </div>
 </section>
 
 <footer class="foot">Delli · Dashboard gerado a partir da planilha "Delli Jardim — Performance iFood Jan-Nov 2026"</footer>
@@ -473,6 +500,10 @@ const NETWORK_ID = '__rede__';
 // Dados da aba "Cancelamentos" — fica vazio até o live-sync carregar (não tem sentido embutir
 // um snapshot congelado aqui: a aba é nova, criada direto na planilha nova em 04/11/2026).
 let CANCEL = { meses: [], resumo: {}, detalhe: {}, motivos: {}, periodos: {} };
+
+// Dados da aba "Itens Cancelados" — um registro por item afetado num pedido cancelado (total)
+// ou parcialmente cancelado. Fica vazio até o live-sync carregar (aba nova, sem snapshot).
+let ITENS_CANCEL = [];
 
 const MONTH_ORDER = {janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
 const MONTH_LABEL = {janeiro:'Janeiro',fevereiro:'Fevereiro',marco:'Março',abril:'Abril',maio:'Maio',junho:'Junho',julho:'Julho',agosto:'Agosto',setembro:'Setembro',outubro:'Outubro',novembro:'Novembro',dezembro:'Dezembro'};
@@ -1336,6 +1367,104 @@ function renderCancelamentos(){
 
   syncCancelMotivoMonthSeg();
   renderCancelMotivos();
+  renderItensCancelados();
+}
+
+/* =================================================================== */
+/* ========================= ITENS CANCELADOS ========================== */
+/* =================================================================== */
+let itensMes = null; // null = todos os meses que a planilha trouxer
+
+function syncItensMonthSeg(){
+  const meses = sortMonths([...new Set(ITENS_CANCEL.map(r=>r.mes))]);
+  if (itensMes && !meses.includes(itensMes)) itensMes = null;
+  const seg = document.getElementById('itensMonthSeg');
+  const options = [{id:'', label:'Todos'}, ...meses.map(m=>({id:m, label:MONTH_LABEL[m]}))];
+  seg.innerHTML = options.map(o=>`<button data-m="${o.id}"${(o.id||null)===itensMes?' class="on"':''}>${esc(o.label)}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); itensMes = b.dataset.m || null; renderItensCancelados();
+    });
+  });
+}
+
+// Mesmo filtro de unidade do resto da aba Cancelamentos (cancelUnidade / cancelLojaKeyFor).
+function itensFiltered(){
+  const lojaKey = cancelUnidade === NETWORK_ID ? null : cancelLojaKeyFor(cancelUnidade);
+  return ITENS_CANCEL.filter(r=>{
+    if (itensMes && r.mes !== itensMes) return false;
+    if (lojaKey && r.loja !== lojaKey) return false;
+    return true;
+  });
+}
+
+function renderItensCancelados(){
+  syncItensMonthSeg();
+  const regs = itensFiltered();
+
+  const meses = sortMonths([...new Set(ITENS_CANCEL.map(r=>r.mes))]);
+  document.getElementById('itensPeriod').textContent = itensMes ? MONTH_LABEL[itensMes]
+    : (meses.length ? MONTH_LABEL[meses[0]] + '–' + MONTH_LABEL[meses[meses.length-1]] : '');
+
+  const kpiRow = document.getElementById('itensKpiRow');
+  if (!regs.length) {
+    kpiRow.innerHTML = '<div class="kpi"><div class="lbl">Sem dados ainda</div><div class="val">—</div></div>';
+    document.getElementById('itensTopChart').innerHTML = '';
+    document.getElementById('itensTipoChart').innerHTML = '';
+    document.getElementById('itensTable').innerHTML = '';
+    return;
+  }
+
+  const totalQtde = regs.reduce((a,r)=>a+r.qtde,0);
+  const totalPedidos = regs.reduce((a,r)=>a+r.pedidos,0);
+  const totalValor = regs.reduce((a,r)=>a+r.valor,0);
+  const valorTotal = regs.filter(r=>r.tipo==='Total').reduce((a,r)=>a+r.valor,0);
+  const valorParcial = regs.filter(r=>r.tipo==='Parcial').reduce((a,r)=>a+r.valor,0);
+
+  kpiRow.innerHTML = `
+    <div class="kpi"><div class="lbl">Itens cancelados</div><div class="val">${fmt(totalQtde,'num')}</div></div>
+    <div class="kpi"><div class="lbl">Pedidos afetados</div><div class="val">${fmt(totalPedidos,'num')}</div></div>
+    <div class="kpi"><div class="lbl">Valor bruto perdido</div><div class="val">${fmt(totalValor,'money')}</div></div>
+    <div class="kpi"><div class="lbl">Itens únicos atingidos</div><div class="val">${fmt(new Set(regs.map(r=>r.item)).size,'num')}</div></div>
+  `;
+
+  // Agrega por item (uma linha por prato, somando todas as datas/motivos do período filtrado).
+  const byItem = {};
+  regs.forEach(r=>{
+    const it = byItem[r.item] = byItem[r.item] || { item:r.item, categoria:r.categoria, qtde:0, pedidos:0, valor:0, motivos:{} };
+    it.qtde += r.qtde; it.pedidos += r.pedidos; it.valor += r.valor;
+    it.motivos[r.motivo] = (it.motivos[r.motivo]||0) + r.pedidos;
+  });
+  const ranked = Object.values(byItem).sort((a,b)=>b.valor-a.valor);
+  const top = ranked.slice(0,6);
+
+  svgBarChart(document.getElementById('itensTopChart'), {
+    labels: top.map(it=>it.item.length>9 ? it.item.slice(0,8)+'…' : it.item),
+    values: top.map(it=>it.valor),
+    fmtKind: 'money'
+  });
+
+  svgBarChart(document.getElementById('itensTipoChart'), {
+    labels: ['Cancelamento total','Cancelamento parcial'],
+    values: [valorTotal, valorParcial],
+    colors: ['var(--bad)','var(--neutral)'],
+    fmtKind: 'money'
+  });
+
+  const rows = ranked.map(it=>{
+    const motivoTop = Object.entries(it.motivos).sort((a,b)=>b[1]-a[1])[0];
+    return `<tr>
+      <td><strong>${esc(it.item)}</strong></td>
+      <td>${esc(it.categoria)}</td>
+      <td>${fmt(it.qtde,'num')}</td>
+      <td>${fmt(it.pedidos,'num')}</td>
+      <td>${fmt(it.valor,'money')}</td>
+      <td>${esc(motivoTop ? motivoTop[0] : '—')}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('itensTable').innerHTML = `<thead><tr><th>Item</th><th>Categoria</th><th>Qtde itens</th><th>Pedidos</th><th>Valor perdido</th><th>Motivo principal</th></tr></thead>
+    <tbody>${rows}</tbody>`;
 }
 
 /* =================================================================== */
