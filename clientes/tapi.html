@@ -1186,7 +1186,7 @@ function renderMargem(){
  d.fixos.forEach(fx=>{html+=`<tr><td>(−) ${fx.n} <span class="badge b-off">fixo</span></td><td>${pct(fx.p)}</td><td>− ${brl(fx.v)}</td></tr>`;});
  html+=`<tr><td>(−) Alavancas — Budget de investimento real de ${nomeLoja} em ${d.label}</td><td>${pct(d.bud)}</td><td>− ${brl(d.fat*d.bud/100)}</td></tr>
   <tr><td><b>(=) Custo total</b></td><td><b>${pct(d.custoPct)}</b></td><td><b>− ${brl(d.fat*d.custoPct/100)}</b></td></tr>
-  <tr style="background:var(--verde-bg)"><td><b>(=) Margem de Contribuição iFood</b></td><td><b>${pct(d.margemPct)}</b></td><td><b>${brl(d.margemR)}</b></td></tr>`;
+  <tr style="background:var(--verde-bg)"><td><b>(=) Margem de lucro bruto - iFood</b></td><td><b>${pct(d.margemPct)}</b></td><td><b>${brl(d.margemR)}</b></td></tr>`;
  if(proj)html+=`<tr><td>Projeção mensal proporcional (${dias} dias)</td><td>${pct(d.margemPct)}</td><td>${brl(proj.mar)} <span class="badge b-warn">estimativa</span></td></tr>`;
  document.getElementById('mg-dre').innerHTML=html+"</tbody>";
  document.getElementById('mg-t1').textContent=`DRE Virtual — Delivery · ${nomeLoja} · ${d.label}`;
@@ -1201,7 +1201,9 @@ function renderMargem(){
  if(loja!=="__rede")ds.push({label:"Rede",data:serieRede,borderColor:"#8A7F78",borderDash:[6,4],tension:.3,borderWidth:2,pointRadius:3});
  chart('mg-chart',{type:'line',data:{labels:d.labels,datasets:ds},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},
-  tooltip:{callbacks:{label:c=>c.dataset.label+": Margem iFood "+pct(c.parsed.y)}}},scales:{y:{ticks:{callback:v=>v+"%"}}}}});
+  // eixo Y começa em 0: sem isso o Chart.js enquadra só a faixa onde os pontos caem (ex.: 29,6%-31,4%)
+  // e uma variação real de 1pp parece um despencar de 30 pra 10 no gráfico.
+  tooltip:{callbacks:{label:c=>c.dataset.label+": Margem iFood "+pct(c.parsed.y)}}},scales:{y:{min:0,ticks:{callback:v=>v+"%"}}}}});
  // Ranking de margem % por loja no período
  const arr=LOJAS.map(l=>{const x=dreCalc(l,tipo,t);return {l,v:x?x.margemPct:null};}).sort((a,b)=>(b.v??-99)-(a.v??-99));
  chart('mg-rank',{type:'bar',data:{labels:arr.map(a=>a.l),datasets:[{data:arr.map(a=>a.v),
@@ -1447,23 +1449,26 @@ function scanSheet(aoa){
  return out;
 }
 function applyBag(bag,mesesSet,target,tipo,win){
- const meses=[...mesesSet].sort((a,b)=>MESES_ORD[a]-MESES_ORD[b]);
- // aceita se houver cobertura mínima por loja OU se existir um bloco de rede real cobrindo todos os meses
- // (algumas planilhas atualizam o total da rede mais rápido que a quebra por loja — não pode travar nesse caso)
- const lojasOk=LOJAS_BASE.filter(l=>bag[l]&&meses.every(m=>bag[l][m]&&bag[l][m][0]!=null)); // só lojas com histórico entram na cobertura mínima
+ const todosMeses=[...mesesSet].sort((a,b)=>MESES_ORD[a]-MESES_ORD[b]);
  const minLojas=Math.max(2,Math.ceil(LOJAS_BASE.length*0.7)); // escala com o tamanho da rede (não trava redes pequenas como Spesso/Pato)
- const temRede=bag.__REDE&&meses.every(m=>bag.__REDE[m]);
- if(meses.length<2||(lojasOk.length<minLojas&&!temRede))return false;
+ // Cobertura é avaliada MÊS A MÊS, não pra janela inteira: antes, 1 loja com buraco num mês
+ // qualquer (mesmo antigo e isolado) travava a janela inteira e escondia meses novos já completos
+ // (ex.: Arpoador sem Julho travava Agosto–Novembro, que já estavam 100% preenchidos). Agora cada
+ // mês entra sozinho se tiver cobertura mínima por loja OU um total de rede real pra ele.
+ const coberturaPorMes=m=>LOJAS_BASE.filter(l=>bag[l]&&bag[l][m]&&bag[l][m][0]!=null).length;
+ const meses=todosMeses.filter(m=>coberturaPorMes(m)>=minLojas||(bag.__REDE&&bag.__REDE[m]));
+ if(meses.length<2)return false;
  target.labels=meses.map(m=>tipo==="P"?cap(m)+" (01–"+win.split("-")[1]+")":cap(m));
  LOJAS.forEach(l=>{
   const src=bag[l]||{};
   target.data[l]=Array.from({length:11},(_,mi)=>meses.map(m=>src[m]?src[m][mi]:null));
  });
+ const temRede=bag.__REDE&&meses.every(m=>bag.__REDE[m]);
  if(tipo==="P"){
   if(temRede)target.rede=Array.from({length:11},(_,mi)=>meses.map(m=>bag.__REDE[m][mi]));
   else target.rede=aggRede(target.data,meses.length);
  }
- target.redeOnly=lojasOk.length<minLojas; // aviso: esta janela não tem quebra por loja suficiente
+ target.redeOnly=meses.some(m=>coberturaPorMes(m)<minLojas); // aviso: algum mês desta janela não tem quebra por loja suficiente
  return true;
 }
 function setStatus(msg,cls){
