@@ -694,7 +694,7 @@ function svgLineChart(el, {labels, series, fmtKind}){
     const val = minV + (maxV-minV)*i/4;
     const y = yFor(val);
     grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#EDE6DC" stroke-width="1"/>`;
-    grid += `<text x="${padL-8}" y="${(y+4).toFixed(1)}" font-size="10" fill="#948b81" text-anchor="end" ${CHART_FONT}>${esc(fmt(val,fmtKind).replace('R$ ',''))}</text>`;
+    grid += `<text x="${padL-8}" y="${(y+4).toFixed(1)}" font-size="10" fill="var(--ink-soft)" text-anchor="end" ${CHART_FONT}>${esc(fmt(val,fmtKind).replace('R$ ',''))}</text>`;
   }
   labels.forEach((l,i)=>{ axisLabels += `<text x="${xFor(i).toFixed(1)}" y="${H-8}" font-size="11" text-anchor="middle" fill="#5B5652" ${CHART_FONT}>${esc(l)}</text>`; });
   let lines='', dots='', legend='';
@@ -720,7 +720,7 @@ function svgBarChart(el, {labels, values, colors, fmtKind}){
   for(let i=0;i<=4;i++){
     const y = padT+innerH-(innerH*i/4), val = maxV*i/4;
     grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#EDE6DC" stroke-width="1"/>`;
-    grid += `<text x="${padL-8}" y="${(y+4).toFixed(1)}" font-size="10" fill="#948b81" text-anchor="end" ${CHART_FONT}>${esc(fmt(val,fmtKind).replace('R$ ',''))}</text>`;
+    grid += `<text x="${padL-8}" y="${(y+4).toFixed(1)}" font-size="10" fill="var(--ink-soft)" text-anchor="end" ${CHART_FONT}>${esc(fmt(val,fmtKind).replace('R$ ',''))}</text>`;
   }
   values.forEach((v,i)=>{
     const x = padL+barGap*i+(barGap-barW)/2, h = innerH*(v/maxV), y = padT+innerH-h;
@@ -741,7 +741,7 @@ function svgGroupedBarChart(el, {labels, seriesA, seriesB, nameA, nameB, fmtKind
   for(let i=0;i<=4;i++){
     const y = padT+innerH-(innerH*i/4), val = maxV*i/4;
     grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#EDE6DC" stroke-width="1"/>`;
-    grid += `<text x="${padL-8}" y="${(y+4).toFixed(1)}" font-size="10" fill="#948b81" text-anchor="end" ${CHART_FONT}>${esc(fmt(val,fmtKind).replace('R$ ',''))}</text>`;
+    grid += `<text x="${padL-8}" y="${(y+4).toFixed(1)}" font-size="10" fill="var(--ink-soft)" text-anchor="end" ${CHART_FONT}>${esc(fmt(val,fmtKind).replace('R$ ',''))}</text>`;
   }
   labels.forEach((l,i)=>{
     const gx = padL+groupGap*i+groupGap/2;
