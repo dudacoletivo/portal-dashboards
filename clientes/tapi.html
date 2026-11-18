@@ -631,6 +631,17 @@ function evoTag(e,goodUp=1){
  return `<span class="${good?'up':'down'}">${arrow} ${s}</span>`; // a cor é que diz se é bom (verde) ou ruim (vermelho)
 }
 function chart(id,cfg){const el=document.getElementById(id);const ex=Chart.getChart(el);if(ex)ex.destroy();return new Chart(el,cfg);}
+// Margem do eixo Y proporcional à variação real dos dados (em vez de sempre começar em 0, que
+// achata demais uma métrica que varia pouco em termos absolutos, ou de deixar o Chart.js
+// enquadrar só a faixa exata dos pontos, que exagera uma queda pequena). A folga é ~1x a
+// variação (min) + ~30% por cima (max), nunca passando de 0 por baixo.
+function yAxisPad(...series){
+ const nums=series.flat(Infinity).filter(v=>v!=null&&isFinite(v));
+ if(!nums.length)return{};
+ const mn=Math.min(...nums),mx=Math.max(...nums);
+ const range=(mx-mn)||Math.abs(mx)*0.1||1;
+ return{min:Math.max(0,mn-range),max:mx+range*0.3};
+}
 Chart.defaults.font.family="'Manrope','Segoe UI',sans-serif";
 Chart.defaults.elements.line.cubicInterpolationMode='monotone';
 Chart.defaults.plugins.legend.onClick=()=>{}; // legenda é informativa; ocultar linha por clique confundia a leitura
@@ -778,9 +789,7 @@ function makeDash(cfg){
   chart(cfg.prefix+"-c2",{type:'line',data:{labels:cfg.labels,datasets:ds},
    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},
    tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(metric,c.parsed.y)}}},
-   // eixo Y sempre começa em 0 — todas essas métricas são não-negativas, e sem isso o Chart.js
-   // enquadra só a faixa onde os pontos caem e uma variação pequena parece um tombo/pico enorme.
-   scales:{y:{min:0,ticks:{callback:v=>FMT[metric]===1?"R$ "+v.toLocaleString('pt-BR'):FMT[metric]===2?v+"%":v.toLocaleString('pt-BR')}}}}});
+   scales:{y:{...yAxisPad(s[mi],cfg.rede[mi]),ticks:{callback:v=>FMT[metric]===1?"R$ "+v.toLocaleString('pt-BR'):FMT[metric]===2?v+"%":v.toLocaleString('pt-BR')}}}}});
   // Tabela
   if(loja==="__rede"){
    $("t3").textContent=`Lojas em ${cfg.labels[t]} — principais indicadores`;
@@ -1056,9 +1065,11 @@ function renderInvCons(){
      return c.dataset.label+": "+(c.parsed.y==null?"sem dado":num(c.parsed.y));
     }}}},
    scales:{
-    yGmv:{position:'left',min:0,ticks:{callback:v=>"R$ "+(v/1000).toLocaleString('pt-BR')+"k"},title:{display:true,text:'GMV (R$)'}},
+    // Pedidos é barra: começa em 0 por convenção (bem diferente de linha, onde achatar ou
+    // exagerar a escala muda a leitura da variação). GMV e Budget são linhas: folga proporcional.
+    yGmv:{position:'left',...yAxisPad(serie.map(s=>s.gmv)),ticks:{callback:v=>"R$ "+(v/1000).toLocaleString('pt-BR')+"k"},title:{display:true,text:'GMV (R$)'}},
     yPed:{position:'right',min:0,grid:{drawOnChartArea:false},ticks:{callback:v=>v.toLocaleString('pt-BR')},title:{display:true,text:'Pedidos'}},
-    yBud:{display:false,min:0}
+    yBud:{display:false,...yAxisPad(serie.map(s=>s.budget))}
    }}});
  const semPedidos=meses.filter(m=>invRedeMes(INV.meses.indexOf(m)).pedidos==null);
  document.getElementById('invConsNote').textContent=semPedidos.length
@@ -1117,7 +1128,7 @@ function renderInvEvo(){
  options:{responsive:true,maintainAspectRatio:false,
   plugins:{legend:{position:'bottom',labels:{filter:(item,data)=>data.datasets[item.datasetIndex].__hi}},
    tooltip:{filter:c=>c.dataset.__hi,callbacks:{label:c=>c.dataset.label+": "+brl(c.parsed.y)}}},
-  scales:{y:{min:0,ticks:{callback:v=>"R$ "+v.toLocaleString('pt-BR')}}}}});
+  scales:{y:{...yAxisPad(ds.map(d=>d.data)),ticks:{callback:v=>"R$ "+v.toLocaleString('pt-BR')}}}}});
 }
 
 
@@ -1203,9 +1214,7 @@ function renderMargem(){
  if(loja!=="__rede")ds.push({label:"Rede",data:serieRede,borderColor:"#8A7F78",borderDash:[6,4],tension:.3,borderWidth:2,pointRadius:3});
  chart('mg-chart',{type:'line',data:{labels:d.labels,datasets:ds},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},
-  // eixo Y começa em 0: sem isso o Chart.js enquadra só a faixa onde os pontos caem (ex.: 29,6%-31,4%)
-  // e uma variação real de 1pp parece um despencar de 30 pra 10 no gráfico.
-  tooltip:{callbacks:{label:c=>c.dataset.label+": Margem iFood "+pct(c.parsed.y)}}},scales:{y:{min:0,ticks:{callback:v=>v+"%"}}}}});
+  tooltip:{callbacks:{label:c=>c.dataset.label+": Margem iFood "+pct(c.parsed.y)}}},scales:{y:{...yAxisPad(serie,serieRede),ticks:{callback:v=>v+"%"}}}}});
  // Ranking de margem % por loja no período
  const arr=LOJAS.map(l=>{const x=dreCalc(l,tipo,t);return {l,v:x?x.margemPct:null};}).sort((a,b)=>(b.v??-99)-(a.v??-99));
  chart('mg-rank',{type:'bar',data:{labels:arr.map(a=>a.l),datasets:[{data:arr.map(a=>a.v),
@@ -1248,7 +1257,7 @@ function renderBP(){
  const isPct=m!=='pedidos';
  const ds=[...bpSel].map(l=>({label:l,data:BP.data[l][key],borderColor:CORES[LOJAS.indexOf(l)],backgroundColor:CORES[LOJAS.indexOf(l)],tension:.3,borderWidth:2.5,pointRadius:4}));
  chart('bpChart',{type:'line',data:{labels:BP.semanas.map(s=>"Sem. "+s),datasets:ds},
- options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{min:0,ticks:{callback:v=>isPct?v+"%":v}}}}});
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{...yAxisPad(ds.map(d=>d.data)),ticks:{callback:v=>isPct?v+"%":v}}}}});
 }
 
 
