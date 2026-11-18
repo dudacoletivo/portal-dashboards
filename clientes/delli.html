@@ -170,6 +170,7 @@
   <button class="tab-btn" data-tab="parcial">🔍 Comparativo Parcial</button>
   <button class="tab-btn" data-tab="acoes">🗂️ Ações</button>
   <button class="tab-btn" data-tab="cancel">🚫 Cancelamentos</button>
+  <button class="tab-btn" data-tab="itens">🍽️ Itens Cancelados</button>
 </nav>
 
 <!-- ================= DASH — MÊS FECHADO ================= -->
@@ -388,16 +389,29 @@
     </div>
     <div class="table-wrap"><table id="cancelMotivosTable"></table></div>
   </div>
+</section>
 
-  <div class="section-title">Itens mais cancelados <span class="tag" id="itensPeriod"></span></div>
+<!-- ================= ITENS CANCELADOS ================= -->
+<section class="panel" id="panel-itens">
   <div class="card">
-    <p class="sub" style="margin-top:0;">Cruza cada pedido cancelado (ou parcialmente cancelado) com o item específico envolvido — mostra quais pratos puxam mais cancelamento, quanto isso custou em R$ e o principal motivo. Usa a unidade selecionada acima.</p>
-    <div class="filtergroup" style="margin-bottom:0;">
-      <label class="title">Mês</label>
-      <div class="seg" id="itensMonthSeg"></div>
+    <h2 style="margin-top:0;font-size:16px;">Itens Cancelados</h2>
+    <p class="sub" style="margin-bottom:0;">Cruza cada pedido cancelado (ou parcialmente cancelado) com o item específico envolvido — mostra quais pratos puxam mais cancelamento, quanto isso custou em R$ e o principal motivo.</p>
+  </div>
+
+  <div class="card">
+    <div class="filterbar">
+      <div class="filtergroup">
+        <label class="title">Unidade</label>
+        <div class="seg" id="itensUnidadeSeg"></div>
+      </div>
+      <div class="filtergroup">
+        <label class="title">Mês</label>
+        <div class="seg" id="itensMonthSeg"></div>
+      </div>
     </div>
   </div>
 
+  <div class="section-title">Resumo do período <span class="tag" id="itensPeriod"></span></div>
   <div class="kpi-row" id="itensKpiRow"></div>
 
   <div class="grid2">
@@ -412,6 +426,7 @@
     </div>
   </div>
 
+  <div class="section-title">Todos os itens no período</div>
   <div class="card">
     <div class="table-wrap"><table id="itensTable"></table></div>
   </div>
@@ -1367,13 +1382,25 @@ function renderCancelamentos(){
 
   syncCancelMotivoMonthSeg();
   renderCancelMotivos();
-  renderItensCancelados();
 }
 
 /* =================================================================== */
 /* ========================= ITENS CANCELADOS ========================== */
 /* =================================================================== */
 let itensMes = null; // null = todos os meses que a planilha trouxer
+let itensUnidade = NETWORK_ID;
+
+function syncItensUnidadeSeg(){
+  const seg = document.getElementById('itensUnidadeSeg');
+  const options = [{id:NETWORK_ID, label:'Rede Toda'}, ...STORE_IDS.map(id=>({id, label:STORES[id].label}))];
+  seg.innerHTML = options.map(o=>`<button data-u="${o.id}"${o.id===itensUnidade?' class="on"':''}>${esc(o.label)}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); itensUnidade = b.dataset.u; renderItensCancelados();
+    });
+  });
+}
 
 function syncItensMonthSeg(){
   const meses = sortMonths([...new Set(ITENS_CANCEL.map(r=>r.mes))]);
@@ -1389,9 +1416,8 @@ function syncItensMonthSeg(){
   });
 }
 
-// Mesmo filtro de unidade do resto da aba Cancelamentos (cancelUnidade / cancelLojaKeyFor).
 function itensFiltered(){
-  const lojaKey = cancelUnidade === NETWORK_ID ? null : cancelLojaKeyFor(cancelUnidade);
+  const lojaKey = itensUnidade === NETWORK_ID ? null : cancelLojaKeyFor(itensUnidade);
   return ITENS_CANCEL.filter(r=>{
     if (itensMes && r.mes !== itensMes) return false;
     if (lojaKey && r.loja !== lojaKey) return false;
@@ -1400,6 +1426,7 @@ function itensFiltered(){
 }
 
 function renderItensCancelados(){
+  syncItensUnidadeSeg();
   syncItensMonthSeg();
   const regs = itensFiltered();
 
@@ -1486,6 +1513,7 @@ function renderAll(){
   renderParcial();
   bootAcoes();
   renderCancelamentos();
+  renderItensCancelados();
   const periodPill = document.getElementById('periodPill');
   const allMonths = sortMonths([...CLOSED_MONTHS, ...discoverPartialMonthsAny()]);
   if(allMonths.length) periodPill.textContent = allMonths.length>1 ? `${MONTH_LABEL[allMonths[0]]} → ${MONTH_LABEL[allMonths[allMonths.length-1]]} 2026` : MONTH_LABEL[allMonths[0]]+' 2026';
