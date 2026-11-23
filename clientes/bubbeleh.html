@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bubbeleh · Dashboard de Performance</title>
+<link rel="icon" type="image/png" href="../assets/logos/bubbeleh.png">
+<script src="../assets/portal-config.js"></script>
+<script src="../assets/auth-guard.js" data-client="bubbeleh"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue-deep:#00305e;
+    --blue:#00498e;
+    --blue-mid:#1f6cb8;
+    --blue-light:#5b93cc;
+    --blue-pale:#eaf1fa;
+    --blue-pale-2:#f5f8fc;
+    --bg:#f7f8fb;
+    --card:#ffffff;
+    --ink:#1b2430;
+    --ink-soft:#5b6675;
+    --line:#e3e8f0;
+    --good:#1c8a53;
+    --good-bg:#e7f6ee;
+    --bad:#c8433d;
+    --bad-bg:#fbeaea;
+    --neutral:#8a6d1a;
+    --neutral-bg:#faf3e0;
+    --radius-lg:20px;
+    --radius-md:14px;
+    --radius-sm:9px;
+    --shadow: 0 1px 2px rgba(16,38,73,.04), 0 6px 20px rgba(16,38,73,.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family: 'Manrope', 'Segoe UI', 'Trebuchet MS', Arial, sans-serif;
+    background:
+      radial-gradient(1100px 420px at 90% -10%, var(--blue-pale) 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .wrap{max-width:1280px;margin:0 auto;padding:28px 28px 80px;}
+
+  /* HEADER */
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:24px;flex-wrap:wrap;
+    padding:20px 26px;
+    background:linear-gradient(120deg, var(--blue-deep) 0%, var(--blue) 62%, var(--blue-mid) 100%);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    margin-bottom:14px;
+    position:relative;
+    overflow:hidden;
+  }
+  header::after{
+    content:"";position:absolute;right:-60px;top:-90px;width:260px;height:260px;
+    background:radial-gradient(circle, rgba(255,255,255,.10) 0%, transparent 70%);
+  }
+  .brand{display:flex;align-items:center;gap:18px;}
+  .brand img{height:54px;width:auto;filter:drop-shadow(0 2px 6px rgba(0,0,0,.15));
+    background:#fff;padding:8px 14px;border-radius:14px;}
+  .brand-text h1{color:#fff;font-size:21px;margin:0 0 2px;letter-spacing:.2px;font-weight:700;}
+  .brand-text p{color:rgba(255,255,255,.78);margin:0;font-size:12.5px;}
+  .header-meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:center;}
+  .pill{
+    background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);
+    padding:7px 14px;border-radius:999px;font-size:12px;font-weight:600;letter-spacing:.2px;
+  }
+  .header-meta select{
+    background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);
+    padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:700;cursor:pointer;
+  }
+  .header-meta select option{color:#111;}
+  .store-note{
+    width:100%;text-align:right;color:rgba(255,255,255,.68);font-size:11px;margin-top:-2px;
+  }
+
+  /* TABS */
+  nav.tabs{
+    display:flex;gap:8px;background:var(--card);padding:6px;border-radius:999px;
+    box-shadow: var(--shadow); margin-bottom:20px; width:fit-content;
+  }
+  nav.tabs button{
+    border:none;background:transparent;padding:10px 20px;border-radius:999px;
+    font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;
+    transition:.18s ease;
+  }
+  nav.tabs button.active{background:var(--blue);color:#fff;box-shadow:0 4px 14px rgba(0,73,142,.35);}
+  nav.tabs button:not(.active):hover{background:var(--blue-pale);color:var(--blue-deep);}
+
+  section.panel{display:none;}
+  section.panel.active{display:block; animation: fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  /* CARD */
+  .card{
+    background:var(--card); border-radius:var(--radius-md); box-shadow:var(--shadow);
+    padding:20px 22px; border:1px solid var(--line);
+  }
+  .card + .card{margin-top:18px;}
+  .card h2{margin:0 0 4px;font-size:15.5px;color:var(--blue-deep);font-weight:700;}
+  .card .sub{margin:0 0 16px;color:var(--ink-soft);font-size:12.5px;}
+
+  /* FILTER BAR */
+  .filterbar{
+    display:flex;flex-wrap:wrap;gap:22px;align-items:center;margin-bottom:16px;
+    padding-bottom:16px;border-bottom:1px solid var(--line);
+  }
+  .filterbar label{font-size:11.5px;font-weight:700;color:var(--ink-soft);margin-right:8px;text-transform:uppercase;letter-spacing:.3px;}
+  select{
+    border:1px solid var(--line);background:var(--blue-pale-2);color:var(--ink);
+    padding:9px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+    cursor:pointer;font-family:inherit;
+  }
+  .seg{display:inline-flex;background:var(--blue-pale-2);border:1px solid var(--line);border-radius:999px;padding:4px;}
+  .seg button{
+    border:none;background:transparent;padding:7px 16px;border-radius:999px;font-family:inherit;
+    font-size:12.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:.15s;
+  }
+  .seg button.active{background:var(--blue);color:#fff;}
+  .toggle-line{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);font-weight:600;margin-left:auto;cursor:pointer;user-select:none;}
+  .toggle-line input{accent-color:var(--blue);width:16px;height:16px;cursor:pointer;}
+
+  /* KPI GRID */
+  .kpi-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;
+  }
+  .kpi{
+    background:var(--card);border:1.5px solid var(--line);border-radius:var(--radius-md);
+    padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+    transition:.15s;
+  }
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--blue);}
+  .kpi.flag-good{border-color:#bfe6cf;}
+  .kpi.flag-good::before{background:var(--good);}
+  .kpi.flag-bad{border-color:#f3caca;}
+  .kpi.flag-bad::before{background:var(--bad);}
+  .badge-parcial,.badge-fechado{display:inline-flex;align-items:center;font-weight:700;font-size:12px;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+  .badge-parcial{color:#8a6d1a;background:#f7f0dc;}
+  .badge-fechado{color:#1c8a53;background:#dcf0e5;}
+  .kpi .label{font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.4px;}
+  .kpi .value{font-size:22px;font-weight:700;color:var(--blue-deep);margin:6px 0 4px;}
+  .kpi .delta{font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;}
+  .delta.up{color:var(--good);background:var(--good-bg);}
+  .delta.down{color:var(--bad);background:var(--bad-bg);}
+  .delta.na{color:#8a99ac;background:#eef1f5;}
+
+  /* CHART CONTAINER */
+  .chart-box{position:relative;height:300px;}
+  .chart-row{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;}
+  @media (max-width:900px){.chart-row{grid-template-columns:1fr;}}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;
+    color:var(--ink-soft);padding:10px 12px;border-bottom:2px solid var(--line);white-space:nowrap;
+  }
+  tbody td{padding:11px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody tr:hover{background:var(--blue-pale-2);}
+  td.metric{font-weight:700;color:var(--blue-deep);}
+  .evo{font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px;display:inline-block;}
+  .evo.up{color:var(--good);background:var(--good-bg);}
+  .evo.down{color:var(--bad);background:var(--bad-bg);}
+  .evo.na{color:#8a99ac;background:#eef1f5;}
+  .table-scroll{overflow-x:auto;}
+
+  /* BADGES / INSIGHT */
+  .insight{
+    display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-radius:var(--radius-md);
+    margin-bottom:18px;border:1px solid var(--line);
+  }
+  .insight .icon{font-size:26px;line-height:1;}
+  .insight.good{background:var(--good-bg);border-color:#bfe6cf;}
+  .insight.bad{background:var(--bad-bg);border-color:#f3caca;}
+  .insight.neutral{background:var(--neutral-bg);border-color:#f0e0ab;}
+  .insight h3{margin:0 0 4px;font-size:14.5px;}
+  .insight.good h3{color:var(--good);}
+  .insight.bad h3{color:var(--bad);}
+  .insight.neutral h3{color:var(--neutral);}
+  .insight p{margin:0 0 4px;font-size:12.5px;color:var(--ink-soft);line-height:1.45;}
+  .insight p:last-child{margin-bottom:0;}
+  .insight .tag{
+    display:inline-block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;
+    padding:2px 9px;border-radius:999px;margin-bottom:6px;
+  }
+  .insight.good .tag{background:var(--good);color:#fff;}
+  .insight.bad .tag{background:var(--bad);color:#fff;}
+  .insight.neutral .tag{background:var(--neutral);color:#fff;}
+
+  /* LEGEND */
+  .legend-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;}
+  .legend-item{
+    background:var(--blue-pale-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:12px 14px;
+  }
+  .legend-item b{color:var(--blue-deep);font-size:13px;}
+  .legend-item p{margin:4px 0 0;font-size:12px;color:var(--ink-soft);line-height:1.4;}
+
+  .lever-card{display:flex;flex-direction:column;gap:6px;}
+  .lever-card .lever-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .lever-status{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:3px 10px;border-radius:999px;white-space:nowrap;}
+  .lever-status.ativo{background:var(--good-bg);color:var(--good);}
+  .lever-status.desativado{background:#eef1f5;color:#8a99ac;}
+  .lever-card.is-off{opacity:.75;}
+
+  .motivo-row{margin-bottom:14px;}
+  .motivo-row .motivo-label{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+  .motivo-row .motivo-track{background:var(--blue-pale-2);border:1px solid var(--line);border-radius:999px;height:30px;position:relative;overflow:hidden;}
+  .motivo-row .motivo-fill{
+    height:100%;border-radius:999px;background:linear-gradient(90deg, var(--blue-mid), var(--blue));
+    display:flex;align-items:center;justify-content:flex-end;padding:0 12px;
+    color:#fff;font-size:12px;font-weight:800;min-width:34px;transition:width .3s ease;
+  }
+  .origem-legend-row{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px;}
+  .origem-legend-row .dot{width:12px;height:12px;border-radius:4px;flex:0 0 12px;}
+  .origem-legend-row b{color:var(--blue-deep);}
+  .origem-legend-row .pct{color:var(--ink-soft);margin-left:auto;}
+
+  footer{text-align:center;color:var(--ink-soft);font-size:11.5px;margin-top:26px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo-box" id="logoBox" style="width:54px;height:54px;border-radius:14px;overflow:hidden;flex-shrink:0;background:var(--blue-deep);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.15);"><img src="../assets/logos/bubbeleh.png" alt="Logo Bubbeleh" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.remove(); document.getElementById('logoBox').innerHTML='<span style=\'color:#fff;font-weight:800;font-size:22px;\'>B</span>';"></div>
+      <div class="brand-text">
+        <h1>Dashboard de Performance · iFood</h1>
+        <p>Bubbeleh — mês fechado, parcial e investimento em um só lugar</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <label style="color:rgba(255,255,255,.78);">Loja</label>
+      <select id="storeSelect">
+        <option value="Bubbeleh">Bubbeleh (loja)</option>
+        <option value="rede">Rede Bubbeleh (toda a rede)</option>
+      </select>
+      <span class="pill" id="lastUpdatePill">Mês fechado: Jul/2026 · Parcial: Jul/2026 (01–28)</span>
+      <div class="store-note" id="storeNote">A rede Bubbeleh tem 1 loja ativa hoje — valores de loja e rede coincidem.</div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="mesfechado">Mês Fechado</button>
+    <button class="tab-btn" data-tab="parcial">Parcial</button>
+    <button class="tab-btn" data-tab="invest">Investimento</button>
+    <button class="tab-btn" data-tab="cancelamentos">Cancelamentos</button>
+    <button class="tab-btn" data-tab="itens">Itens Cancelados</button>
+    <button class="tab-btn" data-tab="projecao">Projeção</button>
+    <button class="tab-btn" data-tab="legenda">Legenda</button>
+  </nav>
+
+  <!-- ================= MÊS FECHADO ================= -->
+  <section class="panel active" id="panel-mesfechado">
+    <div class="card">
+      <div class="filterbar">
+        <div>
+          <label>Mês</label>
+          <div class="seg" id="monthSeg"><!-- gerado via JS a partir dos dados ao vivo --></div>
+        </div>
+        <div>
+          <label>Indicador do gráfico</label>
+          <select id="indicatorSelectMF"></select>
+        </div>
+      </div>
+
+      <div class="kpi-grid" id="kpiGridMF"></div>
+      <div id="insightMF"></div>
+
+      <div class="chart-row">
+        <div>
+          <h2 id="evoTitleMF">Evolução do indicador</h2>
+          <p class="sub">Abril → Maio → Junho de 2026, com o mês selecionado em destaque</p>
+          <div class="chart-box"><canvas id="evoChartMF"></canvas></div>
+        </div>
+        <div>
+          <h2 id="compTitleMF">Mês selecionado vs. anterior</h2>
+          <p class="sub" id="compSubMF">—</p>
+          <div class="chart-box"><canvas id="compChartMF"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="filterbar" style="border:none;padding-bottom:0;margin-bottom:10px;">
+        <h2 style="margin:0;">Indicadores do mês</h2>
+        <label class="toggle-line"><input type="checkbox" id="fullHistoryMF"> Mostrar histórico completo (3 meses)</label>
+      </div>
+      <p class="sub">Mês selecionado vs. mês anterior, com leitura de evolução</p>
+      <div class="table-scroll"><table id="monthlyTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= PARCIAL ================= -->
+  <section class="panel" id="panel-parcial">
+    <div class="card">
+      <div class="filterbar">
+        <div>
+          <label>Mês</label>
+          <div class="seg" id="parcialMonthSeg"><!-- gerado via JS a partir dos dados ao vivo --></div>
+        </div>
+        <div>
+          <label>Janela de dias</label>
+          <div class="seg" id="periodSeg">
+            <button data-period="7" class="active">01–07</button>
+            <button data-period="14">01–14</button>
+            <button data-period="21">01–21</button>
+          </div>
+        </div>
+      </div>
+      <div id="parcialFallbackNotice"></div>
+
+      <div class="kpi-grid" id="kpiGridParcial"></div>
+      <div id="insightParcial"></div>
+    </div>
+
+    <div class="card">
+      <h2 id="parcialChartTitle">GMV e Vendas — comparativo parcial</h2>
+      <p class="sub" id="parcialChartSub">Mesmos dias corridos, mês selecionado em destaque</p>
+      <div class="chart-box"><canvas id="parcialChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="filterbar" style="border:none;padding-bottom:0;margin-bottom:10px;">
+        <h2 style="margin:0;">Indicadores do período</h2>
+        <label class="toggle-line"><input type="checkbox" id="fullHistoryParcial"> Mostrar histórico completo (Maio, Junho e Julho)</label>
+      </div>
+      <p class="sub">Mês selecionado vs. mês anterior, na mesma janela de dias</p>
+      <div class="table-scroll"><table id="parcialTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= INVESTIMENTO ================= -->
+  <section class="panel" id="panel-invest">
+    <div class="card">
+      <div id="insightInvest"></div>
+      <h2>Investimento por mês</h2>
+      <p class="sub">Indicadores de investimento nas colunas · Bubbeleh nas linhas, por mês fechado</p>
+      <div class="table-scroll"><table id="investTable"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="chart-row">
+        <div>
+          <h2>Budget de investimento vs. CPO</h2>
+          <p class="sub">% do faturamento investido e custo por pedido (R$)</p>
+          <div class="chart-box"><canvas id="investChart1"></canvas></div>
+        </div>
+        <div>
+          <h2>Investimento em R$ (Ads + Sub iFood)</h2>
+          <p class="sub">Quanto foi efetivamente gasto por mês</p>
+          <div class="chart-box"><canvas id="investChart2"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Eficiência do investimento (ROI)</h2>
+      <p class="sub">Retorno em R$ para cada R$ investido em promoções/ads</p>
+      <div class="chart-box"><canvas id="roiChart"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ================= CANCELAMENTOS ================= -->
+  <section class="panel" id="panel-cancelamentos">
+    <div class="card">
+      <div class="filterbar">
+        <div>
+          <label>Mês</label>
+          <div class="seg" id="cancelamentosMonthSeg"></div>
+        </div>
+      </div>
+      <div class="kpi-grid" id="kpiGridCancelamentos"></div>
+      <div id="insightCancelamentos"></div>
+
+      <div class="chart-row" style="margin-bottom:18px;">
+        <div>
+          <h2>Motivos de cancelamento <small style="font-weight:600;color:var(--ink-soft);">(acumulado Jan-Nov)</small></h2>
+          <p class="sub">Quantidade de pedidos por motivo, do mais para o menos frequente — a planilha não quebra isso por mês</p>
+          <div id="motivosList"></div>
+        </div>
+        <div>
+          <h2>Origem do cancelamento <small style="font-weight:600;color:var(--ink-soft);">(acumulado Jan-Nov)</small></h2>
+          <p class="sub">Quem originou o cancelamento (loja, cliente ou iFood) — acumulado, mesma observação acima</p>
+          <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+            <div class="chart-box" style="height:220px;width:220px;flex:0 0 220px;"><canvas id="origemChart"></canvas></div>
+            <div id="origemLegend" style="flex:1;min-width:160px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-scroll"><table id="cancelamentosTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= ITENS CANCELADOS ================= -->
+  <section class="panel" id="panel-itens">
+    <div class="card">
+      <h2 style="margin-top:0;">Itens Cancelados</h2>
+      <p class="sub">Cruza cada pedido cancelado (ou parcialmente cancelado) com o item específico envolvido — mostra quais pratos puxam mais cancelamento, quanto isso custou em R$ e o principal motivo.</p>
+      <div class="filterbar">
+        <div>
+          <label>Mês</label>
+          <div class="seg" id="itensMonthSeg"></div>
+        </div>
+      </div>
+      <div class="kpi-grid" id="kpiGridItens"></div>
+
+      <div class="chart-row" style="margin-bottom:18px;">
+        <div>
+          <h2>Top itens — valor perdido</h2>
+          <div class="chart-box"><canvas id="itensTopChart"></canvas></div>
+        </div>
+        <div>
+          <h2>Cancelamento total x parcial</h2>
+          <div class="chart-box"><canvas id="itensTipoChart"></canvas></div>
+          <p class="sub" style="margin-bottom:0;"><span class="badge-fechado" style="background:#fbeaea;color:#c8433d;">Total</span> = pedido inteiro cancelado por causa deste item. <span class="badge-parcial">Parcial</span> = item saiu faltando/errado, mas o pedido seguiu.</p>
+        </div>
+      </div>
+
+      <div class="table-scroll"><table id="itensTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= LEGENDA ================= -->
+  <!-- ================= PROJEÇÃO DE FECHAMENTO ================= -->
+  <section class="panel" id="panel-projecao">
+    <div class="card">
+      <h2>Projeção de fechamento</h2>
+      <p class="sub">A planilha não traz dado dia a dia — só os cortes parciais de 01–07, 01–14, 01–21 e 01–28. Esta projeção usa o corte mais recente disponível no mês corrente e assume que o ritmo observado até aqui se mantém pelo resto do mês. É uma estimativa proporcional, não uma garantia de fechamento.</p>
+      <p class="sub" id="projSub"></p>
+      <div class="kpi-grid" id="projKpiGrid"></div>
+    </div>
+    <div class="card">
+      <h2>Leitura automática</h2>
+      <div id="projInsights"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-legenda">
+    <div class="card">
+      <h2>Legenda dos indicadores</h2>
+      <p class="sub">Definições usadas em todo o dashboard</p>
+      <div class="legend-grid">
+        <div class="legend-item"><b>GMV</b><p>Faturamento bruto — valor total dos pedidos antes de descontos e taxas.</p></div>
+        <div class="legend-item"><b>FATURAMENTO LÍQUIDO</b><p>Valor que efetivamente entra para a loja após promoções, ads e taxas do iFood.</p></div>
+        <div class="legend-item"><b>TM</b><p>Ticket médio — valor médio gasto por pedido (GMV ÷ número de vendas).</p></div>
+        <div class="legend-item"><b>NOVOS</b><p>Clientes novos — quantidade de clientes que compraram pela primeira vez na loja no período.</p></div>
+        <div class="legend-item"><b>CPO</b><p>Custo por pedido — investimento total (promoções + ads) dividido pelo total de pedidos.</p></div>
+        <div class="legend-item"><b>VISITAS</b><p>Número de visitas registradas no cardápio da loja no iFood.</p></div>
+        <div class="legend-item"><b>CONVERSÃO</b><p>Conversão de cardápio — percentual de visitas que resultaram em pedido (vendas ÷ visitas).</p></div>
+        <div class="legend-item"><b>BUDGET DE INVESTIMENTO</b><p>Percentual do faturamento reinvestido em promoções e ads no período.</p></div>
+        <div class="legend-item"><b>PROMOÇÕES + ADS</b><p>Valor em R$ gasto com ferramentas de desconto e anúncios patrocinados no iFood.</p></div>
+        <div class="legend-item"><b>SUB IFOOD</b><p>Valor em R$ referente à assinatura/subsídio da plataforma iFood no período.</p></div>
+        <div class="legend-item"><b>ROI</b><p>Retorno sobre investimento — quanto a loja fatura em R$ para cada R$ investido em promoções/ads.</p></div>
+        <div class="legend-item"><b>ECONOMIZANDO E CRESCENDO</b><p>Quando o % de investimento cai enquanto pedidos e faturamento sobem — a loja vende mais gastando menos, o cenário mais saudável.</p></div>
+        <div class="legend-item"><b>LOJA vs. REDE</b><p>"Loja" mostra a unidade individual; "Rede" consolida todas as unidades da marca. Hoje a Bubbeleh tem 1 loja ativa, então os números coincidem — o filtro já está pronto para quando novas unidades entrarem.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Bubbeleh · Dashboard gerado a partir da planilha [Bubbeleh] Dashboard (iFood) · dados mensais até Junho/2026 e parciais de Julho/2026</footer>
+</div>
+
+<script>
+/* ============ DADOS (extraídos da planilha [Bubbeleh] Dashboard) ============ */
+
+const MONTH_LABELS = ["Abril","Maio","Junho","Julho"];
+
+// Estrutura por loja. Hoje só existe "Bubbeleh" (1 unidade). Quando novas lojas
+// entrarem, basta adicionar uma nova chave aqui — a Rede soma automaticamente.
+const STORE_DATA = {
+  Bubbeleh: {
+    label:"Bubbeleh",
+    monthly: {
+      vendas:        { label:"Vendas",                unit:"num",   values:[17,16,61,57] },
+      faturamento:   { label:"Faturamento líquido",   unit:"money", values:[1830.41,1676.75,3278.17,3507.70] },
+      tm:            { label:"Ticket médio (TM)",     unit:"money", values:[107.67,104.80,53.74,61.54] },
+      novos:         { label:"Novos clientes",        unit:"num",   values:[11,12,52,44] },
+      visitas:       { label:"Visitas",               unit:"num",   values:[541,569,788,915] },
+      conversao:     { label:"Conversão %",           unit:"pct",   values:[3.14,2.81,7.74,6.23] },
+      budget:        { label:"Budget de investimento",unit:"pct",   values:[0.71,8.59,27.75,31.51] },
+      ads:           { label:"Promoções + Ads",       unit:"money", values:[12.99,143.95,909.53,1105.30] },
+      subifood:      { label:"Sub iFood",             unit:"money", values:[36.62,89.69,531.13,417.95] },
+      cpo:           { label:"CPO",                   unit:"money", values:[0.76,9.00,14.91,19.39] },
+      roi:           { label:"ROI",                   unit:"money", values:[139.91,10.65,2.60,2.17] },
+    },
+    parcial: {
+      7:  {
+        vendas:   {label:"Vendas",unit:"num", mai:3, jun:27, jul:10},
+        gmv:      {label:"GMV",unit:"money", mai:251.70, jun:1064.99, jul:970.07},
+        tm:       {label:"Ticket médio (TM)",unit:"money", mai:83.90, jun:39.44, jul:97.01},
+        novos:    {label:"Novos clientes",unit:"num", mai:2, jun:27, jul:6},
+        visitas:  {label:"Visitas",unit:"num", mai:163, jun:253, jul:151},
+        conversao:{label:"Conversão %",unit:"pct", mai:1.84, jun:10.67, jul:6.62},
+        budget:   {label:"Budget de investimento",unit:"pct", mai:8.74, jun:30.68, jul:18.47},
+        ads:      {label:"Promoções + Ads",unit:"money", mai:21.99, jun:326.69, jul:179.15},
+        subifood: {label:"Sub iFood",unit:"money", mai:17.74, jun:315.37, jul:65.77},
+        cpo:      {label:"CPO",unit:"money", mai:7.33, jun:12.10, jul:17.92},
+        roi:      {label:"ROI",unit:"money", mai:10.45, jun:2.26, jul:4.41},
+      },
+      14: {
+        vendas:   {label:"Vendas",unit:"num", mai:5, jun:42, jul:22},
+        gmv:      {label:"GMV",unit:"money", mai:415.98, jun:2710.27, jul:2163.08},
+        tm:       {label:"Ticket médio (TM)",unit:"money", mai:83.20, jun:64.53, jul:98.32},
+        novos:    {label:"Novos clientes",unit:"num", mai:4, jun:38, jul:15},
+        visitas:  {label:"Visitas",unit:"num", mai:281, jun:430, jul:374},
+        conversao:{label:"Conversão %",unit:"pct", mai:1.78, jun:9.77, jul:5.88},
+        budget:   {label:"Budget de investimento",unit:"pct", mai:6.49, jun:21.60, jul:17.83},
+        ads:      {label:"Promoções + Ads",unit:"money", mai:26.99, jun:585.30, jul:385.63},
+        subifood: {label:"Sub iFood",unit:"money", mai:46.20, jun:403.13, jul:138.30},
+        cpo:      {label:"CPO",unit:"money", mai:5.40, jun:13.94, jul:17.53},
+        roi:      {label:"ROI",unit:"money", mai:14.41, jun:3.63, jul:4.61},
+      },
+      21: {
+        vendas:   {label:"Vendas",unit:"num", mai:11, jun:52, jul:30},
+        gmv:      {label:"GMV",unit:"money", mai:1189.36, jun:3383.96, jul:2670.20},
+        tm:       {label:"Ticket médio (TM)",unit:"money", mai:108.12, jun:65.08, jul:89.01},
+        novos:    {label:"Novos clientes",unit:"num", mai:10, jun:45, jul:21},
+        visitas:  {label:"Visitas",unit:"num", mai:392, jun:625, jul:552},
+        conversao:{label:"Conversão %",unit:"pct", mai:2.81, jun:8.32, jul:5.43},
+        budget:   {label:"Budget de investimento",unit:"pct", mai:7.98, jun:21.71, jul:9.08},
+        ads:      {label:"Promoções + Ads",unit:"money", mai:94.96, jun:734.57, jul:242.50},
+        subifood: {label:"Sub iFood",unit:"money", mai:81.70, jun:467.35, jul:191.46},
+        cpo:      {label:"CPO",unit:"money", mai:8.63, jun:14.13, jul:8.08},
+        roi:      {label:"ROI",unit:"money", mai:11.52, jun:3.61, jul:10.01},
+      },
+      28: {
+        vendas:   {label:"Vendas",unit:"num", mai:14, jun:61, jul:51},
+        gmv:      {label:"GMV",unit:"money", mai:1397.53, jun:4038.76, jul:4023.31},
+        tm:       {label:"Ticket médio (TM)",unit:"money", mai:99.82, jun:66.21, jul:78.89},
+        novos:    {label:"Novos clientes",unit:"num", mai:11, jun:45, jul:39},
+        visitas:  {label:"Visitas",unit:"num", mai:515, jun:769, jul:810},
+        conversao:{label:"Conversão %",unit:"pct", mai:2.72, jun:7.93, jul:6.30},
+        budget:   {label:"Budget de investimento",unit:"pct", mai:8.01, jun:22.24, jul:24.16},
+        ads:      {label:"Promoções + Ads",unit:"money", mai:111.96, jun:898.40, jul:972.22},
+        subifood: {label:"Sub iFood",unit:"money", mai:84.69, jun:515.13, jul:393.25},
+        cpo:      {label:"CPO",unit:"money", mai:8.00, jun:14.73, jul:19.06},
+        roi:      {label:"ROI",unit:"money", mai:11.48, jun:3.50, jul:3.14},
+      },
+    }
+  }
+};
+
+function getActiveMonthly(){
+  // "Rede" soma todas as lojas. Com 1 loja só, o resultado é o mesmo do "Bubbeleh".
+  return STORE_DATA.Bubbeleh.monthly;
+}
+function getActiveParcial(){
+  return STORE_DATA.Bubbeleh.parcial;
+}
+
+// indicadores em que "subir" é positivo
+const GROWTH_GOOD = new Set(["vendas","gmv","faturamento","novos","visitas","conversao","roi","tm"]);
+
+/* ============ HELPERS DE FORMATAÇÃO ============ */
+function fmt(value, unit){
+  if(value === null || value === undefined) return "—";
+  if(unit === "money") return "R$ " + value.toLocaleString("pt-BR",{minimumFractionDigits:2, maximumFractionDigits:2});
+  if(unit === "pct") return value.toLocaleString("pt-BR",{minimumFractionDigits:2, maximumFractionDigits:2}) + "%";
+  return value.toLocaleString("pt-BR");
+}
+function pctChange(a,b){
+  if(a === null || b === null || a === undefined || b === undefined || a === 0) return null;
+  return ((b-a)/Math.abs(a))*100;
+}
+function isGoodMove(key,pct){
+  const goodUp = GROWTH_GOOD.has(key);
+  return goodUp ? pct>=0 : pct<0;
+}
+function evoBadge(a,b,key){
+  const p = pctChange(a,b);
+  if(p === null) return '<span class="evo na">—</span>';
+  const cls = isGoodMove(key,p) ? "up" : "down";
+  const arrow = p>=0 ? "▲" : "▼";
+  return `<span class="evo ${cls}">${arrow} ${p>=0?"+":""}${p.toLocaleString("pt-BR",{maximumFractionDigits:1})}%</span>`;
+}
+
+const COLORS = {
+  blue:"#00498e", blueMid:"#1f6cb8", blueLight:"#7fb0e0",
+  good:"#1c8a53", bad:"#c8433d", amber:"#c99a2e"
+};
+
+/* ============ LEITURA AUTOMÁTICA (INSIGHTS) ============ */
+
+// Classifica a relação investimento x vendas x faturamento/GMV entre dois pontos.
+function classifyPattern(budgetPrev,budgetCur,vendasPrev,vendasCur,revPrev,revCur,revLabel){
+  const budgetTrend = budgetCur - budgetPrev;
+  const vendasUp = vendasCur > vendasPrev;
+  const revUp = revCur > revPrev;
+  const budgetDown = budgetTrend < 0;
+  const budgetPct = pctChange(budgetPrev,budgetCur);
+
+  let type,icon,title,text;
+  if(budgetDown && vendasUp && revUp){
+    type="good"; icon="💚"; title="Economizando e crescendo";
+    text=`Investimento caiu ${Math.abs(budgetPct).toFixed(1)}%, enquanto vendas e ${revLabel} subiram — a loja está vendendo mais gastando menos.`;
+  } else if(!budgetDown && vendasUp && revUp){
+    type="neutral"; icon="📈"; title="Crescimento com mais investimento";
+    text=`Vendas e ${revLabel} cresceram, mas o investimento também subiu ${budgetPct>=0?'+':''}${budgetPct.toFixed(1)}% — o avanço está sendo puxado por mais verba, não só por eficiência.`;
+  } else if(budgetDown && !vendasUp && !revUp){
+    type="bad"; icon="⚠️"; title="Queda geral no período";
+    text=`Investimento, vendas e ${revLabel} caíram juntos — não é economia, é retração de demanda.`;
+  } else if(!budgetDown && !vendasUp && !revUp){
+    type="bad"; icon="🔴"; title="Gastando mais e vendendo menos";
+    text=`Investimento subiu, mas vendas e ${revLabel} caíram — o pior cenário: menor eficiência de mídia no período.`;
+  } else {
+    type="neutral"; icon="🔁"; title="Cenário misto";
+    text=`Investimento, vendas e ${revLabel} não seguiram a mesma direção — vale olhar métrica a métrica na tabela abaixo.`;
+  }
+  return {type,icon,title,text};
+}
+
+// Maior destaque positivo e maior ponto de atenção entre uma lista de métricas.
+function buildDestaques(metrics){
+  const moves = metrics
+    .map(m=>({label:m.label, key:m.key, pct:pctChange(m.prev,m.cur)}))
+    .filter(m=>m.pct !== null && isFinite(m.pct));
+  const significant = moves.filter(m=>Math.abs(m.pct)>=3);
+  const good = significant.filter(m=>isGoodMove(m.key,m.pct)).sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
+  const bad = significant.filter(m=>!isGoodMove(m.key,m.pct)).sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
+  let text = "";
+  if(good[0]) text += `Maior destaque: <b>${good[0].label}</b> ${good[0].pct>=0?'subiu':'caiu'} ${Math.abs(good[0].pct).toFixed(1)}%. `;
+  if(bad[0]) text += `Ponto de atenção: <b>${bad[0].label}</b> ${bad[0].pct>=0?'subiu':'caiu'} ${Math.abs(bad[0].pct).toFixed(1)}%.`;
+  return text || "Sem variações relevantes (acima de 3%) neste recorte.";
+}
+
+function renderInsightBox(containerId, type, icon, title, lines){
+  const box = document.getElementById(containerId);
+  const tagLabel = {good:"Positivo", bad:"Atenção", neutral:"Misto"}[type];
+  box.innerHTML = `<div class="insight ${type}"><div class="icon">${icon}</div>
+    <div><span class="tag">${tagLabel}</span><h3>${title}</h3>${lines.map(l=>`<p>${l}</p>`).join("")}</div></div>`;
+}
+
+/* ============ TABS ============ */
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-"+btn.dataset.tab).classList.add("active");
+  });
+});
+
+/* ============ FILTRO DE LOJA (global) ============ */
+document.getElementById("storeSelect").addEventListener("change", (e)=>{
+  const note = document.getElementById("storeNote");
+  if(e.target.value === "rede"){
+    note.textContent = "Exibindo a Rede Bubbeleh consolidada — hoje soma apenas a loja Bubbeleh (1 unidade ativa).";
+  } else {
+    note.textContent = "Exibindo a loja Bubbeleh individualmente — hoje é a única unidade ativa da rede.";
+  }
+  renderAll();
+});
+
+/* ============ MÊS FECHADO ============ */
+let selectedMonthIdx = MONTH_LABELS.length - 1;
+let evoChartMF, compChartMF;
+
+// Reconstrói os botões de mês a partir de MONTH_LABELS (que o live-sync mantém em dia via
+// mutateArrayInPlace a cada "Atualizar" — ver assets/live/bubbeleh.js). Chamado a cada renderAll(),
+// então um mês novo aparece sozinho no filtro assim que a planilha trouxer ele.
+function syncMonthSeg(){
+  // syncMonthSeg só roda na carga inicial e logo após um refresh ao vivo (nunca em resposta a
+  // clique do usuário — os botões chamam renderMesFechado() direto) — então é sempre seguro (e
+  // desejável) pular pro mês mais recente quando dado novo chega.
+  selectedMonthIdx = MONTH_LABELS.length - 1;
+  const seg = document.getElementById('monthSeg');
+  seg.innerHTML = MONTH_LABELS.map((label,i)=>
+    `<button data-idx="${i}"${i===selectedMonthIdx?' class="active"':''}>${label}</button>`
+  ).join('');
+}
+
+function populateIndicatorSelectMF(){
+  const sel = document.getElementById("indicatorSelectMF");
+  if(sel.options.length) return;
+  const M = getActiveMonthly();
+  Object.keys(M).forEach(key=>{
+    const opt = document.createElement("option");
+    opt.value = key; opt.textContent = M[key].label;
+    sel.appendChild(opt);
+  });
+  sel.value = "vendas";
+  sel.addEventListener("change", renderMesFechado);
+}
+
+document.getElementById("monthSeg").addEventListener("click",(e)=>{
+  const btn = e.target.closest("button"); if(!btn) return;
+  document.querySelectorAll("#monthSeg button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  selectedMonthIdx = Number(btn.dataset.idx);
+  renderMesFechado();
+});
+document.getElementById("fullHistoryMF").addEventListener("change", renderMonthlyTable);
+
+const KPI_KEYS_MF = ["vendas","faturamento","tm","conversao","budget","roi"];
+
+function renderKPIsMF(){
+  const M = getActiveMonthly();
+  const grid = document.getElementById("kpiGridMF");
+  grid.innerHTML = "";
+  const prevIdx = selectedMonthIdx>0 ? selectedMonthIdx-1 : null;
+  KPI_KEYS_MF.forEach(key=>{
+    const m = M[key];
+    const cur = m.values[selectedMonthIdx];
+    const prev = prevIdx!==null ? m.values[prevIdx] : null;
+    const p = prevIdx!==null ? pctChange(prev,cur) : null;
+    let deltaHtml, flagClass="";
+    if(p===null){
+      deltaHtml = `<span class="delta na">sem mês anterior</span>`;
+    } else {
+      const good = isGoodMove(key,p);
+      deltaHtml = `<span class="delta ${good?'up':'down'}">${p>=0?'▲':'▼'} ${p>=0?'+':''}${p.toLocaleString('pt-BR',{maximumFractionDigits:1})}% vs ${MONTH_LABELS[prevIdx]}</span>`;
+      if(Math.abs(p)>=25) flagClass = good ? "flag-good" : "flag-bad";
+    }
+    grid.insertAdjacentHTML("beforeend", `
+      <div class="kpi ${flagClass}">
+        <div class="label">${m.label}</div>
+        <div class="value">${fmt(cur,m.unit)}</div>
+        ${deltaHtml}
+      </div>
+    `);
+  });
+}
+
+function renderInsightMF(){
+  const M = getActiveMonthly();
+  const prevIdx = selectedMonthIdx>0 ? selectedMonthIdx-1 : null;
+  if(prevIdx===null){
+    renderInsightBox("insightMF","neutral","ℹ️","Primeiro mês da série",
+      ["Abril é o primeiro mês disponível nesta planilha — ainda não há mês anterior para comparação automática."]);
+    return;
+  }
+  const pattern = classifyPattern(
+    M.budget.values[prevIdx], M.budget.values[selectedMonthIdx],
+    M.vendas.values[prevIdx], M.vendas.values[selectedMonthIdx],
+    M.faturamento.values[prevIdx], M.faturamento.values[selectedMonthIdx],
+    "o faturamento"
+  );
+  const metrics = Object.entries(M).map(([key,m])=>({label:m.label,key,prev:m.values[prevIdx],cur:m.values[selectedMonthIdx]}));
+  const destaque = buildDestaques(metrics);
+  renderInsightBox("insightMF", pattern.type, pattern.icon,
+    `${pattern.title} (${MONTH_LABELS[prevIdx]} → ${MONTH_LABELS[selectedMonthIdx]})`,
+    [pattern.text, destaque]);
+}
+
+function drawEvoChartMF(){
+  const M = getActiveMonthly();
+  const key = document.getElementById("indicatorSelectMF").value;
+  const m = M[key];
+  document.getElementById("evoTitleMF").textContent = "Evolução — " + m.label;
+  const ctx = document.getElementById("evoChartMF");
+  if(evoChartMF) evoChartMF.destroy();
+  const pointColors = MONTH_LABELS.map((_,i)=> i===selectedMonthIdx ? COLORS.amber : COLORS.blue);
+  const pointRadii = MONTH_LABELS.map((_,i)=> i===selectedMonthIdx ? 8 : 5);
+  evoChartMF = new Chart(ctx, {
+    type:"line",
+    data:{ labels:MONTH_LABELS, datasets:[{
+      label:m.label, data:m.values,
+      borderColor:COLORS.blue, backgroundColor:"rgba(0,73,142,.12)",
+      pointBackgroundColor:pointColors, pointRadius:pointRadii,
+      borderWidth:3, tension:.35, fill:true,
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:(c)=> fmt(c.parsed.y, m.unit)}} },
+      scales:{
+        y:{ ticks:{ callback:(v)=> m.unit==="money"? "R$ "+v : m.unit==="pct" ? v+"%" : v }, grid:{color:"#eef1f6"} },
+        x:{ grid:{display:false} }
+      }
+    }
+  });
+}
+
+function drawCompChartMF(){
+  const M = getActiveMonthly();
+  const key = document.getElementById("indicatorSelectMF").value;
+  const m = M[key];
+  const prevIdx = selectedMonthIdx>0 ? selectedMonthIdx-1 : null;
+  document.getElementById("compTitleMF").textContent = "Comparativo — " + m.label;
+  const ctx = document.getElementById("compChartMF");
+  if(compChartMF) compChartMF.destroy();
+  if(prevIdx===null){
+    document.getElementById("compSubMF").textContent = "Sem mês anterior disponível";
+    compChartMF = new Chart(ctx,{type:"bar",data:{labels:[MONTH_LABELS[0]],datasets:[{data:[m.values[0]],backgroundColor:COLORS.blueLight,borderRadius:8}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    return;
+  }
+  document.getElementById("compSubMF").textContent = `${MONTH_LABELS[prevIdx]} vs. ${MONTH_LABELS[selectedMonthIdx]}`;
+  const v0=m.values[prevIdx], v1=m.values[selectedMonthIdx];
+  const isGood = isGoodMove(key, pctChange(v0,v1) ?? 0);
+  compChartMF = new Chart(ctx, {
+    type:"bar",
+    data:{ labels:[MONTH_LABELS[prevIdx], MONTH_LABELS[selectedMonthIdx]],
+      datasets:[{ label:m.label, data:[v0,v1], backgroundColor:[COLORS.blueLight, isGood?COLORS.good:COLORS.bad], borderRadius:8, maxBarThickness:70 }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:(c)=>fmt(c.parsed.y,m.unit)}}},
+      scales:{
+        y:{ ticks:{ callback:(v)=> m.unit==="money"? "R$ "+v : m.unit==="pct"? v+"%": v }, grid:{color:"#eef1f6"} },
+        x:{ grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderMonthlyTable(){
+  const M = getActiveMonthly();
+  const full = document.getElementById("fullHistoryMF").checked;
+  const table = document.getElementById("monthlyTable");
+  const prevIdx = selectedMonthIdx>0 ? selectedMonthIdx-1 : null;
+
+  if(full){
+    let head = "<thead><tr><th>Indicador</th>" + MONTH_LABELS.map(l=>`<th>${l}</th>`).join("") + "<th>Evolução</th></tr></thead>";
+    let body = "<tbody>";
+    Object.entries(M).forEach(([key,m])=>{
+      body += `<tr><td class="metric">${m.label}</td>` + m.values.map(v=>`<td>${fmt(v,m.unit)}</td>`).join("") +
+        `<td>${evoBadge(m.values[1], m.values[2], key)}</td></tr>`;
+    });
+    body += "</tbody>";
+    table.innerHTML = head+body;
+    return;
+  }
+
+  const prevLabel = prevIdx!==null ? MONTH_LABELS[prevIdx] : "—";
+  let head = `<thead><tr><th>Indicador</th><th>${prevLabel}</th><th>${MONTH_LABELS[selectedMonthIdx]}</th><th>Evolução</th></tr></thead>`;
+  let body = "<tbody>";
+  Object.entries(M).forEach(([key,m])=>{
+    const prevVal = prevIdx!==null ? m.values[prevIdx] : null;
+    const curVal = m.values[selectedMonthIdx];
+    body += `<tr><td class="metric">${m.label}</td><td>${fmt(prevVal,m.unit)}</td><td>${fmt(curVal,m.unit)}</td>` +
+      `<td>${prevIdx!==null ? evoBadge(prevVal,curVal,key) : '<span class="evo na">—</span>'}</td></tr>`;
+  });
+  body += "</tbody>";
+  table.innerHTML = head+body;
+}
+
+function renderMesFechado(){
+  populateIndicatorSelectMF();
+  renderKPIsMF();
+  renderInsightMF();
+  drawEvoChartMF();
+  drawCompChartMF();
+  renderMonthlyTable();
+}
+
+/* ============ PARCIAL ============ */
+let currentPeriod = 7;
+let parcialChartInst;
+const KPI_KEYS_PARCIAL = ["vendas","gmv","tm","conversao","budget","roi"];
+// Meses do parcial nunca ficam fixos — P (getActiveParcial()[periodo]) é um dicionário por mês
+// (chave de 3 letras, ex.: "jul"), então descobrimos os meses reais direto dos dados a cada
+// render, em vez de manter um array hardcoded que precisaria de edição manual todo mês.
+const MONTH_ORDER_3 = {jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+const MONTH_LABEL_3 = {jan:'Janeiro',fev:'Fevereiro',mar:'Março',abr:'Abril',mai:'Maio',jun:'Junho',jul:'Julho',ago:'Agosto',set:'Setembro',out:'Outubro',nov:'Novembro',dez:'Dezembro'};
+function discoverParcialMonths(){
+  const set = new Set();
+  Object.values(getActiveParcial()).forEach(periodObj=>{
+    Object.values(periodObj).forEach(row=>{
+      Object.keys(row).forEach(k=>{ if(MONTH_ORDER_3[k]) set.add(k); });
+    });
+  });
+  return [...set].sort((a,b)=>MONTH_ORDER_3[a]-MONTH_ORDER_3[b]);
+}
+let PARCIAL_MONTH_KEYS = discoverParcialMonths();
+let PARCIAL_MONTH_LABELS = PARCIAL_MONTH_KEYS.map(k=>MONTH_LABEL_3[k]);
+let selectedParcialMonthIdx = Math.max(0, PARCIAL_MONTH_KEYS.length - 1); // mês mais recente por padrão
+
+function syncParcialMonthSeg(){
+  // Mesma lógica de syncMonthSeg(): só roda na carga inicial e após refresh ao vivo, então
+  // sempre pula pro mês mais recente disponível.
+  PARCIAL_MONTH_KEYS = discoverParcialMonths();
+  PARCIAL_MONTH_LABELS = PARCIAL_MONTH_KEYS.map(k=>MONTH_LABEL_3[k]);
+  selectedParcialMonthIdx = Math.max(0, PARCIAL_MONTH_KEYS.length - 1);
+  const seg = document.getElementById('parcialMonthSeg');
+  seg.innerHTML = PARCIAL_MONTH_LABELS.map((label,i)=>{
+    const isLast = i===PARCIAL_MONTH_LABELS.length-1;
+    return `<button data-idx="${i}"${i===selectedParcialMonthIdx?' class="active"':''}>${label}${isLast?' (atual)':''}</button>`;
+  }).join('');
+}
+
+/* ============ PROJEÇÃO DE FECHAMENTO ============ */
+// A planilha não tem dado dia a dia — só os 4 cortes parciais (7/14/21/28). A projeção assume
+// ritmo constante: valor do corte mais recente ÷ dias já passados × dias do mês.
+function parcialWindowAvailable(period, monthKey){
+  const P = getActiveParcial()[period];
+  return !!(P && P.vendas && P.vendas[monthKey]!=null && P.gmv && P.gmv[monthKey]!=null);
+}
+function latestParcialWindowWithData(monthKey){
+  const order = [28,21,14,7];
+  for(const p of order){ if(parcialWindowAvailable(p, monthKey)) return p; }
+  return null;
+}
+function daysInMonthOf3(monthKey){
+  const idx = MONTH_ORDER_3[monthKey];
+  if(!idx) return 30;
+  const year = new Date().getFullYear();
+  return new Date(year, idx, 0).getDate();
+}
+// A monthly (Mês Fechado) usa array posicional alinhado com MONTH_LABELS (nomes completos),
+// diferente do parcial (dicionário por chave de 3 letras) — casa os dois pelas 3 primeiras
+// letras do nome pra achar o mês fechado anterior ao mês parcial corrente.
+function prevClosedMonthGmv(monthKey){
+  let idx = MONTH_LABELS.length-1;
+  while(idx>=0 && MONTH_LABELS[idx].slice(0,3).toLowerCase()===monthKey) idx--;
+  if(idx<0) return null;
+  const M = getActiveMonthly();
+  return {label: MONTH_LABELS[idx], gmv: M.faturamento.values[idx]};
+}
+function computeProjection(){
+  const months = PARCIAL_MONTH_KEYS;
+  if(!months.length) return null;
+  const monthKey = months[months.length-1];
+  const period = latestParcialWindowWithData(monthKey);
+  if(period==null) return null;
+  const diasPassados = period;
+  const diasNoMes = daysInMonthOf3(monthKey);
+  const fator = diasNoMes/diasPassados;
+  const P = getActiveParcial()[period];
+  const vendas = P.vendas[monthKey]||0;
+  const gmv = P.gmv[monthKey]||0;
+  const projVendas = vendas*fator;
+  const projGmv = gmv*fator;
+  const prev = prevClosedMonthGmv(monthKey);
+  return {monthKey, period, diasPassados, diasNoMes, vendas, gmv, projVendas, projGmv, prev};
+}
+function renderProjecao(){
+  const p = computeProjection();
+  const grid = document.getElementById('projKpiGrid');
+  const sub = document.getElementById('projSub');
+  if(!p){
+    grid.innerHTML = '';
+    sub.textContent = '';
+    renderInsightBox('projInsights','neutral','ℹ️','Sem dado suficiente',['Ainda não há corte parcial do mês corrente na planilha para calcular a projeção.']);
+    return;
+  }
+  const mesLabel = MONTH_LABEL_3[p.monthKey];
+  sub.textContent = `Com base no corte de ${p.diasPassados} dias de ${mesLabel} (dados até 01–${String(p.diasPassados).padStart(2,'0')}) · faltam ${p.diasNoMes-p.diasPassados} dias para fechar o mês`;
+
+  grid.innerHTML = `
+    <div class="kpi"><div class="label">Pedidos até agora</div><div class="value">${fmt(p.vendas,'num')}</div></div>
+    <div class="kpi"><div class="label">GMV até agora</div><div class="value">${fmt(p.gmv,'money')}</div></div>
+    <div class="kpi"><div class="label">Pedidos projetados (mês fechado)</div><div class="value">${fmt(Math.round(p.projVendas),'num')}</div></div>
+    <div class="kpi"><div class="label">GMV projetado (mês fechado)</div><div class="value">${fmt(p.projGmv,'money')}</div></div>
+  `;
+
+  const lines = [`Mantendo o ritmo dos primeiros ${p.diasPassados} dias, a Bubbeleh fecharia ${mesLabel} com <b>${fmt(Math.round(p.projVendas),'num')} pedidos</b> e <b>${fmt(p.projGmv,'money')}</b> em GMV.`];
+  let type = 'neutral', icon = '📈', title = 'Projeção de fechamento';
+  if(p.prev && p.prev.gmv){
+    const delta = p.projGmv/p.prev.gmv - 1;
+    lines.push(`Isso seria ${delta>=0?'▲':'▼'} ${Math.abs(delta*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% em GMV frente ao fechado de ${p.prev.label} (${fmt(p.prev.gmv,'money')}).`);
+    type = delta>=0 ? 'good' : 'bad';
+    icon = delta>=0 ? '✅' : '⚠️';
+  }
+  lines.push('Projeção proporcional: sem dado diário na planilha, o cálculo assume que o ritmo observado até aqui se mantém pelo resto do mês — trate como estimativa, não como garantia.');
+  renderInsightBox('projInsights', type, icon, title, lines);
+}
+
+document.getElementById("periodSeg").addEventListener("click",(e)=>{
+  const btn = e.target.closest("button"); if(!btn) return;
+  document.querySelectorAll("#periodSeg button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  currentPeriod = Number(btn.dataset.period);
+  renderParcial();
+});
+document.getElementById("parcialMonthSeg").addEventListener("click",(e)=>{
+  const btn = e.target.closest("button"); if(!btn) return;
+  document.querySelectorAll("#parcialMonthSeg button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  selectedParcialMonthIdx = Number(btn.dataset.idx);
+  renderParcial();
+});
+document.getElementById("fullHistoryParcial").addEventListener("change", renderParcialTable);
+
+// Garante que o mês escolhido tem dado nessa janela (Julho ainda não fecha 28 dias).
+// Se não tiver, cai para o mês anterior disponível e avisa na tela.
+function resolveParcialMonthIdx(){
+  const P = getActiveParcial()[currentPeriod];
+  let idx = selectedParcialMonthIdx;
+  let fellBack = false;
+  while(idx>0 && P.vendas[PARCIAL_MONTH_KEYS[idx]] === null){
+    idx -= 1; fellBack = true;
+  }
+  const notice = document.getElementById("parcialFallbackNotice");
+  if(fellBack){
+    notice.innerHTML = `<p style="margin:0 0 14px;font-size:12px;color:var(--neutral);background:var(--neutral-bg);border:1px solid #f0e0ab;padding:8px 12px;border-radius:9px;">
+      ⚠️ ${PARCIAL_MONTH_LABELS[selectedParcialMonthIdx]} ainda não completou ${currentPeriod} dias corridos neste recorte — exibindo ${PARCIAL_MONTH_LABELS[idx]} em vez disso.</p>`;
+  } else {
+    notice.innerHTML = "";
+  }
+  return idx;
+}
+
+function renderKPIsParcial(){
+  const P = getActiveParcial()[currentPeriod];
+  const grid = document.getElementById("kpiGridParcial");
+  grid.innerHTML = "";
+  const curIdx = resolveParcialMonthIdx();
+  const prevIdx = curIdx>0 ? curIdx-1 : null;
+  const curKey = PARCIAL_MONTH_KEYS[curIdx];
+  const prevKey = prevIdx!==null ? PARCIAL_MONTH_KEYS[prevIdx] : null;
+
+  KPI_KEYS_PARCIAL.forEach(key=>{
+    const row = P[key];
+    const cur = row[curKey];
+    const prev = prevKey!==null ? row[prevKey] : null;
+    const p = prevKey!==null ? pctChange(prev,cur) : null;
+    let deltaHtml, flagClass="";
+    if(p===null){
+      deltaHtml = prevKey===null
+        ? `<span class="delta na">sem mês anterior</span>`
+        : `<span class="delta na">—</span>`;
+    } else {
+      const good = isGoodMove(key,p);
+      deltaHtml = `<span class="delta ${good?'up':'down'}">${p>=0?'▲':'▼'} ${p>=0?'+':''}${p.toLocaleString('pt-BR',{maximumFractionDigits:1})}% vs ${PARCIAL_MONTH_LABELS[prevIdx]}</span>`;
+      if(Math.abs(p)>=25) flagClass = good ? "flag-good" : "flag-bad";
+    }
+    grid.insertAdjacentHTML("beforeend", `
+      <div class="kpi ${flagClass}">
+        <div class="label">${row.label}</div>
+        <div class="value">${fmt(cur,row.unit)}</div>
+        ${deltaHtml}
+      </div>
+    `);
+  });
+}
+
+function renderInsightParcial(){
+  const P = getActiveParcial()[currentPeriod];
+  const curIdx = resolveParcialMonthIdx();
+  const prevIdx = curIdx>0 ? curIdx-1 : null;
+
+  if(prevIdx===null){
+    renderInsightBox("insightParcial","neutral","ℹ️","Primeiro mês da série parcial",
+      [`Maio é o primeiro mês disponível no comparativo parcial (dias 01–${currentPeriod}) — ainda não há mês anterior para comparação automática.`]);
+    return;
+  }
+  const curKey = PARCIAL_MONTH_KEYS[curIdx], prevKey = PARCIAL_MONTH_KEYS[prevIdx];
+  const pattern = classifyPattern(
+    P.budget[prevKey], P.budget[curKey], P.vendas[prevKey], P.vendas[curKey], P.gmv[prevKey], P.gmv[curKey], "o GMV"
+  );
+  const metrics = Object.entries(P).map(([key,row])=>({label:row.label,key,prev:row[prevKey],cur:row[curKey]}));
+  const destaque = buildDestaques(metrics);
+  renderInsightBox("insightParcial", pattern.type, pattern.icon,
+    `${pattern.title} (${PARCIAL_MONTH_LABELS[prevIdx]} → ${PARCIAL_MONTH_LABELS[curIdx]}, dias 01–${currentPeriod})`,
+    [pattern.text, destaque]);
+}
+
+function renderParcialChart(){
+  const P = getActiveParcial()[currentPeriod];
+  const curIdx = resolveParcialMonthIdx();
+  // Mostra até os últimos 3 meses com dado neste corte (a planilha da Bubbeleh cobre Out/25-
+  // Nov/26, então os meses em destaque mudam com o tempo — nada fica fixo em "Maio/Junho/Julho").
+  const windowKeys = PARCIAL_MONTH_KEYS.slice(-3);
+  const windowStart = PARCIAL_MONTH_KEYS.length - windowKeys.length;
+  const labels = windowKeys.map(k=>MONTH_LABEL_3[k]);
+  const vendasData = windowKeys.map(k=>P.vendas[k]);
+  const gmvData = windowKeys.map(k=>P.gmv[k]);
+  const gmvColors = windowKeys.map((_,i)=> (windowStart+i)===curIdx ? "rgba(0,73,142,.9)" : "rgba(0,73,142,.35)");
+  const vendasPointRadii = windowKeys.map((_,i)=> (windowStart+i)===curIdx ? 8 : 5);
+
+  document.getElementById("parcialChartTitle").textContent = `GMV e Vendas — dias 01–${currentPeriod}`;
+  document.getElementById("parcialChartSub").textContent = `${PARCIAL_MONTH_LABELS[curIdx]} em destaque`;
+
+  const ctx = document.getElementById("parcialChart");
+  if(parcialChartInst) parcialChartInst.destroy();
+  parcialChartInst = new Chart(ctx,{
+    data:{ labels, datasets:[
+      {type:"bar", label:"GMV (R$)", data:gmvData, backgroundColor:gmvColors, yAxisID:"y2", borderRadius:8, maxBarThickness:60},
+      {type:"line", label:"Vendas (pedidos)", data:vendasData, borderColor:COLORS.amber, backgroundColor:COLORS.amber, yAxisID:"y1", borderWidth:3, pointRadius:vendasPointRadii, tension:.3},
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{
+        y1:{ position:"left", ticks:{callback:v=>v}, grid:{display:false} },
+        y2:{ position:"right", ticks:{callback:v=>"R$ "+v}, grid:{color:"#eef1f6"} },
+        x:{ grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderParcialTable(){
+  const P = getActiveParcial()[currentPeriod];
+  const full = document.getElementById("fullHistoryParcial").checked;
+  const table = document.getElementById("parcialTable");
+  const curIdx = resolveParcialMonthIdx();
+  const prevIdx = curIdx>0 ? curIdx-1 : null;
+
+  if(full){
+    const keys = PARCIAL_MONTH_KEYS.slice(-3);
+    let head = `<thead><tr><th>Indicador</th>` + keys.map(k=>`<th>${MONTH_LABEL_3[k]} (01–${currentPeriod})</th>`).join('') + `<th>Evolução</th></tr></thead>`;
+    let body = "<tbody>";
+    Object.entries(P).forEach(([key,row])=>{
+      const a = prevIdx!==null ? row[PARCIAL_MONTH_KEYS[prevIdx]] : null;
+      const b = row[PARCIAL_MONTH_KEYS[curIdx]];
+      body += `<tr><td class="metric">${row.label}</td>` + keys.map(k=>`<td>${fmt(row[k],row.unit)}</td>`).join('') +
+        `<td>${prevIdx!==null ? evoBadge(a,b,key) : '<span class="evo na">—</span>'}</td></tr>`;
+    });
+    body += "</tbody>";
+    table.innerHTML = head+body;
+    return;
+  }
+
+  const prevLabel = prevIdx!==null ? `${PARCIAL_MONTH_LABELS[prevIdx]} (01–${currentPeriod})` : "—";
+  let head = `<thead><tr><th>Indicador</th><th>${prevLabel}</th><th>${PARCIAL_MONTH_LABELS[curIdx]} (01–${currentPeriod})</th><th>Evolução</th></tr></thead>`;
+  let body = "<tbody>";
+  Object.entries(P).forEach(([key,row])=>{
+    const prevVal = prevIdx!==null ? row[PARCIAL_MONTH_KEYS[prevIdx]] : null;
+    const curVal = row[PARCIAL_MONTH_KEYS[curIdx]];
+    body += `<tr><td class="metric">${row.label}</td><td>${fmt(prevVal,row.unit)}</td><td>${fmt(curVal,row.unit)}</td>` +
+      `<td>${prevIdx!==null ? evoBadge(prevVal,curVal,key) : '<span class="evo na">—</span>'}</td></tr>`;
+  });
+  body += "</tbody>";
+  table.innerHTML = head+body;
+}
+
+function renderParcial(){
+  renderKPIsParcial();
+  renderInsightParcial();
+  renderParcialChart();
+  renderParcialTable();
+}
+
+/* ============ INVESTIMENTO ============ */
+function renderInsightInvest(){
+  const M = getActiveMonthly();
+  const cpoPrev = M.cpo.values[1], cpoCur = M.cpo.values[2];
+  const roiPrev = M.roi.values[1], roiCur = M.roi.values[2];
+  const cpoUp = cpoCur > cpoPrev, roiUp = roiCur > roiPrev;
+  const cpoPct = pctChange(cpoPrev,cpoCur), roiPct = pctChange(roiPrev,roiCur);
+  let type,icon,title,text;
+  if(!cpoUp && roiUp){
+    type="good"; icon="💚"; title="Eficiência de investimento subindo";
+    text=`CPO caiu ${Math.abs(cpoPct).toFixed(1)}% e o ROI melhorou ${roiPct.toFixed(1)}% de Maio para Junho — cada real investido está rendendo mais.`;
+  } else if(cpoUp && !roiUp){
+    type="bad"; icon="🔴"; title="Eficiência de investimento caindo";
+    text=`CPO subiu ${cpoPct.toFixed(1)}% e o ROI caiu ${Math.abs(roiPct).toFixed(1)}% de Maio para Junho — o investimento está rendendo menos por real gasto.`;
+  } else {
+    type="neutral"; icon="🔁"; title="Eficiência mista";
+    text=`CPO e ROI não seguiram a mesma direção de Maio para Junho — vale olhar a tabela e os gráficos abaixo com mais detalhe.`;
+  }
+  renderInsightBox("insightInvest", type, icon, title, [text]);
+}
+
+function renderInvestTable(){
+  const M = getActiveMonthly();
+  const table = document.getElementById("investTable");
+  const cols = [
+    {key:"budget"},{key:"ads"},{key:"subifood"},{key:"cpo"},{key:"roi"},{key:"vendas"},{key:"faturamento"},
+  ];
+  let head = "<thead><tr><th>Mês</th>" + cols.map(c=>`<th>${M[c.key].label}</th>`).join("") + "</tr></thead>";
+  let body = "<tbody>";
+  MONTH_LABELS.forEach((mo,i)=>{
+    body += `<tr><td class="metric">${mo} · Bubbeleh</td>` +
+      cols.map(c=>`<td>${fmt(M[c.key].values[i], M[c.key].unit)}</td>`).join("") + `</tr>`;
+  });
+  body += "</tbody>";
+  table.innerHTML = head+body;
+}
+
+let investChart1, investChart2, roiChartInst;
+function renderInvestCharts(){
+  const M = getActiveMonthly();
+  const ctx1 = document.getElementById("investChart1");
+  if(investChart1) investChart1.destroy();
+  investChart1 = new Chart(ctx1,{
+    type:"bar",
+    data:{ labels:MONTH_LABELS, datasets:[
+      {type:"line", label:"Budget de investimento (%)", data:M.budget.values, borderColor:COLORS.amber, backgroundColor:COLORS.amber, yAxisID:"y1", tension:.3, borderWidth:3, pointRadius:5},
+      {type:"bar", label:"CPO (R$)", data:M.cpo.values, backgroundColor:"rgba(0,73,142,.55)", yAxisID:"y2", borderRadius:6, maxBarThickness:50},
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ y1:{position:"left",ticks:{callback:v=>v+"%"},grid:{color:"#eef1f6"}}, y2:{position:"right",ticks:{callback:v=>"R$ "+v},grid:{display:false}}, x:{grid:{display:false}} }
+    }
+  });
+
+  const ctx2 = document.getElementById("investChart2");
+  if(investChart2) investChart2.destroy();
+  investChart2 = new Chart(ctx2,{
+    type:"bar",
+    data:{ labels:MONTH_LABELS, datasets:[
+      {label:"Promoções + Ads", data:M.ads.values, backgroundColor:COLORS.blue, borderRadius:6, maxBarThickness:40},
+      {label:"Sub iFood", data:M.subifood.values, backgroundColor:COLORS.blueLight, borderRadius:6, maxBarThickness:40},
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ y:{ticks:{callback:v=>"R$ "+v},grid:{color:"#eef1f6"}}, x:{grid:{display:false}} } }
+  });
+
+  const ctx3 = document.getElementById("roiChart");
+  if(roiChartInst) roiChartInst.destroy();
+  roiChartInst = new Chart(ctx3,{
+    type:"line",
+    data:{ labels:MONTH_LABELS, datasets:[{ label:"ROI (R$ retornado por R$ investido)", data:M.roi.values,
+      borderColor:COLORS.good, backgroundColor:"rgba(28,138,83,.14)", borderWidth:3, pointRadius:5, tension:.3, fill:true }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ y:{ticks:{callback:v=>"R$ "+v},grid:{color:"#eef1f6"}}, x:{grid:{display:false}} } }
+  });
+}
+
+function renderInvestimento(){
+  renderInsightInvest();
+  renderInvestTable();
+  renderInvestCharts();
+}
+
+/* ============ CANCELAMENTOS ============
+   Estrutura híbrida só da Bubbeleh (ver parseCancelamentos em assets/live/bubbeleh.js): uma
+   tabela "HISTÓRICO MENSAL" com 1 linha por mês pros primeiros 11 meses (Out/25-Ago/26, sem
+   motivos por pedido) e, pros 3 meses mais recentes, blocos no formato Delli com detalhe +
+   "MOTIVOS — <mês>". Motivo/Origem "acumulados" são somados aqui a partir de todos os meses que
+   trazem essa informação detalhada (a planilha não traz isso pronto). */
+const CANCEL_RESUMO = { origem: [], motivo: [] };
+const CANCEL_MESES = [];
+
+let selectedCancelamentosMonth = null;
+let origemChartInst;
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+// Só é chamada de renderAll() (carga inicial + refresh ao vivo) — nunca de dentro de
+// renderCancelamentos(), pra clicar num mês não reconstruir os botões e perder a seleção.
+function populateCancelamentosMonthSeg(){
+  const seg = document.getElementById("cancelamentosMonthSeg");
+  seg.innerHTML = "";
+  if(!CANCEL_MESES.length) return;
+  selectedCancelamentosMonth = CANCEL_MESES[CANCEL_MESES.length-1].key;
+  CANCEL_MESES.forEach(mes=>{
+    const btn = document.createElement("button");
+    btn.textContent = mes.label + (mes.parcial ? " (parcial)" : "");
+    btn.dataset.month = mes.key;
+    if(mes.key === selectedCancelamentosMonth) btn.classList.add("active");
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll("#cancelamentosMonthSeg button").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      selectedCancelamentosMonth = mes.key;
+      renderCancelamentos();
+    });
+    seg.appendChild(btn);
+  });
+}
+
+function renderCancelamentos(){
+  const mes = CANCEL_MESES.find(m=>m.key===selectedCancelamentosMonth);
+  const grid = document.getElementById("kpiGridCancelamentos");
+  const table = document.getElementById("cancelamentosTable");
+  grid.innerHTML = ""; table.innerHTML = "";
+
+  if(!mes){
+    renderInsightBox("insightCancelamentos","neutral","ℹ️","Sem cancelamentos",["Nenhum dado de cancelamento disponível."]);
+    return;
+  }
+
+  grid.insertAdjacentHTML("beforeend", `
+    <div class="kpi"><div class="label">Pedidos cancelados</div><div class="value">${fmt(mes.cancelamentos,'num')}</div></div>
+    <div class="kpi"><div class="label">Taxa de cancelamento</div><div class="value">${fmt(mes.taxa,'pct')}</div></div>
+    <div class="kpi"><div class="label">Reembolsado</div><div class="value">${fmt(mes.devolvido,'money')}</div></div>
+  `);
+
+  const type = (mes.taxa||0) >= 10 ? "bad" : "neutral";
+  renderInsightBox("insightCancelamentos", type, "📦", `${fmt(mes.cancelamentos,'num')} pedidos cancelados em ${mes.label}${mes.parcial?' (parcial)':''}`,
+    [`Origem principal: <b>${mes.origemPrincipal||'—'}</b>. Estágio principal: <b>${mes.estagioPrincipal||'—'}</b>. Motivos: ${mes.motivos||'—'}.`]);
+
+  // Motivos/Origem são acumulados Jan-Nov (a planilha nova não quebra isso por mês).
+  const motivosOrdenados = CANCEL_RESUMO.motivo.slice().sort((a,b)=>(b.qtde||0)-(a.qtde||0));
+  const maxMotivo = motivosOrdenados.length ? (motivosOrdenados[0].qtde||1) : 1;
+  const motivosList = document.getElementById("motivosList");
+  motivosList.innerHTML = motivosOrdenados.map(m=>`
+    <div class="motivo-row">
+      <div class="motivo-label">${m.label}</div>
+      <div class="motivo-track">
+        <div class="motivo-fill" style="width:${Math.max(10, (m.qtde/maxMotivo)*100)}%">${m.qtde}</div>
+      </div>
+    </div>
+  `).join("") || '<p class="sub">Sem motivos registrados.</p>';
+
+  const origemOrdenada = CANCEL_RESUMO.origem.slice().sort((a,b)=>(b.qtde||0)-(a.qtde||0));
+  const origemTotal = origemOrdenada.reduce((s,o)=>s+(o.qtde||0),0) || 1;
+  const origemColors = [COLORS.blue, COLORS.amber, "#1b2430", COLORS.blueLight];
+  const origemLegend = document.getElementById("origemLegend");
+  origemLegend.innerHTML = origemOrdenada.map((o,i)=>`
+    <div class="origem-legend-row">
+      <span class="dot" style="background:${origemColors[i%origemColors.length]}"></span>
+      <span>${o.label}</span> — <b>${o.qtde}</b>
+      <span class="pct">(${Math.round(o.qtde/origemTotal*100)}%)</span>
+    </div>
+  `).join("");
+
+  const ctxOrigem = document.getElementById("origemChart");
+  if(origemChartInst) origemChartInst.destroy();
+  origemChartInst = new Chart(ctxOrigem, {
+    type:"pie",
+    data:{
+      labels: origemOrdenada.map(o=>o.label),
+      datasets:[{ data: origemOrdenada.map(o=>o.qtde), backgroundColor: origemColors, borderWidth:2, borderColor:"#fff" }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} } }
+  });
+
+  const head = `<thead><tr><th>Mês</th><th>Status</th><th>Cancelamentos</th><th>Taxa</th>
+    <th>Reembolsado</th><th>Origem principal</th><th>Estágio principal</th><th>Motivos</th></tr></thead>`;
+  let body = "<tbody>";
+  CANCEL_MESES.forEach(m=>{
+    body += `<tr>
+      <td class="metric">${m.label}</td>
+      <td>${m.parcial ? '<span class="badge-parcial">Parcial</span>' : '<span class="badge-fechado">Fechado</span>'}</td>
+      <td>${fmt(m.cancelamentos,'num')}</td><td>${fmt(m.taxa,'pct')}</td>
+      <td>${fmt(m.devolvido,'money')}</td>
+      <td>${m.origemPrincipal||'—'}</td><td>${m.estagioPrincipal||'—'}</td><td>${m.motivos||'—'}</td>
+    </tr>`;
+  });
+  body += "</tbody>";
+  table.innerHTML = head+body;
+}
+
+/* ============ ITENS CANCELADOS ============
+   Vem da aba "Itens Cancelados" (mesmo formato usado pelo Delli e Garami/Kimura/Ipoke): um
+   registro por item afetado num pedido cancelado (Tipo="Total") ou parcialmente cancelado
+   (Tipo="Parcial"). A Bubbeleh tem 1 loja só, então não precisa de filtro de unidade, só de mês —
+   a aba acumula histórico de vários meses, o filtro acontece aqui, não no parser. */
+const ITENS_CANCEL = [];
+// Esta planilha cobre Out/25-Nov/26 (14 meses) — "outubro25"/"novembro25"/"dezembro25" são os
+// meses de 2025 (ver mesma convenção em assets/live/bubbeleh.js, monthKeyFromDDMMYYYY).
+const ITENS_MONTH_LABEL = {outubro25:'Out/25',novembro25:'Nov/25',dezembro25:'Dez/25',janeiro:'Janeiro',fevereiro:'Fevereiro',marco:'Março',abril:'Abril',maio:'Maio',junho:'Junho',julho:'Julho',agosto:'Agosto',setembro:'Setembro',outubro:'Outubro',novembro:'Novembro'};
+const ITENS_MONTH_ORDER = {outubro25:1,novembro25:2,dezembro25:3,janeiro:4,fevereiro:5,marco:6,abril:7,maio:8,junho:9,julho:10,agosto:11,setembro:12,outubro:13,novembro:14};
+function sortItensMonths(list){ return [...new Set(list)].sort((a,b)=>(ITENS_MONTH_ORDER[a]||99)-(ITENS_MONTH_ORDER[b]||99)); }
+
+let itensMes = null; // null = todos os meses que a planilha trouxer
+let itensTopChartInst, itensTipoChartInst;
+
+function syncItensMonthSeg(){
+  const meses = sortItensMonths(ITENS_CANCEL.map(r=>r.mes));
+  if (itensMes && !meses.includes(itensMes)) itensMes = null;
+  const seg = document.getElementById('itensMonthSeg');
+  const options = [{id:'', label:'Todos'}, ...meses.map(m=>({id:m, label:ITENS_MONTH_LABEL[m]}))];
+  seg.innerHTML = options.map(o=>`<button data-m="${o.id}" class="${(o.id||null)===itensMes?'active':''}">${esc(o.label)}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); itensMes = b.dataset.m || null; renderItensCancelados();
+    });
+  });
+}
+
+function renderItensCancelados(){
+  syncItensMonthSeg();
+  const regs = itensMes ? ITENS_CANCEL.filter(r=>r.mes===itensMes) : ITENS_CANCEL;
+
+  const meses = sortItensMonths(ITENS_CANCEL.map(r=>r.mes));
+  const kpiEl = document.getElementById('kpiGridItens');
+  if (!regs.length) {
+    kpiEl.innerHTML = '<div class="kpi"><div class="label">Sem dados ainda</div><div class="value">—</div></div>';
+    document.getElementById('itensTable').innerHTML = '';
+    if (itensTopChartInst) { itensTopChartInst.destroy(); itensTopChartInst = null; }
+    if (itensTipoChartInst) { itensTipoChartInst.destroy(); itensTipoChartInst = null; }
+    return;
+  }
+
+  const totalQtde = regs.reduce((a,r)=>a+r.qtde,0);
+  const totalPedidos = regs.reduce((a,r)=>a+r.pedidos,0);
+  const totalValor = regs.reduce((a,r)=>a+r.valor,0);
+  const valorTotal = regs.filter(r=>r.tipo==='Total').reduce((a,r)=>a+r.valor,0);
+  const valorParcial = regs.filter(r=>r.tipo==='Parcial').reduce((a,r)=>a+r.valor,0);
+
+  kpiEl.innerHTML = `
+    <div class="kpi"><div class="label">Itens cancelados</div><div class="value">${fmt(totalQtde)}</div></div>
+    <div class="kpi"><div class="label">Pedidos afetados</div><div class="value">${fmt(totalPedidos)}</div></div>
+    <div class="kpi"><div class="label">Valor bruto perdido</div><div class="value">${fmt(totalValor,'money')}</div></div>
+    <div class="kpi"><div class="label">Itens únicos atingidos</div><div class="value">${fmt(new Set(regs.map(r=>r.item)).size)}</div></div>
+  `;
+
+  const byItem = {};
+  regs.forEach(r=>{
+    const it = byItem[r.item] = byItem[r.item] || { item:r.item, categoria:r.categoria, qtde:0, pedidos:0, valor:0, motivos:{} };
+    it.qtde += r.qtde; it.pedidos += r.pedidos; it.valor += r.valor;
+    it.motivos[r.motivo] = (it.motivos[r.motivo]||0) + r.pedidos;
+  });
+  const ranked = Object.values(byItem).sort((a,b)=>b.valor-a.valor);
+  const top = ranked.slice(0,8);
+
+  const ctxTop = document.getElementById('itensTopChart');
+  if (itensTopChartInst) itensTopChartInst.destroy();
+  itensTopChartInst = new Chart(ctxTop, {
+    type:'bar',
+    data:{
+      labels: top.map(it=>it.item.length>18?it.item.slice(0,17)+'…':it.item),
+      datasets:[{ label:'Valor perdido (R$)', data: top.map(it=>it.valor), backgroundColor: COLORS.bad, borderRadius:6 }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ ticks:{ callback:v=>'R$ '+v } }, x:{ ticks:{ autoSkip:false, maxRotation:40, minRotation:20 } } } }
+  });
+
+  const ctxTipo = document.getElementById('itensTipoChart');
+  if (itensTipoChartInst) itensTipoChartInst.destroy();
+  itensTipoChartInst = new Chart(ctxTipo, {
+    type:'bar',
+    data:{
+      labels:['Cancelamento total','Cancelamento parcial'],
+      datasets:[{ data:[valorTotal, valorParcial], backgroundColor:[COLORS.bad, COLORS.amber], borderRadius:8 }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ ticks:{ callback:v=>'R$ '+v } } } }
+  });
+
+  const rows = ranked.map(it=>{
+    const motivoTop = Object.entries(it.motivos).sort((a,b)=>b[1]-a[1])[0];
+    return `<tr>
+      <td class="metric">${esc(it.item)}</td>
+      <td>${esc(it.categoria)}</td>
+      <td>${fmt(it.qtde)}</td>
+      <td>${fmt(it.pedidos)}</td>
+      <td>${fmt(it.valor,'money')}</td>
+      <td>${esc(motivoTop ? motivoTop[0] : '—')}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('itensTable').innerHTML = `<thead><tr><th>Item</th><th>Categoria</th><th>Qtde itens</th><th>Pedidos</th><th>Valor perdido</th><th>Motivo principal</th></tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+
+/* ============ INIT / RENDER ALL ============ */
+function renderAll(){
+  syncMonthSeg();
+  syncParcialMonthSeg();
+  populateCancelamentosMonthSeg();
+  renderMesFechado();
+  renderParcial();
+  renderInvestimento();
+  renderCancelamentos();
+  renderItensCancelados();
+  renderProjecao();
+}
+renderAll();
+</script>
+<script src="../assets/sheets-sync.js"></script>
+<script src="../assets/live-status-ui.js"></script>
+<script src="../assets/live/bubbeleh.js"></script>
+</body>
+</html>

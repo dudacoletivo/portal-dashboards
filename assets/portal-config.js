@@ -65,6 +65,14 @@ const PORTAL_CLIENTS = [
     color: '#DD6627',
     logo: 'assets/logos/bar-do-ge.jpg',
     passwordHash: '26c3ae90f32c2b6c99da473c9f26559974a73c697406c3c5e6779e34d9ebd931'
+  },
+  {
+    slug: 'bubbeleh',
+    name: 'Bubbeleh',
+    file: 'clientes/bubbeleh.html',
+    color: '#B5651D',
+    logo: 'assets/logos/bubbeleh.png',
+    passwordHash: '5c14c7b5c237d175addce10c03591fdf2b6e9d0edf1d47b8e2f1f9ad30f60057'
   }
 ];
 
