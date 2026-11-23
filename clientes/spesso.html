@@ -255,6 +255,7 @@
     <button class="tab-btn" data-tab="invest">Investimento</button>
     <button class="tab-btn" data-tab="alavancas">Status de Alavancas</button>
     <button class="tab-btn" data-tab="cancelamentos">Cancelamentos</button>
+    <button class="tab-btn" data-tab="itens">Itens Cancelados</button>
     <button class="tab-btn" data-tab="avaliacoes">Avaliações</button>
     <button class="tab-btn" data-tab="projecao">Projeção</button>
     <button class="tab-btn" data-tab="legenda">Legenda</button>
@@ -414,6 +415,35 @@
       </div>
 
       <div class="table-scroll"><table id="cancelamentosTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= ITENS CANCELADOS ================= -->
+  <section class="panel" id="panel-itens">
+    <div class="card">
+      <h2 style="margin-top:0;">Itens Cancelados</h2>
+      <p class="sub">Cruza cada pedido cancelado (ou parcialmente cancelado) com o item específico envolvido — mostra quais pratos puxam mais cancelamento, quanto isso custou em R$ e o principal motivo.</p>
+      <div class="filterbar">
+        <div>
+          <label>Mês</label>
+          <div class="seg" id="itensMonthSeg"></div>
+        </div>
+      </div>
+      <div class="kpi-grid" id="kpiGridItens"></div>
+
+      <div class="chart-row" style="margin-bottom:18px;">
+        <div>
+          <h2>Top itens — valor perdido</h2>
+          <div class="chart-box"><canvas id="itensTopChart"></canvas></div>
+        </div>
+        <div>
+          <h2>Cancelamento total x parcial</h2>
+          <div class="chart-box"><canvas id="itensTipoChart"></canvas></div>
+          <p class="sub" style="margin-bottom:0;"><span class="badge-fechado" style="background:#fbeaea;color:#c8433d;">Total</span> = pedido inteiro cancelado por causa deste item. <span class="badge-parcial">Parcial</span> = item saiu faltando/errado, mas o pedido seguiu.</p>
+        </div>
+      </div>
+
+      <div class="table-scroll"><table id="itensTable"></table></div>
     </div>
   </section>
 
@@ -1300,6 +1330,8 @@ const CANCEL_MESES = [];
 let selectedCancelamentosMonth = null;
 let origemChartInst;
 
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
 // Só é chamada de renderAll() (carga inicial + refresh ao vivo) — nunca de dentro de
 // renderCancelamentos(), pelo mesmo motivo de populateAlavancasMonthSeg() acima.
 function populateCancelamentosMonthSeg(){
@@ -1395,6 +1427,108 @@ function renderCancelamentos(){
   table.innerHTML = head+body;
 }
 
+/* ============ ITENS CANCELADOS ============
+   Vem da aba "Itens Cancelados" (mesmo formato usado pelo Delli e Garami/Kimura/Ipoke): um
+   registro por item afetado num pedido cancelado (Tipo="Total") ou parcialmente cancelado
+   (Tipo="Parcial"). A Spesso tem 1 loja só, então não precisa de filtro de unidade, só de mês —
+   a aba acumula histórico de vários meses, o filtro acontece aqui, não no parser. */
+const ITENS_CANCEL = [];
+const ITENS_MONTH_LABEL = {janeiro:'Janeiro',fevereiro:'Fevereiro',marco:'Março',abril:'Abril',maio:'Maio',junho:'Junho',julho:'Julho',agosto:'Agosto',setembro:'Setembro',outubro:'Outubro',novembro:'Novembro',dezembro:'Dezembro'};
+const ITENS_MONTH_ORDER = {janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+function sortItensMonths(list){ return [...new Set(list)].sort((a,b)=>(ITENS_MONTH_ORDER[a]||99)-(ITENS_MONTH_ORDER[b]||99)); }
+
+let itensMes = null; // null = todos os meses que a planilha trouxer
+let itensTopChartInst, itensTipoChartInst;
+
+function syncItensMonthSeg(){
+  const meses = sortItensMonths(ITENS_CANCEL.map(r=>r.mes));
+  if (itensMes && !meses.includes(itensMes)) itensMes = null;
+  const seg = document.getElementById('itensMonthSeg');
+  const options = [{id:'', label:'Todos'}, ...meses.map(m=>({id:m, label:ITENS_MONTH_LABEL[m]}))];
+  seg.innerHTML = options.map(o=>`<button data-m="${o.id}" class="${(o.id||null)===itensMes?'active':''}">${esc(o.label)}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); itensMes = b.dataset.m || null; renderItensCancelados();
+    });
+  });
+}
+
+function renderItensCancelados(){
+  syncItensMonthSeg();
+  const regs = itensMes ? ITENS_CANCEL.filter(r=>r.mes===itensMes) : ITENS_CANCEL;
+
+  const meses = sortItensMonths(ITENS_CANCEL.map(r=>r.mes));
+  const kpiEl = document.getElementById('kpiGridItens');
+  if (!regs.length) {
+    kpiEl.innerHTML = '<div class="kpi"><div class="label">Sem dados ainda</div><div class="value">—</div></div>';
+    document.getElementById('itensTable').innerHTML = '';
+    if (itensTopChartInst) { itensTopChartInst.destroy(); itensTopChartInst = null; }
+    if (itensTipoChartInst) { itensTipoChartInst.destroy(); itensTipoChartInst = null; }
+    return;
+  }
+
+  const totalQtde = regs.reduce((a,r)=>a+r.qtde,0);
+  const totalPedidos = regs.reduce((a,r)=>a+r.pedidos,0);
+  const totalValor = regs.reduce((a,r)=>a+r.valor,0);
+  const valorTotal = regs.filter(r=>r.tipo==='Total').reduce((a,r)=>a+r.valor,0);
+  const valorParcial = regs.filter(r=>r.tipo==='Parcial').reduce((a,r)=>a+r.valor,0);
+
+  kpiEl.innerHTML = `
+    <div class="kpi"><div class="label">Itens cancelados</div><div class="value">${fmt(totalQtde)}</div></div>
+    <div class="kpi"><div class="label">Pedidos afetados</div><div class="value">${fmt(totalPedidos)}</div></div>
+    <div class="kpi"><div class="label">Valor bruto perdido</div><div class="value">${fmt(totalValor,'money')}</div></div>
+    <div class="kpi"><div class="label">Itens únicos atingidos</div><div class="value">${fmt(new Set(regs.map(r=>r.item)).size)}</div></div>
+  `;
+
+  const byItem = {};
+  regs.forEach(r=>{
+    const it = byItem[r.item] = byItem[r.item] || { item:r.item, categoria:r.categoria, qtde:0, pedidos:0, valor:0, motivos:{} };
+    it.qtde += r.qtde; it.pedidos += r.pedidos; it.valor += r.valor;
+    it.motivos[r.motivo] = (it.motivos[r.motivo]||0) + r.pedidos;
+  });
+  const ranked = Object.values(byItem).sort((a,b)=>b.valor-a.valor);
+  const top = ranked.slice(0,8);
+
+  const ctxTop = document.getElementById('itensTopChart');
+  if (itensTopChartInst) itensTopChartInst.destroy();
+  itensTopChartInst = new Chart(ctxTop, {
+    type:'bar',
+    data:{
+      labels: top.map(it=>it.item.length>18?it.item.slice(0,17)+'…':it.item),
+      datasets:[{ label:'Valor perdido (R$)', data: top.map(it=>it.valor), backgroundColor: COLORS.bad, borderRadius:6 }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ ticks:{ callback:v=>'R$ '+v } }, x:{ ticks:{ autoSkip:false, maxRotation:40, minRotation:20 } } } }
+  });
+
+  const ctxTipo = document.getElementById('itensTipoChart');
+  if (itensTipoChartInst) itensTipoChartInst.destroy();
+  itensTipoChartInst = new Chart(ctxTipo, {
+    type:'bar',
+    data:{
+      labels:['Cancelamento total','Cancelamento parcial'],
+      datasets:[{ data:[valorTotal, valorParcial], backgroundColor:[COLORS.bad, COLORS.amber], borderRadius:8 }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ ticks:{ callback:v=>'R$ '+v } } } }
+  });
+
+  const rows = ranked.map(it=>{
+    const motivoTop = Object.entries(it.motivos).sort((a,b)=>b[1]-a[1])[0];
+    return `<tr>
+      <td class="metric">${esc(it.item)}</td>
+      <td>${esc(it.categoria)}</td>
+      <td>${fmt(it.qtde)}</td>
+      <td>${fmt(it.pedidos)}</td>
+      <td>${fmt(it.valor,'money')}</td>
+      <td>${esc(motivoTop ? motivoTop[0] : '—')}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('itensTable').innerHTML = `<thead><tr><th>Item</th><th>Categoria</th><th>Qtde itens</th><th>Pedidos</th><th>Valor perdido</th><th>Motivo principal</th></tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+
 /* ============ AVALIAÇÕES ============ */
 const AVALIACOES_DATA = {
   julho: {
@@ -1479,6 +1613,7 @@ function renderAll(){
   renderInvestimento();
   renderAlavancas();
   renderCancelamentos();
+  renderItensCancelados();
   renderAvaliacoes();
   renderProjecao();
 }

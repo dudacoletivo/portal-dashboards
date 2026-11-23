@@ -18,6 +18,7 @@
   // blocos 01-14/01-21 (vem formatada como percentual, ex. "7400,0%" em vez de "74"); a
   // Consolidado não tem esse bug.
   const GID_CANCELAMENTOS = '249275755';
+  const GID_ITENS_CANCELADOS = '1480709717'; // aba "Itens Cancelados"
 
   const MONTH_NAMES_PT = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
   const MONTH_KEY_PT = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -25,6 +26,11 @@
   const MONTH_ORDER_PT = {}; MONTH_KEY_PT.forEach((k, i) => { MONTH_ORDER_PT[k] = i; });
 
   function monthKeyFromNumber(mm) { return MONTH_NAMES_PT[mm - 1].toLowerCase(); }
+  function monthKeyFromDDMMYYYY(s) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((s || '').trim());
+    if (!m) return null;
+    return monthKeyFromNumber(parseInt(m[2], 10));
+  }
 
   // Esta planilha mistura decimal BR (vírgula, ex. "251,7") com decimal US (ponto, ex. "306.17")
   // na mesma linha — a coluna de Novembro vem sempre em formato diferente das demais. Também
@@ -306,6 +312,30 @@
     return { meses: meses, motivo: motivo, origem: origem };
   }
 
+  // Lê a aba "Itens Cancelados" -> lista de registros, um por item afetado num pedido cancelado
+  // (Tipo="Total") ou parcialmente cancelado (Tipo="Parcial"). Mesmo formato usado pelo Delli e
+  // pelo Garami/Kimura/Ipoke. Acumula histórico de vários meses — o filtro por mês acontece no
+  // dashboard (ver renderItensCancelados em spesso.html), não aqui.
+  function parseItensCancelados(rows) {
+    const registros = [];
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r] || [];
+      const mes = monthKeyFromDDMMYYYY(row[0]);
+      if (!mes) continue;
+      const item = (row[2] || '').trim();
+      if (!item) continue;
+      let categoria = (row[3] || '').trim();
+      if (!categoria || categoria.toUpperCase() === 'NONE') categoria = 'Outros';
+      const tipo = /parcial/i.test(row[4] || '') ? 'Parcial' : 'Total';
+      const motivo = (row[6] || '').trim() || 'Não informado';
+      registros.push({
+        mes: mes, item: item, categoria: categoria, tipo: tipo, motivo: motivo,
+        qtde: parseNum(row[7]) || 0, pedidos: parseNum(row[8]) || 0, valor: parseNum(row[9]) || 0
+      });
+    }
+    return registros;
+  }
+
   async function loadLive() {
     const [metrics, alavancas, avaliacoes] = await Promise.all([
       buildMonthlyAndParcial(), buildAlavancas(), buildAvaliacoes()
@@ -318,7 +348,13 @@
     } catch (e) {
       console.warn('[live-sync] Aba "Cancelamentos" indisponível:', e);
     }
-    return { metrics, alavancas, avaliacoes, cancelamentos };
+    let itensCancel = [];
+    try {
+      itensCancel = parseItensCancelados(await fetchCsvRowsExport(NEW_SHEET_ID, GID_ITENS_CANCELADOS));
+    } catch (e) {
+      console.warn('[live-sync] Aba "Itens Cancelados" indisponível:', e);
+    }
+    return { metrics, alavancas, avaliacoes, cancelamentos, itensCancel };
   }
 
   function init() {
@@ -337,6 +373,7 @@
         CANCEL_RESUMO.origem = fresh.cancelamentos.origem;
         CANCEL_RESUMO.motivo = fresh.cancelamentos.motivo;
         SheetsSync.mutateArrayInPlace(CANCEL_MESES, fresh.cancelamentos.meses);
+        SheetsSync.mutateArrayInPlace(ITENS_CANCEL, fresh.itensCancel);
         renderAll();
         ui.setStatus('live');
       } catch (e) {
