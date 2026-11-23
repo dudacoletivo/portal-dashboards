@@ -230,88 +230,94 @@
     return byMonth;
   }
 
-  // Lê a aba "Cancelamentos" (nova): totais vitalícios (RESUMO GERAL + POR ORIGEM/ESTÁGIO/
-  // MOTIVO/CÓDIGO) e a tabela "DETALHAMENTO MÊS A MÊS" (1 linha por mês, sem lista de pedidos
-  // individuais — diferente do formato antigo). "Nov (01-06)" vira o mês parcial.
-  function parseListSection(rows, startIdx, cols) {
-    const list = [];
-    let r = startIdx + 2; // pula o título da seção + o cabeçalho de coluna
-    while (r < rows.length && rows[r][0] && !/^total$/i.test(rows[r][0].trim())) {
-      const entry = { label: rows[r][0] };
-      cols.forEach(function (c) { entry[c.key] = c.parse(rows[r][c.idx]); });
-      list.push(entry);
-      r++;
-    }
-    return list;
+  // Extrai pares "Rótulo (n)" de uma célula como "Entregador / iFood (6) | Loja (3) | Cliente (1)".
+  function parsePipeList(s) {
+    return (s || '').split('|').map(function (part) {
+      const m = /^(.+?)\s*\((\d+)\)\s*$/.exec(part.trim());
+      return m ? { label: m[1].trim(), qtde: parseInt(m[2], 10) } : null;
+    }).filter(Boolean);
   }
 
+  // Lê a aba "Cancelamentos" — formato trocado em ~20/11/2026 pelo mesmo que os outros clientes
+  // Toqan usam (ver delli.js): não tem mais "RESUMO GERAL"/"DETALHAMENTO MÊS A MÊS" acumulado,
+  // e sim um bloco "RESUMO MENSAL POR LOJA", um bloco por mês ("SET 2026 — 01/09 a 30/09/2026")
+  // com cancelamentos/taxa/reembolso/origem/estágio principal daquele mês, e logo depois
+  // "MOTIVOS — SET 2026" com a lista de motivos do mês. Não existe mais detalhe de GMV
+  // cancelado, pedidos concluídos nem "afeta Super" — por isso o dashboard (ver spesso.html)
+  // só usa cancelamentos/taxa/reembolso/origem/estágio/motivos. Motivo e origem "acumulados"
+  // são somados aqui a partir dos blocos de cada mês (a planilha não traz mais isso pronto).
   function parseCancelamentos(rows) {
-    const sectionIdx = (title) => rows.findIndex(r => (r[0] || '').trim().toUpperCase().startsWith(title));
-
-    const resumo = {};
-    const iResumo = sectionIdx('RESUMO GERAL');
-    if (iResumo >= 0) {
-      const r1 = rows[iResumo + 1] || [], r2 = rows[iResumo + 2] || [];
-      resumo.totalCancelamentos = parseNum(r1[1]);
-      resumo.totalPedidos = parseNum(r1[4]);
-      resumo.taxaGeral = parsePercent(r1[7]);
-      resumo.gmvCancelado = parseNum(r2[1]);
-      resumo.valorDevolvido = parseNum(r2[4]);
-      resumo.afetaSuper = (r2[7] || '').trim(); // ex.: "17 de 22"
-    }
-
-    const origem = parseListSection(rows, sectionIdx('CANCELAMENTOS POR ORIGEM'), [
-      { key: 'qtde', idx: 1, parse: parseNum }, { key: 'pct', idx: 2, parse: parsePercent }
-    ]);
-    const estagio = parseListSection(rows, sectionIdx('CANCELAMENTOS POR ESTÁGIO'), [
-      { key: 'qtde', idx: 1, parse: parseNum }, { key: 'pct', idx: 2, parse: parsePercent }, { key: 'desc', idx: 3, parse: (v) => v || '' }
-    ]);
-    const motivo = parseListSection(rows, sectionIdx('CANCELAMENTOS POR MOTIVO'), [
-      { key: 'qtde', idx: 1, parse: parseNum }, { key: 'pct', idx: 2, parse: parsePercent }
-    ]);
-    const codigo = parseListSection(rows, sectionIdx('CANCELAMENTOS POR C'), [
-      { key: 'qtde', idx: 1, parse: parseNum }, { key: 'pct', idx: 2, parse: parsePercent }, { key: 'desc', idx: 3, parse: (v) => v || '' }
-    ]);
-
     const meses = [];
-    const iMeses = sectionIdx('DETALHAMENTO M');
-    if (iMeses >= 0) {
-      let r = iMeses + 2; // título + cabeçalho
-      while (r < rows.length && rows[r][0] && !/^total$/i.test(rows[r][0].trim())) {
-        const rawMes = rows[r][0].trim();
-        const abbr = rawMes.slice(0, 3).toUpperCase();
+    const motivoLifetime = {};
+    const origemLifetime = {};
+
+    for (let r = 0; r < rows.length; r++) {
+      const first = (rows[r][0] || '').trim();
+
+      const monthHeaderMatch = /^([A-ZÇ]{3}\s*\d{4})\s*—\s*(.+)$/i.exec(first);
+      if (monthHeaderMatch) {
+        const abbr = monthHeaderMatch[1].trim().slice(0, 3).toUpperCase();
         const key = MONTH_ABBR_PT[abbr];
-        if (!key) { r++; continue; }
-        const parcial = /\(/.test(rawMes); // "Nov (01-06)" = mês em andamento
-        meses.push({
-          key: key,
-          label: key.charAt(0).toUpperCase() + key.slice(1),
-          parcial: parcial,
-          pedidosConcl: parseNum(rows[r][1]),
-          cancelamentos: parseNum(rows[r][2]),
-          taxa: parsePercent(rows[r][3]),
-          gmvCancelado: parseNum(rows[r][4]),
-          devolvido: parseNum(rows[r][5]),
-          afetaSuper: (rows[r][6] || '').trim(),
-          origemPrincipal: rows[r][7] || '',
-          estagioPrincipal: rows[r][8] || '',
-          motivos: rows[r][9] || ''
-        });
-        r++;
+        if (!key) continue;
+        const parcial = /\(parcial\)\s*$/i.test(monthHeaderMatch[2]);
+        let rr = r + 1;
+        if (rows[rr] && /^loja$/i.test((rows[rr][0] || '').trim())) {
+          rr++;
+          const dataRow = rows[rr] || [];
+          const origemPrincipal = dataRow[4] || '';
+          const estagioPrincipal = dataRow[5] || '';
+          meses.push({
+            key: key, label: key.charAt(0).toUpperCase() + key.slice(1), parcial: parcial,
+            cancelamentos: parseNum(dataRow[1]), taxa: parsePercent(dataRow[2]), devolvido: parseNum(dataRow[3]),
+            origemPrincipal: origemPrincipal, estagioPrincipal: estagioPrincipal, motivos: ''
+          });
+          parsePipeList(origemPrincipal).forEach(function (o) { origemLifetime[o.label] = (origemLifetime[o.label] || 0) + o.qtde; });
+        }
+        continue;
       }
-      meses.sort(function (a, b) { return MONTH_ORDER_PT[a.key] - MONTH_ORDER_PT[b.key]; });
+
+      const motivosMatch = /^MOTIVOS\s*—\s*(.+)$/i.exec(first);
+      if (motivosMatch) {
+        const abbr = motivosMatch[1].trim().slice(0, 3).toUpperCase();
+        const key = MONTH_ABBR_PT[abbr];
+        let rr = r + 1;
+        if (key && rows[rr] && /^motivo$/i.test((rows[rr][0] || '').trim())) {
+          const header = rows[rr];
+          let totalCol = header.findIndex(function (h) { return /^total$/i.test((h || '').trim()); });
+          if (totalCol < 0) totalCol = 1;
+          rr++;
+          const list = [];
+          while (rr < rows.length && rows[rr][0] && !/^total$/i.test(rows[rr][0].trim())) {
+            const label = rows[rr][0];
+            const qtde = parseNum(rows[rr][totalCol]) || 0;
+            list.push({ label: label, qtde: qtde });
+            motivoLifetime[label] = (motivoLifetime[label] || 0) + qtde;
+            rr++;
+          }
+          const mesObj = meses.find(function (m) { return m.key === key; });
+          if (mesObj) mesObj.motivos = list.map(function (m) { return m.label + ' (' + m.qtde + ')'; }).join(', ');
+        }
+      }
     }
 
-    return { resumo: resumo, origem: origem, estagio: estagio, motivo: motivo, codigo: codigo, meses: meses };
+    meses.sort(function (a, b) { return MONTH_ORDER_PT[a.key] - MONTH_ORDER_PT[b.key]; });
+    const motivo = Object.keys(motivoLifetime).map(function (label) { return { label: label, qtde: motivoLifetime[label] }; });
+    const origem = Object.keys(origemLifetime).map(function (label) { return { label: label, qtde: origemLifetime[label] }; });
+    return { meses: meses, motivo: motivo, origem: origem };
   }
 
   async function loadLive() {
-    const [metrics, alavancas, avaliacoes, cancelRows] = await Promise.all([
-      buildMonthlyAndParcial(), buildAlavancas(), buildAvaliacoes(),
-      fetchCsvRowsExport(NEW_SHEET_ID, GID_CANCELAMENTOS)
+    const [metrics, alavancas, avaliacoes] = await Promise.all([
+      buildMonthlyAndParcial(), buildAlavancas(), buildAvaliacoes()
     ]);
-    const cancelamentos = parseCancelamentos(cancelRows);
-    if (!cancelamentos.meses.length) throw new Error('Nenhum mês encontrado na aba Cancelamentos');
+    // Isolado do resto: se a aba de cancelamentos mudar de formato de novo (ou falhar), o
+    // resto do dashboard (métricas/alavancas/avaliações) continua funcionando normalmente.
+    let cancelamentos = { meses: [], motivo: [], origem: [] };
+    try {
+      cancelamentos = parseCancelamentos(await fetchCsvRowsExport(NEW_SHEET_ID, GID_CANCELAMENTOS));
+    } catch (e) {
+      console.warn('[live-sync] Aba "Cancelamentos" indisponível:', e);
+    }
     return { metrics, alavancas, avaliacoes, cancelamentos };
   }
 
@@ -328,11 +334,8 @@
         SheetsSync.mutateObjectInPlace(STORE_DATA.spesso.parcial, fresh.metrics.parcial);
         SheetsSync.mutateObjectInPlace(ALAVANCAS_DATA, fresh.alavancas);
         SheetsSync.mutateObjectInPlace(AVALIACOES_DATA, fresh.avaliacoes);
-        CANCEL_RESUMO.data = fresh.cancelamentos.resumo;
         CANCEL_RESUMO.origem = fresh.cancelamentos.origem;
-        CANCEL_RESUMO.estagio = fresh.cancelamentos.estagio;
         CANCEL_RESUMO.motivo = fresh.cancelamentos.motivo;
-        CANCEL_RESUMO.codigo = fresh.cancelamentos.codigo;
         SheetsSync.mutateArrayInPlace(CANCEL_MESES, fresh.cancelamentos.meses);
         renderAll();
         ui.setStatus('live');

@@ -1289,11 +1289,12 @@ function renderAlavancas(){
 }
 
 /* ============ CANCELAMENTOS ============
-   Vem da planilha nova (aba "Cancelamentos"): totais acumulados Jan-Nov (sem detalhe pedido a
-   pedido — a planilha antiga tinha isso, a nova não) + 1 linha de resumo por mês. Motivos/
-   Origem/Estágio ficam sempre acumulados (não há essa quebra por mês na planilha nova); o
-   seletor de mês e a tabela de baixo são o que de fato varia por mês. */
-const CANCEL_RESUMO = { data: {}, origem: [], estagio: [], motivo: [], codigo: [] };
+   Vem da planilha nova (aba "Cancelamentos", formato trocado em ~20/11/2026 — ver
+   parseCancelamentos em assets/live/spesso.js): 1 bloco por mês com cancelamentos/taxa/
+   reembolso/origem/estágio principal + a lista de motivos daquele mês. Não existe mais detalhe
+   de GMV cancelado, pedidos concluídos nem "afeta Super". Motivos/Origem "acumulados Jan-Nov"
+   são somados aqui mesmo a partir dos blocos de cada mês (a planilha não traz isso pronto). */
+const CANCEL_RESUMO = { origem: [], motivo: [] };
 const CANCEL_MESES = [];
 
 let selectedCancelamentosMonth = null;
@@ -1332,17 +1333,15 @@ function renderCancelamentos(){
     return;
   }
 
-  const afetaSuperNum = parseInt((mes.afetaSuper.match(/(\d+)/)||[0,0])[1], 10) || 0;
   grid.insertAdjacentHTML("beforeend", `
     <div class="kpi"><div class="label">Pedidos cancelados</div><div class="value">${fmt(mes.cancelamentos,'num')}</div></div>
-    <div class="kpi"><div class="label">Valor cancelado (GMV)</div><div class="value">${fmt(mes.gmvCancelado,'money')}</div></div>
-    <div class="kpi"><div class="label">Valor devolvido</div><div class="value">${fmt(mes.devolvido,'money')}</div></div>
     <div class="kpi"><div class="label">Taxa de cancelamento</div><div class="value">${fmt(mes.taxa,'pct')}</div></div>
+    <div class="kpi"><div class="label">Reembolsado</div><div class="value">${fmt(mes.devolvido,'money')}</div></div>
   `);
 
   const type = (mes.taxa||0) >= 10 ? "bad" : "neutral";
   renderInsightBox("insightCancelamentos", type, "📦", `${fmt(mes.cancelamentos,'num')} pedidos cancelados em ${mes.label}${mes.parcial?' (parcial)':''}`,
-    [`Origem principal: <b>${mes.origemPrincipal||'—'}</b>. Estágio principal: <b>${mes.estagioPrincipal||'—'}</b>. ${afetaSuperNum} pedido(s) impactaram o indicador de Super da loja no iFood. Motivos: ${mes.motivos||'—'}.`]);
+    [`Origem principal: <b>${mes.origemPrincipal||'—'}</b>. Estágio principal: <b>${mes.estagioPrincipal||'—'}</b>. Motivos: ${mes.motivos||'—'}.`]);
 
   // Motivos/Origem são acumulados Jan-Nov (a planilha nova não quebra isso por mês).
   const motivosOrdenados = CANCEL_RESUMO.motivo.slice().sort((a,b)=>(b.qtde||0)-(a.qtde||0));
@@ -1380,15 +1379,15 @@ function renderCancelamentos(){
     options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} } }
   });
 
-  const head = `<thead><tr><th>Mês</th><th>Status</th><th>Pedidos concl.</th><th>Cancelamentos</th><th>Taxa</th>
-    <th>GMV cancelado</th><th>Devolvido</th><th>Afeta Super</th><th>Origem principal</th><th>Estágio principal</th><th>Motivos</th></tr></thead>`;
+  const head = `<thead><tr><th>Mês</th><th>Status</th><th>Cancelamentos</th><th>Taxa</th>
+    <th>Reembolsado</th><th>Origem principal</th><th>Estágio principal</th><th>Motivos</th></tr></thead>`;
   let body = "<tbody>";
   CANCEL_MESES.forEach(m=>{
     body += `<tr>
       <td class="metric">${m.label}</td>
       <td>${m.parcial ? '<span class="badge-parcial">Parcial</span>' : '<span class="badge-fechado">Fechado</span>'}</td>
-      <td>${fmt(m.pedidosConcl,'num')}</td><td>${fmt(m.cancelamentos,'num')}</td><td>${fmt(m.taxa,'pct')}</td>
-      <td>${fmt(m.gmvCancelado,'money')}</td><td>${fmt(m.devolvido,'money')}</td><td>${m.afetaSuper||'—'}</td>
+      <td>${fmt(m.cancelamentos,'num')}</td><td>${fmt(m.taxa,'pct')}</td>
+      <td>${fmt(m.devolvido,'money')}</td>
       <td>${m.origemPrincipal||'—'}</td><td>${m.estagioPrincipal||'—'}</td><td>${m.motivos||'—'}</td>
     </tr>`;
   });
