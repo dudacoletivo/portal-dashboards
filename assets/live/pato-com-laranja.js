@@ -17,6 +17,7 @@
     { gid: '303705438', key: 'AHIRU LEBLON' }
   ];
   const GID_CANCELAMENTOS = '1219132979';
+  const GID_ITENS_CANCELADOS = '45959332'; // aba "Itens Cancelados"
 
   // Alavancas continua na planilha antiga, sem mudança nenhuma.
   const OLD_SHEET_ID = '1G3yEReZrhYEDo6js0zz0FC62fr8Y_LJgEH1KvdIZtoc';
@@ -304,6 +305,39 @@
     return { meses: meses, resumo: resumo, detalhe: detalhe, motivos: motivos, periodos: periodos };
   }
 
+  const MONTH_FULL_PT_UP = ['', 'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+  function monthKeyFromDDMMYYYY(s) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((s || '').trim());
+    if (!m) return null;
+    return MONTH_FULL_PT_UP[parseInt(m[2], 10)] || null;
+  }
+
+  // Lê a aba "Itens Cancelados" -> lista de registros, um por item afetado num pedido cancelado
+  // (Tipo="Total") ou parcialmente cancelado (Tipo="Parcial"). Mesmo formato usado pelo Delli,
+  // Spesso e Garami/Kimura/Ipoke. Reusa lojaKeyFor (mesma função da aba "Cancelamentos") pra
+  // normalizar o nome da loja ("Japa do Pato - Leblon" -> 'japa-leblon').
+  function parseItensCancelados(rows) {
+    const registros = [];
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r] || [];
+      const mes = monthKeyFromDDMMYYYY(row[0]);
+      if (!mes) continue;
+      const loja = lojaKeyFor(row[1]);
+      if (!loja || loja === 'total') continue;
+      const item = (row[2] || '').trim();
+      if (!item) continue;
+      let categoria = (row[3] || '').trim();
+      if (!categoria || categoria.toUpperCase() === 'NONE') categoria = 'Outros';
+      const tipo = /parcial/i.test(row[4] || '') ? 'Parcial' : 'Total';
+      const motivo = (row[6] || '').trim() || 'Não informado';
+      registros.push({
+        mes: mes, loja: loja, item: item, categoria: categoria, tipo: tipo, motivo: motivo,
+        qtde: parseNum(row[7]) || 0, pedidos: parseNum(row[8]) || 0, valor: parseNum(row[9]) || 0
+      });
+    }
+    return registros;
+  }
+
   // O endpoint gviz/tq (SheetsSync.fetchCsvRows) se confunde com a linha de rótulo de bloco
   // ("── 01-07 ──", só a coluna A preenchida) antes do cabeçalho real — mesmo problema visto na
   // migração do Delli. Usa o endpoint de exportação CSV direto, que preserva as colunas certas.
@@ -370,7 +404,13 @@
     } catch (e) {
       console.warn('[live-sync] Aba "Cancelamentos" indisponível:', e);
     }
-    return { monthly: metrics.monthly, cumulative: metrics.cumulative, alavancas: alavancas, cancel: cancel };
+    let itensCancel = [];
+    try {
+      itensCancel = parseItensCancelados(await fetchCsvRowsExport(SHEET_ID, GID_ITENS_CANCELADOS));
+    } catch (e) {
+      console.warn('[live-sync] Aba "Itens Cancelados" indisponível:', e);
+    }
+    return { monthly: metrics.monthly, cumulative: metrics.cumulative, alavancas: alavancas, cancel: cancel, itensCancel: itensCancel };
   }
 
   function rerenderAll() {
@@ -380,6 +420,7 @@
     try { renderComp7(); } catch (e) { console.error('renderComp7 falhou:', e); }
     try { renderAlavancas(); } catch (e) { console.error('renderAlavancas falhou:', e); }
     try { renderCancelamentos(); } catch (e) { console.error('renderCancelamentos falhou:', e); }
+    try { renderItensCancelados(); } catch (e) { console.error('renderItensCancelados falhou:', e); }
     try { renderProjecao(); } catch (e) { console.error('renderProjecao falhou:', e); }
     try { updateLastUpdateBadge(); } catch (e) { console.error('updateLastUpdateBadge falhou:', e); }
   }
@@ -400,6 +441,7 @@
         });
         SheetsSync.mutateArrayInPlace(ALAV, fresh.alavancas);
         CANCEL = fresh.cancel;
+        ITENS_CANCEL = fresh.itensCancel;
         rerenderAll();
         ui.setStatus('live');
       } catch (e) {

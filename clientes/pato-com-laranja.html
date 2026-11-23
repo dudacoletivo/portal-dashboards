@@ -214,6 +214,7 @@
     <button data-tab="comp7">🔍 Comparativo 7 dias</button>
     <button data-tab="alavancas">🕹️ Status das Alavancas</button>
     <button data-tab="cancelamentos">🚫 Cancelamentos</button>
+    <button data-tab="itens">🍽️ Itens Cancelados</button>
     <button data-tab="projecao">🔮 Projeção</button>
   </nav>
 
@@ -452,6 +453,44 @@
     </div>
   </section>
 
+  <!-- ================= ITENS CANCELADOS ================= -->
+  <section class="tabpanel" id="tab-itens">
+    <div class="panel">
+      <h2>Itens Cancelados</h2>
+      <p class="sub">Cruza cada pedido cancelado (ou parcialmente cancelado) com o item específico envolvido — mostra quais pratos puxam mais cancelamento, quanto isso custou em R$ e o principal motivo.</p>
+      <div class="filterbar">
+        <div class="filtergroup">
+          <label class="title">Unidade</label>
+          <div class="chipset" id="itensUnidadeChips"></div>
+        </div>
+        <div class="filtergroup">
+          <label class="title">Mês</label>
+          <div class="chipset" id="itensMesChips"></div>
+        </div>
+      </div>
+    </div>
+
+    <h2 style="margin:0 0 4px;">Resumo do período <span class="tag mix" id="itensPeriod"></span></h2>
+    <div class="kpi-grid" id="itensKpiGrid" style="margin-bottom:20px;"></div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>Top itens — valor perdido</h2>
+        <div class="chart-wrap small"><div id="itensTopChart" class="svg-chart"></div></div>
+      </div>
+      <div class="panel">
+        <h2>Cancelamento total x parcial</h2>
+        <div class="chart-wrap small"><div id="itensTipoChart" class="svg-chart"></div></div>
+        <p class="sub" style="margin-bottom:0;"><span class="tag neg">Total</span> = pedido inteiro cancelado por causa deste item. <span class="tag parcial">Parcial</span> = item saiu faltando/errado, mas o pedido seguiu.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Todos os itens no período</h2>
+      <div class="table-scroll"><table class="datatable" id="itensTable"></table></div>
+    </div>
+  </section>
+
   <!-- ================= PROJEÇÃO DE FECHAMENTO ================= -->
   <section class="tabpanel" id="tab-projecao">
     <div class="panel">
@@ -513,7 +552,10 @@ const STORES = ['JAPA BARRA', 'JAPA LEBLON', 'PATO NA BRASA BARRA', 'AHIRU LEBLO
 const MONTHLY = {}; STORES.forEach(s => MONTHLY[s] = {});
 const CUM = {}; STORES.forEach(s => CUM[s] = {});
 let CANCEL = { meses: [], resumo: {}, detalhe: {}, motivos: {}, periodos: {} };
+let ITENS_CANCEL = [];
 const ALAV = RAW.alavancas || [];
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
 const COLORS = ['#F89E26', '#EF6A2F', '#221F1D', '#3C8F5E'];
 const STORE_COLOR = {};
@@ -1528,6 +1570,91 @@ function renderCancelamentos(){
     <tbody>${motivoRows || '<tr><td colspan="6" style="text-align:center;color:#8A8378;padding:20px;">Sem detalhamento de motivos para este mês.</td></tr>'}</tbody>`;
 }
 try { renderCancelamentos(); } catch(e) { console.error('renderCancelamentos failed:', e); }
+
+// ============================================================
+// ITENS CANCELADOS — cruza a aba "Itens Cancelados" (item, categoria, tipo total/parcial,
+// motivo) com filtro de unidade (reusa STORE_SCOPE_OPTIONS/cancLojaKeyForStore, mesma lógica
+// da aba Cancelamentos) e de mês. Mesmo formato usado pelo Delli, Spesso e Garami/Kimura/Ipoke.
+// ============================================================
+let itensUnidade = 'REDE';
+let itensMes = null; // null = todos os meses que a planilha trouxer
+
+function renderItensCancelados(){
+  renderPillGroup('itensUnidadeChips', STORE_SCOPE_OPTIONS, itensUnidade, (v)=>{ itensUnidade=v; renderItensCancelados(); }, true);
+
+  const mesesSet = new Set(ITENS_CANCEL.map(r=>r.mes));
+  const meses = MONTH_ORDER.filter(m=>mesesSet.has(m));
+  if (itensMes && !meses.includes(itensMes)) itensMes = null;
+  renderPillGroup('itensMesChips', [{value:'', label:'Todos'}, ...meses.map(m=>({value:m,label:toSentence(m)}))], itensMes||'', (v)=>{ itensMes=v||null; renderItensCancelados(); });
+
+  document.getElementById('itensPeriod').textContent = itensMes ? toSentence(itensMes)
+    : (meses.length ? toSentence(meses[0]) + '–' + toSentence(meses[meses.length-1]) : '');
+
+  const lojaKey = itensUnidade==='REDE' ? null : cancLojaKeyForStore(itensUnidade);
+  const regs = ITENS_CANCEL.filter(r=>{
+    if (itensMes && r.mes !== itensMes) return false;
+    if (lojaKey && r.loja !== lojaKey) return false;
+    return true;
+  });
+
+  const kpiEl = document.getElementById('itensKpiGrid');
+  if (!regs.length) {
+    kpiEl.innerHTML = '<div class="kpi"><div class="label">Sem dados ainda</div><div class="value">—</div></div>';
+    document.getElementById('itensTopChart').innerHTML = '';
+    document.getElementById('itensTipoChart').innerHTML = '';
+    document.getElementById('itensTable').innerHTML = '';
+    return;
+  }
+
+  const totalQtde = regs.reduce((a,r)=>a+r.qtde,0);
+  const totalPedidos = regs.reduce((a,r)=>a+r.pedidos,0);
+  const totalValor = regs.reduce((a,r)=>a+r.valor,0);
+  const valorTotal = regs.filter(r=>r.tipo==='Total').reduce((a,r)=>a+r.valor,0);
+  const valorParcial = regs.filter(r=>r.tipo==='Parcial').reduce((a,r)=>a+r.valor,0);
+
+  kpiEl.innerHTML = `
+    <div class="kpi"><div class="label">Itens cancelados</div><div class="value">${fmtNumber(totalQtde)}</div></div>
+    <div class="kpi"><div class="label">Pedidos afetados</div><div class="value">${fmtNumber(totalPedidos)}</div></div>
+    <div class="kpi"><div class="label">Valor bruto perdido</div><div class="value">${fmtCurrency(totalValor)}</div></div>
+    <div class="kpi"><div class="label">Itens únicos atingidos</div><div class="value">${fmtNumber(new Set(regs.map(r=>r.item)).size)}</div></div>
+  `;
+
+  const byItem = {};
+  regs.forEach(r=>{
+    const it = byItem[r.item] = byItem[r.item] || { item:r.item, categoria:r.categoria, qtde:0, pedidos:0, valor:0, motivos:{} };
+    it.qtde += r.qtde; it.pedidos += r.pedidos; it.valor += r.valor;
+    it.motivos[r.motivo] = (it.motivos[r.motivo]||0) + r.pedidos;
+  });
+  const ranked = Object.values(byItem).sort((a,b)=>b.valor-a.valor);
+  const top = ranked.slice(0,8);
+
+  document.getElementById('itensTopChart').innerHTML = svgBarChart({
+    labels: top.map(it=>it.item),
+    series: [{ label:'Valor perdido', data: top.map(it=>it.valor), color:'#EF6A2F' }],
+    valueFormatter: v=>fmtCurrency(v)
+  });
+
+  document.getElementById('itensTipoChart').innerHTML = svgBarChart({
+    labels: ['Cancelamento total','Cancelamento parcial'],
+    series: [{ label:'Valor perdido', data: [valorTotal, valorParcial], color:'#D9463A', colors:['#D9463A','#F89E26'] }],
+    valueFormatter: v=>fmtCurrency(v)
+  });
+
+  const rows = ranked.map(it=>{
+    const motivoTop = Object.entries(it.motivos).sort((a,b)=>b[1]-a[1])[0];
+    return `<tr>
+      <td>${esc(it.item)}</td>
+      <td>${esc(it.categoria)}</td>
+      <td>${fmtNumber(it.qtde)}</td>
+      <td>${fmtNumber(it.pedidos)}</td>
+      <td>${fmtCurrency(it.valor)}</td>
+      <td>${esc(motivoTop ? motivoTop[0] : '—')}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('itensTable').innerHTML = `<thead><tr><th>Item</th><th>Categoria</th><th>Qtde itens</th><th>Pedidos</th><th>Valor perdido</th><th>Motivo principal</th></tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+try { renderItensCancelados(); } catch(e) { console.error('renderItensCancelados failed:', e); }
 
 // ============================================================
 // PROJEÇÃO DE FECHAMENTO
