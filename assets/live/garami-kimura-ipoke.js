@@ -2,7 +2,8 @@
 // Ipoke — Performance iFood Jan-Nov 2026" (alimentada automaticamente pela IA do iFood/Toqan).
 // Trocado em 09/11/2026 a partir das 3 planilhas antigas (uma por marca, cada uma com 3
 // unidades) — a nova traz 11 abas, uma por unidade (Garami e Kimura ganharam uma 4ª unidade,
-// "Recreio"; Ipoke continua só com Barra/Tijuca/Zona Sul), mais uma aba "Cancelamentos".
+// "Recreio"; Ipoke continua só com Barra/Tijuca/Zona Sul), mais as abas "Cancelamentos" e
+// "Itens Cancelados" (esta última lida por parseItensCancelados, adicionada em 23/11/2026).
 //
 // Formato de cada aba de unidade: igual ao Delli — vários blocos empilhados na mesma aba
 // ("── 01-07 ──" / "── 01-14 ──" / "── 01-21 ──" / "── Mês Fechado ──"), cabeçalho "Métrica" e
@@ -18,6 +19,7 @@
 (function () {
   const SHEET_ID = '1SK6LuFfFWtO-EoeD4hSwrIIpQEhXCsvHvyDFRUuKKx8';
   const GID_CANCELAMENTOS = '218093528';
+  const GID_ITENS_CANCELADOS = '442380588'; // aba "Itens Cancelados"
 
   const UNITS = [
     { id: 'garami-barra', brand: 'Garami', unit: 'Barra da Tijuca', color: '#3E93B7', gid: '1109683142' },
@@ -67,6 +69,12 @@
     const m = /([A-ZÇ]{3})/i.exec((s || '').toUpperCase());
     if (!m) return null;
     return MONTH_ABBR_PT[m[1]] || null;
+  }
+  const MONTH_BY_NUM = ['', 'janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  function monthKeyFromDDMMYYYY(s) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((s || '').trim());
+    if (!m) return null;
+    return MONTH_BY_NUM[parseInt(m[2], 10)] || null;
   }
   function parseNum(v) {
     if (v === null || v === undefined || v === '') return null;
@@ -154,12 +162,48 @@
     return brand.toLowerCase() + '-' + unitId;
   }
 
-  // Lê a aba "Cancelamentos" -> { meses, resumo, detalhe, periodos }. Formato parecido com o do
-  // Delli, mas mais simples: sem "MOTIVOS —" por mês (só uma "Origem principal" por loja/mês), e
-  // o cabeçalho do resumo mensal vem sem ano ("SET Canc." em vez de "SET 2026 Canc."). O conjunto
-  // de lojas não é fixo: "Garami Recreio" não aparece aqui enquanto não tiver cancelamento algum.
+  // Extrai pares "Rótulo (n)" de uma célula como "Cliente (10) | Loja (4)".
+  function parsePipeList(s) {
+    return (s || '').split('|').map(function (part) {
+      const m = /^(.+?)\s*\((\d+)\)\s*$/.exec(part.trim());
+      return m ? { label: m[1].trim(), qtde: parseInt(m[2], 10) } : null;
+    }).filter(Boolean);
+  }
+
+  // Lê o bloco "MOTIVOS — <mês>": cabeçalho é "Motivo" + uma coluna por loja + "TOTAL".
+  function parseMotivosBlock(rows, headerIdx) {
+    const header = rows[headerIdx] || [];
+    const cols = [];
+    for (let c = 1; c < header.length; c++) {
+      const h = (header[c] || '').trim();
+      if (!h) continue;
+      if (/^total$/i.test(h)) { cols.push({ c: c, key: 'total' }); continue; }
+      const sid = storeIdForLabel(h);
+      if (sid && sid !== 'total') cols.push({ c: c, key: sid });
+    }
+    const list = [];
+    let r = headerIdx + 1;
+    while (r < rows.length && rows[r][0] && !/^total$/i.test(rows[r][0].trim())) {
+      const entry = { motivo: rows[r][0], perStore: {}, total: 0 };
+      cols.forEach(function (col) {
+        const v = parseNum(rows[r][col.c]) || 0;
+        if (col.key === 'total') entry.total = v; else entry.perStore[col.key] = v;
+      });
+      list.push(entry);
+      r++;
+    }
+    return list;
+  }
+
+  // Lê a aba "Cancelamentos" -> { meses, resumo, detalhe, periodos, motivos }. Formato igual ao
+  // do Delli: um bloco "RESUMO MENSAL POR LOJA" (com linhas "SUBTOTAL <marca>" entre as unidades
+  // e "TOTAL GRUPO" no fim — ambas puladas aqui, SUBTOTAL por não ser uma loja real e TOTAL por
+  // virar a chave 'total', usada pelo filtro "Rede Toda"), um bloco por mês com o detalhe
+  // (reembolso/origem/estágio) por loja, e logo depois "MOTIVOS — <mês>" com a lista de motivos
+  // daquele mês (1 coluna por loja + TOTAL). O conjunto de lojas não é fixo: "Garami Recreio" não
+  // aparece aqui enquanto não tiver cancelamento algum.
   function parseCancelamentos(rows) {
-    const resumo = {}, detalhe = {}, periodos = {};
+    const resumo = {}, detalhe = {}, periodos = {}, motivos = {};
 
     const resumoIdx = rows.findIndex(function (r) { return (r[0] || '').trim().toUpperCase() === 'RESUMO MENSAL POR LOJA'; });
     if (resumoIdx >= 0) {
@@ -171,7 +215,9 @@
       }
       let r = resumoIdx + 2;
       while (r < rows.length && rows[r][0]) {
-        const loja = storeIdForLabel(rows[r][0]);
+        const label = rows[r][0].trim();
+        if (/^SUBTOTAL/i.test(label)) { r++; continue; }
+        const loja = storeIdForLabel(label);
         if (!loja) break;
         monthCols.forEach(function (mc) {
           resumo[mc.month] = resumo[mc.month] || {};
@@ -183,6 +229,16 @@
 
     for (let r = 0; r < rows.length; r++) {
       const first = (rows[r][0] || '').trim();
+
+      const motivosMatch = /^MOTIVOS\s*—\s*(.+)$/i.exec(first);
+      if (motivosMatch) {
+        const mesM = monthKeyFromAbbr(motivosMatch[1]);
+        if (mesM && rows[r + 1] && /^motivo$/i.test((rows[r + 1][0] || '').trim())) {
+          motivos[mesM] = parseMotivosBlock(rows, r + 1);
+        }
+        continue;
+      }
+
       const monthHeaderMatch = /^([A-ZÇ]{3}\s*\d{4})\s*—\s*(.+)$/i.exec(first);
       if (!monthHeaderMatch) continue;
       const mes = monthKeyFromAbbr(monthHeaderMatch[1]);
@@ -198,13 +254,39 @@
       while (rr < rows.length && rows[rr][0]) {
         const loja = storeIdForLabel(rows[rr][0]);
         if (!loja || loja === 'total') break;
-        detalhe[mes][loja] = { canc: parseNum(rows[rr][1]), taxa: parseNum(rows[rr][2]), reembolso: parseNum(rows[rr][3]), origem: rows[rr][4] || '' };
+        detalhe[mes][loja] = { canc: parseNum(rows[rr][1]), taxa: parseNum(rows[rr][2]), reembolso: parseNum(rows[rr][3]), origem: rows[rr][4] || '', estagio: rows[rr][5] || '' };
         rr++;
       }
     }
 
     const meses = [...new Set(Object.keys(resumo))].sort(function (a, b) { return (MONTH_ORDER[a] || 99) - (MONTH_ORDER[b] || 99); });
-    return { meses: meses, resumo: resumo, detalhe: detalhe, periodos: periodos };
+    return { meses: meses, resumo: resumo, detalhe: detalhe, periodos: periodos, motivos: motivos };
+  }
+
+  // Lê a aba "Itens Cancelados" -> lista de registros, um por item afetado num pedido cancelado
+  // (Tipo="Total") ou parcialmente cancelado (Tipo="Parcial"). Acumula histórico de vários meses
+  // na mesma aba — o filtro por mês/loja acontece no dashboard (ver renderItensCancelados em
+  // garami-kimura-ipoke.html), não aqui. Mesmo formato usado pelo Delli.
+  function parseItensCancelados(rows) {
+    const registros = [];
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r] || [];
+      const mes = monthKeyFromDDMMYYYY(row[0]);
+      if (!mes) continue;
+      const loja = storeIdForLabel(row[1]);
+      if (!loja || loja === 'total') continue;
+      const item = (row[2] || '').trim();
+      if (!item) continue;
+      let categoria = (row[3] || '').trim();
+      if (!categoria || categoria.toUpperCase() === 'NONE') categoria = 'Outros';
+      const tipo = /parcial/i.test(row[4] || '') ? 'Parcial' : 'Total';
+      const motivo = (row[6] || '').trim() || 'Não informado';
+      registros.push({
+        mes: mes, loja: loja, item: item, categoria: categoria, tipo: tipo, motivo: motivo,
+        qtde: parseNum(row[7]) || 0, pedidos: parseNum(row[8]) || 0, valor: parseNum(row[9]) || 0
+      });
+    }
+    return registros;
   }
 
   // A planilha tem uma linha de rótulo de bloco ("── 01-07 ──") com só a coluna A preenchida
@@ -252,14 +334,21 @@
       { id: 'roi', label: 'ROI', fmt: 'money' }
     ];
 
-    let CANCEL = { meses: [], resumo: {}, detalhe: {}, periodos: {} };
+    let CANCEL = { meses: [], resumo: {}, detalhe: {}, periodos: {}, motivos: {} };
     try {
       CANCEL = parseCancelamentos(await fetchCsvRowsExport(SHEET_ID, GID_CANCELAMENTOS));
     } catch (e) {
       console.warn('[live-sync] Aba "Cancelamentos" indisponível:', e);
     }
 
-    return { DATA: DATA, STORES: STORES, METRICS: METRICS, CANCEL: CANCEL };
+    let ITENS_CANCEL = [];
+    try {
+      ITENS_CANCEL = parseItensCancelados(await fetchCsvRowsExport(SHEET_ID, GID_ITENS_CANCELADOS));
+    } catch (e) {
+      console.warn('[live-sync] Aba "Itens Cancelados" indisponível:', e);
+    }
+
+    return { DATA: DATA, STORES: STORES, METRICS: METRICS, CANCEL: CANCEL, ITENS_CANCEL: ITENS_CANCEL };
   }
 
   function init() {
