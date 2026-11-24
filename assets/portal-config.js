@@ -70,7 +70,7 @@ const PORTAL_CLIENTS = [
     slug: 'bubbeleh',
     name: 'Bubbeleh',
     file: 'clientes/bubbeleh.html',
-    color: '#FF6600',
+    color: '#C2410C',
     logo: 'assets/logos/bubbeleh.png',
     passwordHash: '5c14c7b5c237d175addce10c03591fdf2b6e9d0edf1d47b8e2f1f9ad30f60057'
   }
