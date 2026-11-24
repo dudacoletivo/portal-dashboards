@@ -13,12 +13,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --blue-deep:#00305e;
-    --blue:#00498e;
-    --blue-mid:#1f6cb8;
-    --blue-light:#5b93cc;
-    --blue-pale:#eaf1fa;
-    --blue-pale-2:#f5f8fc;
+    --blue-deep:#8A3200;
+    --blue:#FF6600;
+    --blue-mid:#FF7A1A;
+    --blue-light:#FFB380;
+    --blue-pale:#FFF1E6;
+    --blue-pale-2:#FFF8F2;
     --bg:#f7f8fb;
     --card:#ffffff;
     --ink:#1b2430;
@@ -92,7 +92,7 @@
     font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;
     transition:.18s ease;
   }
-  nav.tabs button.active{background:var(--blue);color:#fff;box-shadow:0 4px 14px rgba(0,73,142,.35);}
+  nav.tabs button.active{background:var(--blue);color:#fff;box-shadow:0 4px 14px rgba(255,102,0,.35);}
   nav.tabs button:not(.active):hover{background:var(--blue-pale);color:var(--blue-deep);}
 
   section.panel{display:none;}
@@ -586,7 +586,7 @@ function evoBadge(a,b,key){
 }
 
 const COLORS = {
-  blue:"#00498e", blueMid:"#1f6cb8", blueLight:"#7fb0e0",
+  blue:"#FF6600", blueMid:"#FF7A1A", blueLight:"#FFB380",
   good:"#1c8a53", bad:"#c8433d", amber:"#c99a2e"
 };
 
@@ -766,7 +766,7 @@ function drawEvoChartMF(){
     type:"line",
     data:{ labels:MONTH_LABELS, datasets:[{
       label:m.label, data:m.values,
-      borderColor:COLORS.blue, backgroundColor:"rgba(0,73,142,.12)",
+      borderColor:COLORS.blue, backgroundColor:"rgba(255,102,0,.12)",
       pointBackgroundColor:pointColors, pointRadius:pointRadii,
       borderWidth:3, tension:.35, fill:true,
     }]},
@@ -1065,7 +1065,7 @@ function renderParcialChart(){
   const labels = windowKeys.map(k=>MONTH_LABEL_3[k]);
   const vendasData = windowKeys.map(k=>P.vendas[k]);
   const gmvData = windowKeys.map(k=>P.gmv[k]);
-  const gmvColors = windowKeys.map((_,i)=> (windowStart+i)===curIdx ? "rgba(0,73,142,.9)" : "rgba(0,73,142,.35)");
+  const gmvColors = windowKeys.map((_,i)=> (windowStart+i)===curIdx ? "rgba(255,102,0,.9)" : "rgba(255,102,0,.35)");
   const vendasPointRadii = windowKeys.map((_,i)=> (windowStart+i)===curIdx ? 8 : 5);
 
   document.getElementById("parcialChartTitle").textContent = `GMV e Vendas — dias 01–${currentPeriod}`;
@@ -1177,7 +1177,7 @@ function renderInvestCharts(){
     type:"bar",
     data:{ labels:MONTH_LABELS, datasets:[
       {type:"line", label:"Budget de investimento (%)", data:M.budget.values, borderColor:COLORS.amber, backgroundColor:COLORS.amber, yAxisID:"y1", tension:.3, borderWidth:3, pointRadius:5},
-      {type:"bar", label:"CPO (R$)", data:M.cpo.values, backgroundColor:"rgba(0,73,142,.55)", yAxisID:"y2", borderRadius:6, maxBarThickness:50},
+      {type:"bar", label:"CPO (R$)", data:M.cpo.values, backgroundColor:"rgba(255,102,0,.55)", yAxisID:"y2", borderRadius:6, maxBarThickness:50},
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
       scales:{ y1:{position:"left",ticks:{callback:v=>v+"%"},grid:{color:"#eef1f6"}}, y2:{position:"right",ticks:{callback:v=>"R$ "+v},grid:{display:false}}, x:{grid:{display:false}} }
